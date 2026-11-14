@@ -13,7 +13,8 @@ import { BlockTypes, isSolid, getBlockHardness } from '../../systems/chunks/bloc
 import useGameStore from '../../stores/useGameStore';
 import { calculateDrops, getPlacementCost, canAffordPlacement } from '../../data/blockDrops';
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
-import { HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN, STOCKPILE_INTERACT_RANGE, CONSTRUCTION_INTERACT_RANGE } from '../../data/tuning';
+import { HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN, STOCKPILE_INTERACT_RANGE, CONSTRUCTION_INTERACT_RANGE, NPC_INTERACT_RANGE } from '../../data/tuning';
+import { findNearestNPC } from '../../utils/npcQueries';
 import { getBuildingById } from '../../data/buildings';
 import { getSpellById, executeSpell } from '../../data/spells';
 import { performMeleeAttack, MELEE_COOLDOWN } from '../../data/meleeAttack';
@@ -675,6 +676,13 @@ export function BlockInteraction({ chunkManager }) {
       return true;
     }
 
+    // If NPC panel is open, close it
+    if (store.activeNPCId) {
+      store.closeNPCPanel();
+      useBlockCooldown.current = now;
+      return true;
+    }
+
     // Check for rift interaction FIRST (doesn't need chunkManager)
     const riftManager = store._riftManager;
     if (riftManager) {
@@ -725,8 +733,15 @@ export function BlockInteraction({ chunkManager }) {
       }
     }
 
-    // Check if player is near a construction site — open delivery panel
+    // A settler next to the player opens their detail panel, unless a construction
+    // site or stockpile is closer (so NPCs working there don't block E).
     const px = playerPos[0], pz = playerPos[2];
+    const nearbyNPC = findNearestNPC(store.settlement?.npcs || [], playerPos, NPC_INTERACT_RANGE);
+    const npcDist = nearbyNPC
+      ? Math.hypot(nearbyNPC.position[0] - px, nearbyNPC.position[2] - pz)
+      : Infinity;
+
+    // Check if player is near a construction site — open delivery panel
     for (const site of store.constructionSites) {
       if (site.status === 'COMPLETE') continue;
       const building = getBuildingById(site.buildingId);
@@ -734,7 +749,8 @@ export function BlockInteraction({ chunkManager }) {
       const centerX = site.position[0] + (building.size.width * VOXEL_SIZE) / 2;
       const centerZ = site.position[2] + (building.size.depth * VOXEL_SIZE) / 2;
       const dx = px - centerX, dz = pz - centerZ;
-      if (Math.sqrt(dx * dx + dz * dz) <= CONSTRUCTION_INTERACT_RANGE) {
+      const siteDist = Math.sqrt(dx * dx + dz * dz);
+      if (siteDist <= CONSTRUCTION_INTERACT_RANGE && siteDist <= npcDist) {
         store.setActiveConstructionSite(site.id);
         useBlockCooldown.current = now;
         return true;
@@ -749,11 +765,18 @@ export function BlockInteraction({ chunkManager }) {
       const centerX = (minX + maxX) / 2;
       const centerZ = (minZ + maxZ) / 2;
       const dx = px - centerX, dz = pz - centerZ;
-      if (Math.sqrt(dx * dx + dz * dz) <= STOCKPILE_INTERACT_RANGE) {
+      const zoneDist = Math.sqrt(dx * dx + dz * dz);
+      if (zoneDist <= STOCKPILE_INTERACT_RANGE && zoneDist <= npcDist) {
         store.setActiveStockpileZone(zone.id);
         useBlockCooldown.current = now;
         return true;
       }
+    }
+
+    if (nearbyNPC) {
+      store.setActiveNPC(nearbyNPC.id);
+      useBlockCooldown.current = now;
+      return true;
     }
 
     // Block interactions need chunkManager

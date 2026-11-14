@@ -21,7 +21,7 @@ const shortcuts = {
       { key: 'D', description: 'Move right' },
       { key: 'Space', description: 'Jump' },
       { key: 'Shift', description: 'Sprint / Run' },
-      { key: 'E', description: 'Interact / Use' },
+      { key: 'E', description: 'Interact / Use (next to a settler: view details)' },
       { key: 'V', description: 'Toggle first-person mode' },
     ],
   },

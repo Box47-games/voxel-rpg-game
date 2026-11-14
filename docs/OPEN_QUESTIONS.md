@@ -21,7 +21,7 @@ From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#de
 
 | # | Question | Proposed default |
 |---|----------|------------------|
-| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | Only housing + schedule + NPC panel; dashboard and farming later |
+| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | **Decided: default.** Only housing + schedule + NPC panel; dashboard and farming later. NPC panel done; housing and schedule wait for the SettlementBridge wiring |
 | 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | Yes, if it fits in weeks 1–3 |
 | 3 | Permanent NPC death? | No — NPCs are knocked down and recover (or leave if hit again while down) |
 | 4 | Enemy navigation: full pathfinding or simple steering? | Steering + breaking through walls; A* only if playtests show stuck raids |
