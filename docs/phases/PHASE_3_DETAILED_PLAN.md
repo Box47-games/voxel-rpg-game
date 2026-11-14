@@ -87,14 +87,14 @@ Infrastructure every other Phase 3 task depends on. No new player-facing content
 **Goal:** Closing a rift is permanent across save/load (today it isn't).
 
 **Implementation tasks:**
-- [ ] Add `RiftManager.serialize()` / `deserialize(data)`: per-rift `state`, `corruptionProgress`, `anchorHealth`, `closedAt`, resurgence fields (3.3), `lastSpawnTime` reset on load
-- [ ] Include rifts in `Game3DSaveManager` (schema v7, `migrateSave`: v6 saves keep seed-generated rifts)
-- [ ] `RiftController` applies saved state after creating the manager (same seed → same rift IDs)
-- [ ] Corrupted/purified blocks are already world edits and persist via modified chunks — verify
+- [x] Add `RiftManager.serialize()` / `deserialize(data)`: per-rift `state`, `corruptionProgress`, `anchorHealth`, `lastSpawnTime` reset on load (add `closedAt` and resurgence fields with 3.3)
+- [x] Include rifts in `Game3DSaveManager` (schema v7, `migrateSave`: v6 saves keep seed-generated rifts)
+- [x] `RiftController` applies saved state after creating the manager (same seed → same rift IDs); a load before it mounts is kept in `store._pendingRiftState`
+- [x] Corrupted/purified blocks are already world edits and persist via modified chunks — verified: `CorruptionManager` writes through `ChunkManager.setBlock`
 
 **Acceptance criteria:**
-- [ ] Close a rift, save, reload: rift stays closed, land stays purified
-- [ ] Mid-closing save/load resumes CLOSING with the same progress
+- [x] Close a rift, save, reload: rift stays closed, land stays purified (unit-tested; needs an in-browser playtest)
+- [x] Mid-closing save/load resumes CLOSING with the same progress (unit-tested)
 
 **Tests:** `RiftManager.persistence.test.js`, extend `Game3DSaveManager.test.js`
 

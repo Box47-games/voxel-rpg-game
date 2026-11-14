@@ -5,6 +5,7 @@
 import useGameStore from '../../stores/useGameStore';
 import Game3DSaveManager, { validateSaveData } from '../Game3DSaveManager';
 import { ChunkManager } from '../../systems/chunks/ChunkManager';
+import { RiftManager, RiftState } from '../../systems/survival/RiftManager';
 
 async function loadChunksAround(cm, x, z) {
   cm.updatePlayerPosition(x, z);
@@ -84,6 +85,68 @@ describe('Game3DSaveManager', () => {
     // The unloaded edit comes back when the player returns
     await loadChunksAround(cm, 0, 0);
     expect(cm.getBlock(1, 61, 1)).toBe(5);
+  });
+
+  describe('rift state', () => {
+    function closeFirstRift(rm) {
+      const rift = rm.rifts[0];
+      rift.spawnedMonsterIds = [];
+      rm.beginClosing(rift.id, 0);
+      rm.closeRift(rift.id);
+      return rift.id;
+    }
+
+    test('a closed rift stays closed after save and load into a running game', async () => {
+      const rm = new RiftManager(12345);
+      useGameStore.getState().setRiftManager(rm);
+      const riftId = closeFirstRift(rm);
+      expect((await manager.saveGame(useGameStore, null, 'rifts1')).success).toBe(true);
+
+      // Same session: the game recreated its rifts from the seed
+      const fresh = new RiftManager(12345);
+      useGameStore.getState().setRiftManager(fresh);
+      expect((await manager.loadGame(useGameStore, null, 'rifts1')).success).toBe(true);
+
+      expect(fresh.rifts.find((r) => r.id === riftId).state).toBe(RiftState.CLOSED);
+      expect(useGameStore.getState()._pendingRiftState).toBeNull();
+    });
+
+    test('loading before the rift manager exists leaves the state pending', async () => {
+      const rm = new RiftManager(12345);
+      useGameStore.getState().setRiftManager(rm);
+      const riftId = closeFirstRift(rm);
+      await manager.saveGame(useGameStore, null, 'rifts2');
+
+      useGameStore.getState().reset();
+      useGameStore.getState().setRiftManager(null);
+      expect((await manager.loadGame(useGameStore, null, 'rifts2')).success).toBe(true);
+
+      const pending = useGameStore.getState()._pendingRiftState;
+      expect(pending.rifts.find((r) => r.id === riftId).state).toBe(RiftState.CLOSED);
+    });
+
+    test('v6 saves without rift data load and keep seed-generated rifts', async () => {
+      useGameStore.getState().setRiftManager(null);
+      await manager.saveGame(useGameStore, null, 'rifts3');
+      await new Promise((resolve, reject) => {
+        const tx = manager.db.transaction(['saves'], 'readwrite');
+        const store = tx.objectStore('saves');
+        const req = store.get('rifts3');
+        req.onsuccess = () => {
+          const old = { ...req.result, version: 6 };
+          delete old.rifts;
+          store.put(old);
+        };
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+
+      const rm = new RiftManager(12345);
+      useGameStore.getState().setRiftManager(rm);
+      expect((await manager.loadGame(useGameStore, null, 'rifts3')).success).toBe(true);
+      expect(rm.rifts.every((r) => r.state === RiftState.ACTIVE)).toBe(true);
+      expect(useGameStore.getState()._pendingRiftState).toBeNull();
+    });
   });
 
   test('rejects corrupted saves', () => {

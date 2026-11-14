@@ -6,13 +6,7 @@ _Last updated: 2026-11-11_
 
 ## Repository state
 
-- **Branch `claude/sweet-hopper-28hqmt` is not merged into `main`.** It is 4 commits ahead and contains:
-  - `5856fe3` Remove dead code (legacy 2D game, module system, unused assets)
-  - `3dd60b1` Roadmap & vision audit (`docs/ROADMAP_AUDIT.md`)
-  - `3512b92` Unified dev overlay (`src/components/dev/`)
-  - `62e8654` Phase 3 detailed plan (`docs/phases/PHASE_3_DETAILED_PLAN.md`)
-
-  Lint, tests and build passed on this branch. **Question:** open a PR and merge it into `main`?
+- Branch `claude/sweet-hopper-28hqmt` (dead-code removal, roadmap audit, unified dev overlay, Phase 3 plan) was merged into `main` as PR #558.
 - After the organization transfer, update `package.json` (`homepage: https://TiberiousDoom.github.io/voxel-rpg-game`, `author`, `repository.url`) to the new owner, and re-enable GitHub Pages/Actions on the new repo so `.github/workflows/deploy.yml` deploys. `vite.config.js` `base: '/voxel-rpg-game/'` stays correct if the repo name is unchanged.
 
 ## Phase 3 — decisions needed
@@ -22,7 +16,7 @@ From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#de
 | # | Question | Proposed default |
 |---|----------|------------------|
 | 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | Only housing + schedule + NPC panel; dashboard and farming later |
-| 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | Yes, if it fits in weeks 1–3 |
+| 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | **Decided: yes** (in progress) |
 | 3 | Permanent NPC death? | No — NPCs are knocked down and recover (or leave if hit again while down) |
 | 4 | Enemy navigation: full pathfinding or simple steering? | Steering + breaking through walls; A* only if playtests show stuck raids |
 | 5 | Can monsters break blocks? | Only player-placed wood/stone defenses, never terrain |
@@ -39,10 +33,10 @@ From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#de
 | 4 | Do guards use up weapon durability? (Tool durability isn't implemented yet.) | Undecided |
 | 5 | NPC recruitment | Defer to Phase 5 trade caravans |
 
-## Known bugs found while planning (not yet fixed)
+## Known bugs found while planning
 
-- **Closed rifts reopen after a reload** — rift state isn't saved; `RiftController` recreates rifts from the seed on load. Fixed by Phase 3 task 3.0.1.
-- **The rift anchor is almost never attacked** — `Enemy.jsx` ignores `targetPosition`, and `RiftController`'s anchor-hit check uses each enemy's spawn position instead of `store._enemyPositions`. Fixed by Phase 3 task 3.0.2.
+- **Fixed: closed rifts reopened after a reload** — rift state is now saved (schema v7, Phase 3 task 3.0.1).
+- **Fixed: the rift anchor was almost never attacked** — the anchor check now uses live positions from `store._enemyPositions`, and reinforcements walk to their anchor while the rift is closing unless the player is closer. The rest of task 3.0.2 (target registry, single damage path, removing the legacy Monster path) is still to do.
 
 ## Other follow-ups from the roadmap audit
 

@@ -14,7 +14,17 @@ import {
   STATUS_FREEZE_SLOW,
   STATUS_SLOW_MULT,
   STATUS_BURN_DAMAGE_TAKEN_MULT,
+  RIFT_ANCHOR_ATTACK_RANGE,
 } from '../../data/tuning';
+
+/** True while the rift a reinforcement was sent to is still being closed. */
+function isAnchorActive(rifts, riftId) {
+  if (!riftId) return false;
+  for (const r of rifts) {
+    if (r.id === riftId) return r.state === 'CLOSING';
+  }
+  return false;
+}
 
 /** Movement multiplier from active crowd-control effects. */
 function getStatusSpeedMultiplier(effects) {
@@ -58,6 +68,7 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
   const _playerPos = useRef(new THREE.Vector3());
   const _enemyPos = useRef(new THREE.Vector3());
   const _direction = useRef(new THREE.Vector3());
+  const _anchorPos = useRef(new THREE.Vector3());
 
   // Active status effects: [{ type, duration, value, tickTimer }]
   const statusEffectsRef = useRef([]);
@@ -211,7 +222,28 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
     const detectionRange = 20;
     const attackRange = 2;
 
-    if (distance < detectionRange) {
+    // Reinforcements march on their rift's anchor while it is being closed,
+    // unless the player is closer. RiftController applies the anchor damage.
+    const anchor = monsterData?.targetPosition;
+    let anchorDist = Infinity;
+    if (anchor && isAnchorActive(gameStore.rifts, monsterData.targetRiftId)) {
+      const adx = anchor[0] - enemyPos.x;
+      const adz = anchor[2] - enemyPos.z;
+      anchorDist = Math.sqrt(adx * adx + adz * adz);
+    }
+    const chasingAnchor = anchorDist < distance;
+
+    if (chasingAnchor) {
+      // Stop just inside attack range so the anchor check keeps registering hits
+      const goal = _anchorPos.current.set(anchor[0], enemyPos.y, anchor[2]);
+      const moveMult = anchorDist > RIFT_ANCHOR_ATTACK_RANGE * 0.5 ? mSpeed * speedMult : 0;
+      const direction = _direction.current.subVectors(goal, enemyPos).normalize();
+      body.setLinvel({
+        x: direction.x * moveMult,
+        y: body.linvel().y,
+        z: direction.z * moveMult,
+      }, true);
+    } else if (distance < detectionRange) {
       // Move towards player
       const direction = _direction.current.subVectors(playerPos, enemyPos).normalize();
 

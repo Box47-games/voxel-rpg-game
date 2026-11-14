@@ -112,6 +112,7 @@ export const RIFT_NOCTURNAL_DAMAGE_MULT = 1.5; // Night monster damage multiplie
 export const RIFT_CLOSE_RANGE = 8;                // World units — must be within to press E
 export const RIFT_ANCHOR_HEALTH = 100;             // Anchor HP (enemies attack it)
 export const RIFT_ANCHOR_ENEMY_DAMAGE = 10;        // Damage per enemy hit on anchor
+export const RIFT_ANCHOR_ATTACK_RANGE = 3;         // Horizontal distance at which enemies hit the anchor
 export const RIFT_CORRUPTION_FADE_SPEED = 0.02;    // Per second at max proximity (1.0→0.0 over ~50s)
 export const RIFT_FADE_PROXIMITY_RANGE = 32;       // Player must be within this for full fade speed
 export const RIFT_FADE_MIN_SPEED_MULT = 0.05;      // Fade speed multiplier when player far away

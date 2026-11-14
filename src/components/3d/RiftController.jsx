@@ -12,6 +12,7 @@ import { RiftManager, RiftState } from '../../systems/survival/RiftManager';
 import CorruptionManager from '../../systems/survival/CorruptionManager';
 import { VOXEL_SIZE, CHUNK_SIZE_Y } from '../../systems/chunks/coordinates';
 import { isSolid } from '../../systems/chunks/blockTypes';
+import { RIFT_ANCHOR_ATTACK_RANGE } from '../../data/tuning';
 
 
 /**
@@ -41,8 +42,15 @@ const RiftController = ({ chunkManager }) => {
       riftManagerRef.current = new RiftManager(12345, [0, 0, 0]);
       corruptionManagerRef.current = new CorruptionManager();
 
-      // Store rift positions for visual rendering
+      // Apply rift state loaded before this component mounted
       const rm = riftManagerRef.current;
+      const pending = useGameStore.getState()._pendingRiftState;
+      if (pending) {
+        rm.deserialize(pending);
+        useGameStore.setState({ _pendingRiftState: null });
+      }
+
+      // Store rift positions for visual rendering
       useGameStore.getState().setRifts(
         rm.rifts
           .filter(r => r.state !== RiftState.CLOSED)
@@ -173,19 +181,23 @@ const RiftController = ({ chunkManager }) => {
             position: [sx, terrainY, sz],
             riftId: spawn.riftId,
             targetPosition: spawn.targetPosition, // Anchor position
+            targetRiftId: spawn.targetRiftId,
           });
         }
       }
     }
 
     // ── Check for enemy anchor attacks ──
+    // enemy.position is the spawn point; the live position comes from Enemy.jsx
     for (const rift of closingRifts) {
       for (const enemy of state.enemies) {
         if (!enemy.targetPosition) continue;
-        const dx = enemy.position[0] - rift.x;
-        const dz = enemy.position[2] - rift.z;
+        const livePos = state._enemyPositions.get(enemy.id);
+        if (!livePos) continue;
+        const dx = livePos[0] - rift.x;
+        const dz = livePos[2] - rift.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < 3) {
+        if (dist < RIFT_ANCHOR_ATTACK_RANGE) {
           const { destroyed } = rm.damageAnchor(rift.id);
           if (destroyed) {
             if (window.addNotification) {

@@ -439,6 +439,7 @@ export class RiftManager {
         },
         // Reinforcements target the anchor, not the player
         targetPosition: [closingRift.x, 0, closingRift.z],
+        targetRiftId: closingRift.id,
         sourceRiftId: source.id,
       });
     }
@@ -452,6 +453,57 @@ export class RiftManager {
    */
   getClosingRifts() {
     return this.rifts.filter(r => r.state === RiftState.CLOSING);
+  }
+
+  // ── Persistence ────────────────────────────────────────────
+
+  /**
+   * Persistent per-rift state. Positions and IDs are not saved: they are
+   * regenerated from the seed, so the same seed yields the same rift IDs.
+   */
+  serialize() {
+    return {
+      seed: this.seed,
+      nextMonsterId: this.nextMonsterId,
+      rifts: this.rifts.map((r) => ({
+        id: r.id,
+        state: r.state,
+        corruptionProgress: r.corruptionProgress,
+        anchorHealth: r.anchorHealth,
+        isDormant: r.isDormant,
+        dormantUntil: r.dormantUntil,
+        lastReinforcementTime: r.lastReinforcementTime,
+      })),
+    };
+  }
+
+  /**
+   * Apply state from serialize(). Unknown rift IDs are ignored (e.g. if
+   * rift generation changed); rifts missing from the data keep their state.
+   */
+  deserialize(data) {
+    if (!data || !Array.isArray(data.rifts)) return;
+    if (data.seed != null && data.seed !== this.seed) return;
+    if (Number.isFinite(data.nextMonsterId)) {
+      this.nextMonsterId = Math.max(this.nextMonsterId, data.nextMonsterId);
+    }
+    const byId = new Map(this.rifts.map((r) => [r.id, r]));
+    for (const saved of data.rifts) {
+      const rift = byId.get(saved.id);
+      if (!rift || !Object.values(RiftState).includes(saved.state)) continue;
+      rift.state = saved.state;
+      rift.corruptionProgress = saved.corruptionProgress ?? rift.corruptionProgress;
+      rift.anchorHealth = saved.anchorHealth ?? 0;
+      rift.isDormant = !!saved.isDormant;
+      rift.dormantUntil = saved.dormantUntil || 0;
+      rift.lastReinforcementTime = saved.lastReinforcementTime || 0;
+      rift.lastSpawnTime = 0;
+      delete rift._chainBoost;
+      if (rift.state === RiftState.CLOSED) {
+        rift.corruptionProgress = 0;
+        rift.spawnedMonsterIds = [];
+      }
+    }
   }
 
   /**

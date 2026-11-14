@@ -243,6 +243,53 @@ describe('Enemy Component', () => {
       expect(typeof handler.applyStatusEffect).toBe('function');
     });
 
+    describe('reinforcements', () => {
+      // Player at [0,2,0] is in melee range of an enemy at [1,2,1];
+      // the anchor at [1.5,0,1.5] is closer still.
+      const reinforcement = {
+        id: 'rift_r1',
+        health: 50,
+        targetPosition: [1.5, 0, 1.5],
+        targetRiftId: 'rift-3',
+      };
+
+      test('march on an active anchor instead of attacking a farther player', () => {
+        useGameStoreMock.getState().rifts = [{ id: 'rift-3', state: 'CLOSING' }];
+        render(
+          <TestWrapper>
+            <Enemy position={[1, 2, 1]} monsterData={reinforcement} />
+          </TestWrapper>
+        );
+        act(() => advanceFrames(5));
+        expect(useGameStoreMock.getState().dealDamageToPlayer).not.toHaveBeenCalled();
+      });
+
+      test('fall back to the player once the rift is no longer closing', () => {
+        useGameStoreMock.getState().rifts = [{ id: 'rift-3', state: 'WOUNDED' }];
+        render(
+          <TestWrapper>
+            <Enemy position={[1, 2, 1]} monsterData={reinforcement} />
+          </TestWrapper>
+        );
+        act(() => advanceFrames(1));
+        expect(useGameStoreMock.getState().dealDamageToPlayer).toHaveBeenCalledTimes(1);
+      });
+
+      test('attack the player when the player is closer than the anchor', () => {
+        useGameStoreMock.getState().rifts = [{ id: 'rift-3', state: 'CLOSING' }];
+        render(
+          <TestWrapper>
+            <Enemy
+              position={[1, 2, 1]}
+              monsterData={{ ...reinforcement, targetPosition: [40, 0, 40] }}
+            />
+          </TestWrapper>
+        );
+        act(() => advanceFrames(1));
+        expect(useGameStoreMock.getState().dealDamageToPlayer).toHaveBeenCalledTimes(1);
+      });
+    });
+
     test('stun stops the enemy from attacking', () => {
       render(
         <TestWrapper>
