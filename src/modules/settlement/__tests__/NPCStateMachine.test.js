@@ -1,6 +1,6 @@
 /**
- * NPCStateMachine.test.js — Tests for the pure NPC state machine extracted
- * from SettlementTick.jsx.
+ * NPCStateMachine.test.js — Tests for the NPC needs + state machine
+ * (the live settlement NPC logic; the work loop is in NPCWorkBehavior.test.js).
  */
 
 import {
@@ -9,46 +9,14 @@ import {
   getWanderRadiusMult,
   getSocialDecayMult,
   getPersonalityHappinessBonus,
-  getDistance2D,
 } from '../NPCStateMachine';
+import { clearTasks } from '../../../systems/settlement/TaskAssignmentEngine';
+import { NPC_THOUGHT_DURATION } from '../../../data/tuning';
+import { makeNPC, makeContext, makeStockpile } from './helpers/fakeWorld';
 
-// ── Helper: build a default NPC and context ───────────────────
-
-function makeNPC(overrides = {}) {
-  return {
-    id: 'npc_1',
-    fullName: 'Test Settler',
-    personality: 'stoic',
-    position: [50, 2, 50],
-    targetPosition: null,
-    facingAngle: 0,
-    state: 'IDLE',
-    stateTimer: 0,
-    hunger: 80,
-    rest: 80,
-    social: 80,
-    happiness: 65,
-    unhappyDays: 0,
-    dayCheckpoint: 0,
-    currentJob: null,
-    arrivedAtSettlement: true,
-    eatingRestore: 0,
-    _hungryWarned: false,
-    ...overrides,
-  };
-}
-
-function makeContext(overrides = {}) {
-  return {
-    center: [50, 2, 50],
-    attractiveness: 30,
-    npcs: [],
-    inventory: { materials: { meat: 5, berry: 10 } },
-    worldTimeElapsed: 100,
-    warnedNPCs: new Set(),
-    ...overrides,
-  };
-}
+beforeEach(() => {
+  clearTasks();
+});
 
 // ── Personality helpers ───────────────────────────────────────
 
@@ -159,13 +127,16 @@ describe('APPROACHING state', () => {
     expect(updates.stateTimer).toBe(12);
   });
 
-  test('transitions to EVALUATING on arrival (dist < 1.5)', () => {
+  test('does not detect arrival itself (SettlerNPC moves the NPC to EVALUATING)', () => {
     const npc = makeNPC({ state: 'APPROACHING', stateTimer: 5, position: [50.5, 2, 50.5], targetPosition: [50, 2, 50] });
     const { updates } = tickNPC(npc, 2, makeContext());
-    expect(updates.state).toBe('EVALUATING');
-    expect(updates.stateTimer).toBe(0);
-    expect(updates.targetPosition).toBeNull();
-    expect(updates.arrivedAtSettlement).toBe(true);
+    expect(updates).toEqual({ stateTimer: 7 });
+  });
+
+  test('gives up even if it is standing at the target once the timeout has passed', () => {
+    const npc = makeNPC({ state: 'APPROACHING', stateTimer: 59, position: [50, 2, 50], targetPosition: [50, 2, 50] });
+    const { updates } = tickNPC(npc, 2, makeContext());
+    expect(updates.state).toBe('LEAVING');
   });
 
   test('transitions to LEAVING after 60s stuck', () => {
@@ -182,10 +153,9 @@ describe('APPROACHING state', () => {
     expect(updates.hunger).toBeUndefined();
   });
 
-  test('handles null position gracefully (treats as not arrived)', () => {
+  test('handles null position gracefully', () => {
     const npc = makeNPC({ state: 'APPROACHING', stateTimer: 5, position: null, targetPosition: [50, 2, 50] });
     const { updates } = tickNPC(npc, 2, makeContext());
-    // Should not transition to EVALUATING (Infinity distance)
     expect(updates.state).toBeUndefined();
     expect(updates.stateTimer).toBe(7);
   });
@@ -206,10 +176,11 @@ describe('LEAVING state', () => {
     expect(result.remove).toBe(true);
   });
 
-  test('returns remove: true when NPC reaches edge (dist < 3)', () => {
+  test('is not removed just for reaching its target — only the timeout removes it', () => {
     const npc = makeNPC({ state: 'LEAVING', stateTimer: 5, position: [200, 2, 200], targetPosition: [201, 2, 201] });
     const result = tickNPC(npc, 2, makeContext());
-    expect(result.remove).toBe(true);
+    expect(result.remove).toBeUndefined();
+    expect(result.updates).toEqual({ stateTimer: 7 });
   });
 
   test('does not return remove when far and before 30s', () => {
@@ -257,35 +228,74 @@ describe('EVALUATING state', () => {
 describe('IDLE → EATING', () => {
   test('transitions to EATING when hunger < critical and food available', () => {
     const npc = makeNPC({ state: 'IDLE', hunger: 10 });
-    const { updates, consumeFood } = tickNPC(npc, 2, makeContext());
+    const ctx = makeContext();
+    const { updates } = tickNPC(npc, 2, ctx);
     expect(updates.state).toBe('EATING');
-    expect(updates.eatingRestore).toBeDefined();
-    expect(consumeFood).toBeDefined();
-    expect(consumeFood.qty).toBe(1);
+    expect(updates.stateTimer).toBe(0);
+    expect(updates.eatingRestore).toBe(15);
+    expect(updates.thoughtBubble).toEqual({ type: 'hungry', timer: NPC_THOUGHT_DURATION });
+    expect(updates._hungryWarned).toBe(false);
+    expect(ctx.host.removeMaterial).toHaveBeenCalledTimes(1);
+    expect(ctx.host.removeMaterial).toHaveBeenCalledWith('meat', 1);
   });
 
   test('prefers meat over berry (priority order)', () => {
     const npc = makeNPC({ state: 'IDLE', hunger: 10 });
-    const { consumeFood } = tickNPC(npc, 2, makeContext({ inventory: { materials: { meat: 1, berry: 5 } } }));
-    expect(consumeFood.material).toBe('meat');
+    const ctx = makeContext({ inventory: { materials: { meat: 1, berry: 5 } } });
+    tickNPC(npc, 2, ctx);
+    expect(ctx.host.removeMaterial).toHaveBeenCalledWith('meat', 1);
   });
 
   test('falls back to berry when no meat', () => {
     const npc = makeNPC({ state: 'IDLE', hunger: 10 });
-    const { consumeFood } = tickNPC(npc, 2, makeContext({ inventory: { materials: { berry: 5 } } }));
-    expect(consumeFood.material).toBe('berry');
+    const ctx = makeContext({ inventory: { materials: { berry: 5 } } });
+    const { updates } = tickNPC(npc, 2, ctx);
+    expect(ctx.host.removeMaterial).toHaveBeenCalledWith('berry', 1);
+    expect(updates.eatingRestore).toBe(10);
+  });
+
+  test('eats from a stockpile before touching the player inventory', () => {
+    const npc = makeNPC({ state: 'IDLE', hunger: 10 });
+    const stockpile = makeStockpile({ storage: { items: { berry: 3 }, capacity: 100, usedCapacity: 3 } });
+    const ctx = makeContext({ zones: [stockpile], inventory: { materials: { meat: 5 } } });
+    const { updates } = tickNPC(npc, 2, ctx);
+    expect(updates.state).toBe('EATING');
+    expect(updates.eatingRestore).toBe(10); // the stockpile's berry, not the inventory's meat
+    expect(ctx.host.consumeFromStockpile).toHaveBeenCalledWith('stock_1', 'berry', 1);
+    expect(ctx.host.removeMaterial).not.toHaveBeenCalled();
+    expect(ctx.host.getZones()[0].storage.items.berry).toBe(2);
+  });
+
+  test('ignores stockpiles without storage and non-stockpile zones', () => {
+    const npc = makeNPC({ state: 'IDLE', hunger: 10 });
+    const zones = [
+      { id: 'mine_1', type: 'MINING', bounds: {}, storage: { items: { meat: 9 } } },
+      makeStockpile({ storage: null }),
+    ];
+    const ctx = makeContext({ zones, inventory: { materials: { berry: 1 } } });
+    tickNPC(npc, 2, ctx);
+    expect(ctx.host.consumeFromStockpile).not.toHaveBeenCalled();
+    expect(ctx.host.removeMaterial).toHaveBeenCalledWith('berry', 1);
   });
 
   test('stays IDLE and warns when no food available', () => {
     const npc = makeNPC({ state: 'IDLE', hunger: 10, _hungryWarned: false });
     const ctx = makeContext({ inventory: { materials: {} } });
-    const { updates, notifications, consumeFood } = tickNPC(npc, 2, ctx);
+    const { updates, notifications } = tickNPC(npc, 2, ctx);
     expect(updates.state).toBeUndefined(); // stays IDLE
-    expect(consumeFood).toBeUndefined();
+    expect(ctx.host.removeMaterial).not.toHaveBeenCalled();
     expect(updates._hungryWarned).toBe(true);
     expect(notifications).toEqual(
       expect.arrayContaining([expect.objectContaining({ title: 'No Food' })])
     );
+  });
+
+  test('warns about missing food only once', () => {
+    const npc = makeNPC({ state: 'IDLE', hunger: 10, _hungryWarned: true });
+    const ctx = makeContext({ inventory: { materials: {} } });
+    const { updates, notifications } = tickNPC(npc, 2, ctx);
+    expect(notifications).toEqual([]);
+    expect(updates._hungryWarned).toBeUndefined();
   });
 });
 
@@ -412,11 +422,11 @@ describe('WANDERING → IDLE', () => {
     expect(updates.state).toBe('IDLE');
   });
 
-  test('transitions to IDLE on arrival at target (dist < 1.5)', () => {
+  test('keeps wandering near its target until SettlerNPC reports arrival', () => {
     const npc = makeNPC({ state: 'WANDERING', stateTimer: 3, position: [60, 2, 60], targetPosition: [60.5, 2, 60.5] });
     const { updates } = tickNPC(npc, 2, makeContext());
-    expect(updates.state).toBe('IDLE');
-    expect(updates.targetPosition).toBeNull();
+    expect(updates.state).toBeUndefined();
+    expect(updates.stateTimer).toBe(5);
   });
 });
 
@@ -506,60 +516,51 @@ describe('Unhappy day tracking', () => {
   });
 });
 
-// ── getDistance2D helper ─────────────────────────────────────
+// ── Thought bubbles ──────────────────────────────────────────
 
-describe('getDistance2D', () => {
-  test('calculates 2D distance ignoring Y', () => {
-    expect(getDistance2D([0, 0, 0], [3, 99, 4])).toBeCloseTo(5, 5);
+describe('Thought bubbles', () => {
+  test('counts the bubble timer down each tick', () => {
+    const npc = makeNPC({ state: 'EATING', stateTimer: 0, eatingRestore: 15, thoughtBubble: { type: 'hungry', timer: 4 } });
+    const { updates } = tickNPC(npc, 1.5, makeContext());
+    expect(updates.thoughtBubble).toEqual({ type: 'hungry', timer: 2.5 });
   });
 
-  test('returns Infinity for null positions', () => {
-    expect(getDistance2D(null, [0, 0, 0])).toBe(Infinity);
-    expect(getDistance2D([0, 0, 0], null)).toBe(Infinity);
-    expect(getDistance2D(null, null)).toBe(Infinity);
+  test('clears the bubble when its timer runs out', () => {
+    const npc = makeNPC({ state: 'EATING', stateTimer: 0, eatingRestore: 15, thoughtBubble: { type: 'hungry', timer: 1 } });
+    const { updates } = tickNPC(npc, 1.5, makeContext());
+    expect(updates.thoughtBubble).toBeNull();
   });
 
-  test('returns 0 for same position', () => {
-    expect(getDistance2D([5, 2, 10], [5, 99, 10])).toBeCloseTo(0, 5);
+  test('leaves thoughtBubble alone when the NPC has none', () => {
+    const npc = makeNPC({ state: 'EATING', stateTimer: 0, eatingRestore: 15 });
+    const { updates } = tickNPC(npc, 1.5, makeContext());
+    expect('thoughtBubble' in updates).toBe(false);
+  });
+
+  test('going to sleep shows a sleeping bubble', () => {
+    const npc = makeNPC({ state: 'IDLE', rest: 10 });
+    const { updates } = tickNPC(npc, 2, makeContext());
+    expect(updates.thoughtBubble).toEqual({ type: 'sleeping', timer: NPC_THOUGHT_DURATION });
+  });
+
+  test('starting to socialize shows a socializing bubble', () => {
+    const npc = makeNPC({ state: 'IDLE', social: 5 });
+    const other = makeNPC({ id: 'npc_2', position: [55, 2, 50] });
+    const { updates } = tickNPC(npc, 2, makeContext({ npcs: [npc, other] }));
+    expect(updates.state).toBe('SOCIALIZING');
+    expect(updates.thoughtBubble).toEqual({ type: 'socializing', timer: NPC_THOUGHT_DURATION });
   });
 });
 
-// ── HAULING / BUILDING work states ──────────────────────────
+// ── Unknown states ───────────────────────────────────────────
 
-describe('Work states (HAULING/BUILDING)', () => {
-  test('stays in HAULING when needs are fine', () => {
-    const npc = makeNPC({ state: 'HAULING', hunger: 80, rest: 80, currentJob: 'haul_site1' });
-    const { updates } = tickNPC(npc, 2, makeContext());
-    expect(updates.state).toBeUndefined(); // stays in HAULING
-    expect(updates.currentJob).toBeUndefined();
-  });
-
-  test('stays in BUILDING when needs are fine', () => {
-    const npc = makeNPC({ state: 'BUILDING', hunger: 80, rest: 80, currentJob: 'build_site1' });
-    const { updates } = tickNPC(npc, 2, makeContext());
-    expect(updates.state).toBeUndefined();
-  });
-
-  test('interrupts HAULING to EATING when hunger critical and food available', () => {
-    const npc = makeNPC({ state: 'HAULING', hunger: 10, rest: 80, currentJob: 'haul_site1' });
-    const { updates, consumeFood } = tickNPC(npc, 2, makeContext());
-    expect(updates.state).toBe('EATING');
-    expect(updates.currentJob).toBeNull();
-    expect(consumeFood).toBeDefined();
-  });
-
-  test('interrupts BUILDING to SLEEPING when rest critical', () => {
-    const npc = makeNPC({ state: 'BUILDING', hunger: 80, rest: 10, currentJob: 'build_site1' });
-    const { updates } = tickNPC(npc, 2, makeContext());
-    expect(updates.state).toBe('SLEEPING');
-    expect(updates.currentJob).toBeNull();
-  });
-
-  test('interrupts to IDLE when hunger critical but no food', () => {
-    const npc = makeNPC({ state: 'HAULING', hunger: 10, rest: 80, currentJob: 'haul_site1' });
-    const ctx = makeContext({ inventory: { materials: {} } });
+describe('Unknown states', () => {
+  test('an unrecognised state only has its needs and timer ticked', () => {
+    const npc = makeNPC({ state: 'HAULING', hunger: 10, rest: 10 });
+    const ctx = makeContext();
     const { updates } = tickNPC(npc, 2, ctx);
-    expect(updates.state).toBe('IDLE');
-    expect(updates.currentJob).toBeNull();
+    expect(updates.state).toBeUndefined();
+    expect(updates.stateTimer).toBe(2);
+    expect(ctx.host.removeMaterial).not.toHaveBeenCalled();
   });
 });

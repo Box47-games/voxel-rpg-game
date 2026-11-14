@@ -190,7 +190,8 @@ const ContextualHints = () => {
         if (gameState !== 'playing') return false;
         const s = useGameStore.getState();
         const mod = s._settlementModule;
-        if (!mod || !mod.housingManager) return false;
+        // Housing assignment is not live yet; the engine flips housingEnabled when it is.
+        if (!mod || !mod.housingEnabled || !mod.housingManager) return false;
         return s.settlement.npcs.length > 1 &&
           mod.housingManager.getTotalCapacity() < s.settlement.npcs.length;
       },

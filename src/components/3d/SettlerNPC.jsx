@@ -131,9 +131,9 @@ const SettlerNPC = React.memo(({ npcData }) => {
 
     let moving = false;
 
-    // State transitions (APPROACHING→EVALUATING, WANDERING→IDLE, LEAVING→remove)
-    // are handled by NPCStateMachine.tickNPC() in the module layer.
-    // This component only handles movement, rendering, and position writes.
+    // This component moves the NPC toward targetPosition and performs the
+    // on-arrival transitions below (APPROACHING→EVALUATING, WANDERING/SOCIALIZING→IDLE).
+    // Everything else (needs, work, timeouts, removal) is NPCStateMachine.tickNPC().
 
     if (npc.targetPosition) {
       // Move toward target
@@ -144,7 +144,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
       if (dist < 1.5) {
         // Arrived at target
         if (npc.state === 'APPROACHING' && (npc.stateTimer || 0) <= 60) {
-          // Transition to EVALUATING (skip if SettlementTick already timed out to LEAVING)
+          // Transition to EVALUATING (skip if the state machine already timed out to LEAVING)
           store.updateSettlementNPC(npc.id, {
             targetPosition: null,
             arrivedAtSettlement: true,
@@ -159,7 +159,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
             stateTimer: npc.state === 'WANDERING' ? 0 : npc.stateTimer,
           });
         }
-        // Work states: don't clear targetPosition here — SettlementTick handles arrival
+        // Work states: don't clear targetPosition here — NPCWorkBehavior handles arrival
       } else {
         // Determine speed based on state
         let speed = NPC_WALK_SPEED;

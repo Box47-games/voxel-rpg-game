@@ -1,22 +1,23 @@
 /**
- * SettlementModule.js - Central coordinator for Phase 2 settlement systems
+ * SettlementModule.js - Headless settlement engine for the 3D game
  *
- * Hosts all settlement subsystems and integrates with the ModuleOrchestrator.
- * Sub-managers are ticked in a strict order each game tick:
- *   Immigration → Zone → Stockpile → Construction → Hauling → TaskAssignment → Housing
+ * LIVE PATH: SettlementTick.jsx → SettlementBridge → tickSettlementCore().
+ * It runs campfire detection, attractiveness, immigration, the NPC needs/state
+ * machine (NPCStateMachine) and the work loop (NPCWorkBehavior). The Zustand
+ * store stays the source of truth for NPCs, zones, stockpiles and construction
+ * sites (that is what gets saved); this module only keeps timers and other
+ * throwaway state, and changes the world through the host port it is given.
  *
- * Inter-module communication:
- *   Settlement → ResourceEconomyModule: stockpile deposits/withdrawals
- *   Settlement → NPCManager: immigration spawns NPCs through NPCManager
- *   Settlement → GridManager: completed constructions registered as buildings
- *   Settlement → TownManager: population/housing changes forwarded
- *   NPCManager → Settlement: NPC tick delegates to TaskAssignment for work decisions
- *   BuildingConfig → Settlement: building effects and blueprints read from config
+ * NOT ON THE LIVE PATH (yet): update() and the class-based sub-managers created
+ * in initialize() — ZoneManager, Mining/FarmingZoneBehavior, StockpileManager,
+ * HaulingManager, ConstructionManager, HousingManager, ImmigrationManager. They
+ * keep their own state, are covered by their own tests, and are the seams for
+ * later features (farming zones, housing assignment). Nothing feeds them from
+ * the store today.
  */
 
 import {
   IMMIGRATION_CHECK_INTERVAL,
-  ATTRACTIVENESS_CAMPFIRE_BONUS,
   ATTRACT_RECALC_INTERVAL,
   IMMIGRATION_THRESHOLD,
   IMMIGRATION_THRESHOLD_PER_NPC,
@@ -24,6 +25,14 @@ import {
   IMMIGRATION_SPAWN_MAX_DIST,
   IMMIGRATION_MAX_NPCS,
   NPC_NEEDS_TICK_INTERVAL,
+  WORK_SCAN_INTERVAL,
+  HOUSING_WALLS_PER_SLOT,
+  HOUSING_MIN_NPC_CAP,
+  SETTLEMENT_CAMPFIRE_SCAN_INTERVAL,
+  NPC_INITIAL_HUNGER,
+  NPC_INITIAL_REST,
+  NPC_INITIAL_SOCIAL,
+  NPC_INITIAL_HAPPINESS,
 } from '../../data/tuning.js';
 
 import AttractivenessCalculator from './AttractivenessCalculator.js';
@@ -35,23 +44,17 @@ import FarmingZoneBehavior from './FarmingZoneBehavior.js';
 import StockpileManager from './StockpileManager.js';
 import { HaulingManager } from '../hauling/HaulingManager.js';
 import { ConstructionManager } from '../construction/ConstructionManager.js';
-import TaskAssignmentEngine from './TaskAssignmentEngine.js';
 import HousingManager from './HousingManager.js';
 import ChunkAttractivenessAdapter from './ChunkAttractivenessAdapter.js';
-import { scanForCampfire, getTerrainYAt } from './CampfireDetector.js';
+import { scanChunkForCampfire, getTerrainYAt } from './CampfireDetector.js';
 import { tickNPC } from './NPCStateMachine.js';
 import { generateNPCIdentity } from '../../data/npcIdentity.js';
+import { scanForTasks } from '../../systems/settlement/TaskAssignmentEngine.js';
 
 class SettlementModule {
   /**
-   * @param {Object} deps - Module dependencies from GameManager
-   * @param {Object} deps.npcManager - NPCManager instance
-   * @param {Object} deps.storage - StorageManager instance
-   * @param {Object} deps.townManager - TownManager instance
-   * @param {Object} deps.grid - GridManager instance
-   * @param {Object} deps.buildingConfig - BuildingConfig instance
-   * @param {Object} deps.territoryManager - TerritoryManager instance
-   * @param {Object} deps.npcNeedsTracker - NPCNeedsTracker instance (optional)
+   * @param {Object} [deps] - Optional collaborators for the legacy update() path.
+   *   The live game constructs the module with none.
    */
   constructor(deps = {}) {
     this.npcManager = deps.npcManager || null;
@@ -73,8 +76,10 @@ class SettlementModule {
     // Sub-managers (created in initialize, Batches 5-8):
     this.haulingManager = null;
     this.constructionManager = null;
-    this.taskAssignmentEngine = null;
     this.housingManager = null;
+    // Seam: housing assignment is not a live feature yet. UI that would nag the
+    // player about housing (ContextualHints) stays quiet while this is false.
+    this.housingEnabled = false;
 
     // Timing
     this.tickCount = 0;
@@ -83,22 +88,36 @@ class SettlementModule {
     // Event listeners
     this._eventListeners = new Map();
 
-    // ── Core tick state (used by tickSettlementCore, driven by bridge) ──
+    // ── Core tick state (used by tickSettlementCore, driven by the bridge) ──
     this.chunkAdapter = null;
+    this.host = null;
     this.chunkAttractiveness = null;
-    this.settlementCenter = null;
     this._warnedNPCs = new Set();
     this._npcIdCounter = 0;
     this._campfireAccum = 0;
+    this._campfireScanIdx = 0;
     this._attractAccum = 0;
     this._immigrationAccum = 0;
     this._needsAccum = 0;
+    this._workScanAccum = 0;
+    // Reused every frame so the per-frame tick allocates nothing.
+    this._results = {
+      campfireCenter: null,
+      attractivenessUpdated: false,
+      attractiveness: 0,
+      wallCount: 0,
+      newNPC: null,
+      batchUpdates: null,
+      removeIds: null,
+      notifications: null,
+      needsTicked: false,
+    };
 
     this.initialized = false;
   }
 
   /**
-   * Initialize all sub-managers. Called after orchestrator is constructed.
+   * Initialize all sub-managers. Must be called before the first tick.
    */
   initialize() {
     if (this.initialized) return;
@@ -177,14 +196,6 @@ class SettlementModule {
       constructionManager: this.constructionManager,
     });
 
-    // Batch 7: Task assignment
-    this.taskAssignmentEngine = new TaskAssignmentEngine({
-      haulingManager: this.haulingManager,
-      constructionManager: this.constructionManager,
-      miningBehavior: this.miningBehavior,
-      farmingBehavior: this.farmingBehavior,
-    });
-
     // Batch 8: Housing
     this.housingManager = new HousingManager();
 
@@ -195,17 +206,36 @@ class SettlementModule {
   }
 
   /**
-   * Set the chunk adapter for campfire detection and chunk-based attractiveness.
+   * Set the chunk adapter (world block access).
    * Called by SettlementBridge when chunkManager becomes available.
-   * @param {Object} adapter - { iterateChunks(), getBlock(), getRawChunkManager() }
+   * @param {Object} adapter - { iterateChunks(), getBlock(), setBlock(), getRawChunkManager() }
    */
   setChunkAdapter(adapter) {
     this.chunkAdapter = adapter;
   }
 
   /**
-   * Update all settlement sub-managers for one game tick.
-   * Called from ModuleOrchestrator.executeTick() in Step 4.8.
+   * Set the host port: how the engine changes the world outside the NPC list.
+   * The live implementation (SettlementBridge) forwards to useGameStore.
+   *
+   * @param {Object} host
+   * @param {() => Object[]} host.getZones - Current zones (fresh, not the tick snapshot)
+   * @param {() => Object[]} host.getConstructionSites - Current construction sites (fresh)
+   * @param {(zoneId, material, amount) => void} host.consumeFromStockpile
+   * @param {(zoneId, updates) => void} host.updateZone
+   * @param {(material, amount) => void} host.addMaterial - To the player's inventory
+   * @param {(material, amount) => void} host.removeMaterial - From the player's inventory
+   * @param {(siteId, material, amount) => void} host.npcDeliverToConstruction
+   * @param {(siteId) => void} host.advanceConstruction
+   * @param {(text, color) => void} host.addPickupText
+   */
+  setHost(host) {
+    this.host = host;
+  }
+
+  /**
+   * Update the class-based sub-managers for one tick.
+   * Not called by the live game (see the file header); kept for the sub-manager tests.
    *
    * @param {number} deltaTime - Time since last tick in milliseconds
    * @param {Object} gameState - Current game state from orchestrator
@@ -281,173 +311,181 @@ class SettlementModule {
   // ── Core Settlement Tick (driven by SettlementBridge) ──────
 
   /**
-   * Tick campfire detection, attractiveness, immigration, and NPC state machines.
-   * Called every frame by the bridge; internal accumulators gate actual work.
+   * Run one frame of the live settlement simulation: campfire detection,
+   * attractiveness, immigration, task scanning and the NPC state machines.
+   * Called every frame; internal accumulators gate the actual work.
    *
-   * This is SEPARATE from update() which handles zones/mining/farming/stockpiles
-   * via the ModuleOrchestrator.
+   * World changes (stockpiles, inventory, blocks, construction) are applied
+   * immediately through the host. Changes to the settlement slice itself come
+   * back in the result for the bridge to write.
+   *
+   * The returned object is reused between calls — read it, don't keep it.
    *
    * @param {number} deltaSeconds - Frame delta in seconds (from useFrame)
-   * @param {Object} storeSnapshot - { settlement, inventory, worldTimeElapsed }
-   * @returns {Object} Results for the bridge to sync back to the store
+   * @param {Object} state - Game state as of the start of the frame:
+   *   { settlement, zones, constructionSites, inventory, rifts, worldTime }
+   *   (the live bridge passes the store state itself)
+   * @returns {Object|null} Results for the bridge to sync back to the store
    */
-  tickSettlementCore(deltaSeconds, storeSnapshot) {
-    if (!this.initialized || !this.chunkAdapter) {
-      return null;
-    }
+  tickSettlementCore(deltaSeconds, state) {
+    if (!this.initialized || !this.chunkAdapter || !this.host) return null;
 
-    const settlement = storeSnapshot.settlement;
-    const results = {
-      campfireCenter: null,
-      attractiveness: 0,
-      wallCount: 0,
-      attractivenessUpdated: false,
-      newNPC: null,
-      batchUpdates: {},
-      removeIds: [],
-      notifications: [],
-      foodConsumptions: [],
-      timestamps: {},
-    };
+    const settlement = state.settlement;
+    if (!settlement) return null;
 
-    // ── Step 0: Campfire detection (every 5s, until center found) ──
-    if (!this.settlementCenter) {
-      this._campfireAccum += deltaSeconds;
-      if (this._campfireAccum >= 5) {
+    const results = this._results;
+    results.campfireCenter = null;
+    results.attractivenessUpdated = false;
+    results.newNPC = null;
+    results.batchUpdates = null;
+    results.removeIds = null;
+    results.notifications = null;
+    results.needsTicked = false;
+
+    // ── 1. Campfire detection (until a center is found) ──
+    this._campfireAccum += deltaSeconds;
+    const center = settlement.settlementCenter;
+    if (!center) {
+      // No settlement (new game / reset): forget warnings from the last one
+      if (this._warnedNPCs.size > 0) this._warnedNPCs.clear();
+
+      if (this._campfireAccum >= SETTLEMENT_CAMPFIRE_SCAN_INTERVAL) {
         this._campfireAccum = 0;
-        const found = scanForCampfire(this.chunkAdapter);
-        if (found) {
-          this.settlementCenter = found;
-          results.campfireCenter = found;
-          return results; // Early return — matches original behavior
-        }
+        results.campfireCenter = this._scanNextChunkForCampfire();
       }
       return results; // No center yet — skip everything else
     }
 
-    const center = this.settlementCenter;
-
-    // ── Step 1: Attractiveness recalc ──
+    // ── 2. Attractiveness recalc ──
     this._attractAccum += deltaSeconds;
     if (this._attractAccum >= ATTRACT_RECALC_INTERVAL) {
       this._attractAccum = 0;
-      this.chunkAttractiveness.recalculate(center, this.chunkAdapter, storeSnapshot);
+      this.chunkAttractiveness.recalculate(center, this.chunkAdapter, state);
       results.attractiveness = this.chunkAttractiveness.getScore();
       results.wallCount = this.chunkAttractiveness.getWallCount();
       results.attractivenessUpdated = true;
     }
 
-    // Use latest attractiveness (from this frame or previously cached)
-    const currentAttractiveness = results.attractivenessUpdated
-      ? results.attractiveness
-      : settlement.attractiveness;
-    const currentWallCount = results.attractivenessUpdated
-      ? results.wallCount
-      : (settlement.wallCount || 0);
+    // Immigration and EVALUATING NPCs deliberately use the attractiveness and
+    // wall count from the start of the frame (i.e. the previous recalculation),
+    // not the one computed just above. That is how the game has always behaved.
 
-    // ── Step 2: Immigration check ──
+    // ── 3. Immigration check ──
     this._immigrationAccum += deltaSeconds;
     if (this._immigrationAccum >= IMMIGRATION_CHECK_INTERVAL) {
       this._immigrationAccum = 0;
-      const npcCount = settlement.npcs.length;
-      const threshold = IMMIGRATION_THRESHOLD + npcCount * IMMIGRATION_THRESHOLD_PER_NPC;
-      const housingSlots = Math.floor(currentWallCount / 25);
-      const maxNPCs = Math.min(IMMIGRATION_MAX_NPCS, Math.max(3, housingSlots));
-
-      if (currentAttractiveness >= threshold && npcCount < maxNPCs) {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = IMMIGRATION_SPAWN_MIN_DIST +
-          Math.random() * (IMMIGRATION_SPAWN_MAX_DIST - IMMIGRATION_SPAWN_MIN_DIST);
-        const spawnX = center[0] + Math.cos(angle) * dist;
-        const spawnZ = center[2] + Math.sin(angle) * dist;
-        const spawnY = getTerrainYAt(this.chunkAdapter, spawnX, spawnZ);
-
-        const seed = Date.now() ^ (++this._npcIdCounter * 2654435761);
-        const identity = generateNPCIdentity(seed);
-
-        results.newNPC = {
-          id: `npc_${Date.now()}_${this._npcIdCounter}`,
-          ...identity,
-          position: [spawnX, spawnY, spawnZ],
-          targetPosition: [...center],
-          facingAngle: 0,
-          state: 'APPROACHING',
-          stateTimer: 0,
-          hunger: 80,
-          rest: 80,
-          social: 80,
-          happiness: 65,
-          unhappyDays: 0,
-          dayCheckpoint: storeSnapshot.worldTimeElapsed,
-          currentJob: null,
-          arrivedAtSettlement: false,
-        };
-      }
-      results.timestamps.lastImmigrationCheck = Date.now();
+      results.newNPC = this._tryImmigration(settlement, center, state.worldTime.elapsed);
     }
 
-    // ── Step 3: NPC state machine tick ──
+    // ── 3b. Work task scan ──
+    this._workScanAccum += deltaSeconds;
+    if (this._workScanAccum >= WORK_SCAN_INTERVAL) {
+      this._workScanAccum = 0;
+      scanForTasks(state.zones, state.constructionSites, this.chunkAdapter);
+    }
+
+    // ── 4. NPC needs + state machines ──
     this._needsAccum += deltaSeconds;
     if (this._needsAccum >= NPC_NEEDS_TICK_INTERVAL) {
       const tickDelta = this._needsAccum;
       this._needsAccum = 0;
-
-      const context = {
-        center,
-        attractiveness: currentAttractiveness,
-        npcs: settlement.npcs,
-        inventory: storeSnapshot.inventory,
-        worldTimeElapsed: storeSnapshot.worldTimeElapsed,
-        warnedNPCs: this._warnedNPCs,
-      };
-
-      for (const npc of settlement.npcs) {
-        const { updates, remove, notifications, consumeFood } = tickNPC(npc, tickDelta, context);
-
-        if (remove) {
-          results.removeIds.push(npc.id);
-        } else {
-          results.batchUpdates[npc.id] = updates;
-        }
-
-        if (notifications && notifications.length > 0) {
-          results.notifications.push(...notifications);
-        }
-
-        if (consumeFood) {
-          results.foodConsumptions.push(consumeFood);
-        }
-      }
-
-      results.timestamps.lastNeedsUpdate = Date.now();
-    }
-
-    // ── Step 4: Task assignment (assign idle NPCs to work) ──
-    if (this.taskAssignmentEngine) {
-      const assignments = this.taskAssignmentEngine.update(
-        deltaSeconds, settlement.npcs, center
-      );
-      for (const a of assignments) {
-        results.batchUpdates[a.npcId] = {
-          ...(results.batchUpdates[a.npcId] || {}),
-          state: a.state,
-          stateTimer: 0,
-          currentJob: a.currentJob,
-          targetPosition: a.targetPosition || null,
-        };
-      }
-    }
-
-    // ── Step 5: Housing (auto-assign new NPCs) ──
-    if (this.housingManager) {
-      for (const npc of settlement.npcs) {
-        if (npc.state === 'IDLE' && !this.housingManager.getAssignment(npc.id)) {
-          this.housingManager.assignNPC(npc.id);
-        }
-      }
+      this._tickNPCs(tickDelta, settlement, center, state, results);
     }
 
     return results;
+  }
+
+  /** Scan one loaded chunk per call (round-robin) to amortize the cost. */
+  _scanNextChunkForCampfire() {
+    const chunks = Array.from(this.chunkAdapter.iterateChunks());
+    if (chunks.length === 0) return null;
+    const scanIdx = this._campfireScanIdx % chunks.length;
+    this._campfireScanIdx = scanIdx + 1;
+    return scanChunkForCampfire(chunks[scanIdx]);
+  }
+
+  /** @returns {Object|null} A new APPROACHING NPC if one is attracted this check */
+  _tryImmigration(settlement, center, worldTimeElapsed) {
+    const npcCount = settlement.npcs.length;
+    const threshold = IMMIGRATION_THRESHOLD + npcCount * IMMIGRATION_THRESHOLD_PER_NPC;
+
+    // Housing-based population cap
+    const housingSlots = Math.floor((settlement.wallCount || 0) / HOUSING_WALLS_PER_SLOT);
+    const maxNPCs = Math.min(IMMIGRATION_MAX_NPCS, Math.max(HOUSING_MIN_NPC_CAP, housingSlots));
+
+    if (!(settlement.attractiveness >= threshold && npcCount < maxNPCs)) return null;
+
+    const angle = Math.random() * Math.PI * 2;
+    const dist = IMMIGRATION_SPAWN_MIN_DIST +
+      Math.random() * (IMMIGRATION_SPAWN_MAX_DIST - IMMIGRATION_SPAWN_MIN_DIST);
+    const spawnX = center[0] + Math.cos(angle) * dist;
+    const spawnZ = center[2] + Math.sin(angle) * dist;
+    const spawnY = getTerrainYAt(this.chunkAdapter, spawnX, spawnZ);
+
+    const seed = Date.now() ^ (++this._npcIdCounter * 2654435761);
+    const identity = generateNPCIdentity(seed);
+
+    return {
+      id: `npc_${Date.now()}_${this._npcIdCounter}`,
+      ...identity,
+      position: [spawnX, spawnY, spawnZ],
+      targetPosition: [...center],
+      facingAngle: 0,
+      state: 'APPROACHING',
+      stateTimer: 0,
+      hunger: NPC_INITIAL_HUNGER,
+      rest: NPC_INITIAL_REST,
+      social: NPC_INITIAL_SOCIAL,
+      happiness: NPC_INITIAL_HAPPINESS,
+      unhappyDays: 0,
+      dayCheckpoint: worldTimeElapsed,
+      currentJob: null,
+      arrivedAtSettlement: false,
+    };
+  }
+
+  _tickNPCs(tickDelta, settlement, center, state, results) {
+    const batchUpdates = {};
+    const removeIds = [];
+    const notifications = [];
+    let anyTaskCompleted = false;
+
+    const context = {
+      center,
+      attractiveness: settlement.attractiveness,
+      npcs: settlement.npcs,
+      zones: state.zones,
+      constructionSites: state.constructionSites,
+      inventory: state.inventory,
+      worldTimeElapsed: state.worldTime.elapsed,
+      warnedNPCs: this._warnedNPCs,
+      chunkAdapter: this.chunkAdapter,
+      host: this.host,
+      notifications,
+    };
+
+    for (const npc of settlement.npcs) {
+      const { updates, remove, taskCompleted } = tickNPC(npc, tickDelta, context);
+      if (remove) {
+        removeIds.push(npc.id);
+      } else {
+        batchUpdates[npc.id] = updates;
+      }
+      if (taskCompleted) anyTaskCompleted = true;
+    }
+
+    // If any NPC completed a task, re-scan immediately so idle NPCs find new
+    // work on the next tick instead of waiting for WORK_SCAN_INTERVAL. Uses
+    // fresh zones/sites: they were changed through the host during this tick.
+    if (anyTaskCompleted) {
+      scanForTasks(this.host.getZones(), this.host.getConstructionSites(), this.chunkAdapter);
+      this._workScanAccum = 0;
+    }
+
+    results.batchUpdates = batchUpdates;
+    results.removeIds = removeIds;
+    results.notifications = notifications;
+    results.needsTicked = true;
   }
 
   // ── Event System ────────────────────────────────────────────
@@ -502,10 +540,8 @@ class SettlementModule {
       // Batches 5-8 sub-managers
       hauling: this.haulingManager && this.haulingManager.toJSON ? this.haulingManager.toJSON() : null,
       construction: this.constructionManager && this.constructionManager.toJSON ? this.constructionManager.toJSON() : null,
-      taskAssignment: this.taskAssignmentEngine ? this.taskAssignmentEngine.serialize() : null,
       housing: this.housingManager ? this.housingManager.serialize() : null,
       // Core tick state
-      settlementCenter: this.settlementCenter,
       npcIdCounter: this._npcIdCounter,
       warnedNPCs: Array.from(this._warnedNPCs),
     };
@@ -546,16 +582,10 @@ class SettlementModule {
     if (state.construction && this.constructionManager && this.constructionManager.fromJSON) {
       // ConstructionManager.fromJSON is static, but we can load into existing instance
     }
-    if (state.taskAssignment && this.taskAssignmentEngine) {
-      this.taskAssignmentEngine.deserialize(state.taskAssignment);
-    }
     if (state.housing && this.housingManager) {
       this.housingManager.deserialize(state.housing);
     }
     // Core tick state
-    if (state.settlementCenter) {
-      this.settlementCenter = state.settlementCenter;
-    }
     if (state.npcIdCounter != null) {
       this._npcIdCounter = state.npcIdCounter;
     }

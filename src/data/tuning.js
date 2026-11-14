@@ -381,3 +381,22 @@ export const STATUS_FREEZE_SLOW = 0.5;         // Speed multiplier while frozen
 export const STATUS_SLOW_MULT = 0.7;           // Speed multiplier while slowed
 export const STATUS_BURN_DAMAGE_TAKEN_MULT = 1.25; // Extra damage taken while burning
 export const SHIELD_DAMAGE_REDUCTION = 0.5;    // Fraction of damage absorbed while shielded (until shield HP runs out)
+
+// ─── Settlement Core Tick (SettlementModule.tickSettlementCore) ──
+export const SETTLEMENT_CAMPFIRE_SCAN_INTERVAL = 2; // Seconds between campfire scans (one loaded chunk per scan)
+export const NPC_INITIAL_HUNGER = 80;          // Needs an immigrant arrives with
+export const NPC_INITIAL_REST = 80;
+export const NPC_INITIAL_SOCIAL = 80;
+export const NPC_INITIAL_HAPPINESS = 65;
+export const NPC_HAPPINESS_HUNGER_WEIGHT = 0.35; // happiness = hunger*w + rest*w + social*w + base + personality
+export const NPC_HAPPINESS_REST_WEIGHT = 0.3;
+export const NPC_HAPPINESS_SOCIAL_WEIGHT = 0.2;
+export const NPC_HAPPINESS_BASE = 15;
+export const NPC_SLEEP_RESTORE_RATE = 8;       // Rest restored per second while SLEEPING
+export const NPC_SLEEP_WAKE_REST = 80;         // Rest level at which a sleeping NPC wakes
+export const NPC_DEFAULT_EATING_RESTORE = 10;  // Hunger restored by a meal with no recorded food value
+export const NPC_SOCIALIZE_SEARCH_RADIUS = 20; // World units to look for someone to talk to
+export const NPC_WANDER_TIMEOUT = 15;          // Seconds before a wandering NPC gives up and idles
+export const NPC_LEAVE_EXTRA_DISTANCE = 20;    // World units past the spawn ring a departing NPC walks to
+export const NPC_WORK_SKILL_FALLBACK = 0.5;    // Skill used for work speed when an NPC has none recorded
+export const NPC_SKILL_GROWTH_BASE = 0.3;      // Skill a first completed task grows from when none recorded

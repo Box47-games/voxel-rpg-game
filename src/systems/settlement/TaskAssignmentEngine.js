@@ -220,6 +220,13 @@ export function getTask(taskId) {
 }
 
 /**
+ * Drop every task and claim (new game / tests). The next scanForTasks rebuilds the list.
+ */
+export function clearTasks() {
+  _tasks.clear();
+}
+
+/**
  * Check if a construction site has an NPC working BUILD on it.
  */
 export function siteHasNPCBuilder(siteId) {

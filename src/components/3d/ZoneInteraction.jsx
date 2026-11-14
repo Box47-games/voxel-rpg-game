@@ -15,7 +15,7 @@ import useGameStore from '../../stores/useGameStore';
 import { VOXEL_SIZE, CHUNK_SIZE_Y, worldToChunk } from '../../systems/chunks/coordinates';
 import { isSolid } from '../../systems/chunks/blockTypes';
 import { createZone, ZONE_COLORS } from '../../data/zoneTypes';
-import { ZONE_MAX_COUNT, ZONE_MAX_SIDE_VOXELS, ZONE_MIN_SIDE_VOXELS, STOCKPILE_CAPACITY_PER_VOXEL } from '../../data/tuning';
+import { ZONE_MAX_COUNT, ZONE_MAX_SIDE_VOXELS, ZONE_MIN_SIDE_VOXELS } from '../../data/tuning';
 import { scanMiningZone } from '../../systems/settlement/MiningZoneScanner';
 
 function getTerrainY(chunkManager, wx, wz) {
@@ -144,59 +144,20 @@ export default function ZoneInteraction({ chunkManager }) {
       return;
     }
 
-    // Route zone creation through the settlement module
-    const module = store._settlementModule;
-    if (module && module.zoneManager) {
-      const result = module.zoneManager.createZone({
-        type: store.zoneTypeToPlace,
-        bounds: { minX, minZ, maxX, maxZ },
-      });
-      if (!result.success) {
-        store.addPickupText(result.error || 'Zone creation failed', '#ff4444');
-        store.clearZoneDrag();
-        setPreviewEnd(null);
-        return;
-      }
+    // The store owns zones (it is what renders and what gets saved). The
+    // settlement engine reads them from there each tick.
+    const zone = createZone({
+      type: store.zoneTypeToPlace,
+      minX, minZ, maxX, maxZ,
+    });
+    store.addZone(zone);
 
-      // Also add to the store for rendering (ZoneOverlay reads from store)
-      const storeZone = createZone({
-        type: store.zoneTypeToPlace,
-        minX, minZ, maxX, maxZ,
-      });
-      // Use the module-assigned ID so store and module stay in sync
-      storeZone.id = result.zone.id;
-      store.addZone(storeZone);
-
-      // Scan for mining tasks if MINING zone
-      if (storeZone.type === 'MINING' && chunkManager) {
-        const miningTasks = scanMiningZone(storeZone.bounds, chunkManager);
-        store.updateZone(storeZone.id, { miningTasks });
-        store.addPickupText(`Mining Zone created (${miningTasks.length} blocks)`, '#ff8c00');
-      } else if (storeZone.type === 'STOCKPILE') {
-        const areaVoxels = ((maxX - minX) / VOXEL_SIZE) * ((maxZ - minZ) / VOXEL_SIZE);
-        const capacity = areaVoxels * STOCKPILE_CAPACITY_PER_VOXEL;
-        store.updateZone(storeZone.id, {
-          storage: { items: {}, capacity, usedCapacity: 0 },
-        });
-        store.addPickupText(`Stockpile created (${capacity} capacity)`, '#4488ff');
-      } else {
-        store.addPickupText(`${storeZone.type} Zone created`, '#4488ff');
-      }
+    if (zone.type === 'MINING' && chunkManager) {
+      const miningTasks = scanMiningZone(zone.bounds, chunkManager);
+      store.updateZone(zone.id, { miningTasks });
+      store.addPickupText(`Mining Zone created (${miningTasks.length} blocks)`, '#ff8c00');
     } else {
-      // Fallback: direct store creation (module not yet initialized)
-      const zone = createZone({
-        type: store.zoneTypeToPlace,
-        minX, minZ, maxX, maxZ,
-      });
-      store.addZone(zone);
-
-      if (zone.type === 'MINING' && chunkManager) {
-        const miningTasks = scanMiningZone(zone.bounds, chunkManager);
-        store.updateZone(zone.id, { miningTasks });
-        store.addPickupText(`Mining Zone created (${miningTasks.length} blocks)`, '#ff8c00');
-      } else {
-        store.addPickupText(`${zone.type} Zone created`, '#4488ff');
-      }
+      store.addPickupText(`${zone.type} Zone created`, '#4488ff');
     }
 
     store.clearZoneDrag();
@@ -238,10 +199,6 @@ export default function ZoneInteraction({ chunkManager }) {
           const zone = findZoneAtPoint(pos[0], pos[1]);
           if (zone) {
             const st = useGameStore.getState();
-            const mod = st._settlementModule;
-            if (mod && mod.zoneManager) {
-              mod.zoneManager.deleteZone(zone.id);
-            }
             st.removeZone(zone.id);
             st.addPickupText('Zone removed', '#ff4444');
           }
@@ -261,10 +218,6 @@ export default function ZoneInteraction({ chunkManager }) {
       if (store.zoneTypeToPlace === '__DELETE__') {
         const zone = findZoneAtPoint(pos[0], pos[1]);
         if (zone) {
-          const mod = store._settlementModule;
-          if (mod && mod.zoneManager) {
-            mod.zoneManager.deleteZone(zone.id);
-          }
           store.removeZone(zone.id);
           store.addPickupText('Zone removed', '#ff4444');
         }

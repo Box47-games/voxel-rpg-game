@@ -1,0 +1,477 @@
+/**
+ * SettlementCoreTick.test.js — SettlementModule.tickSettlementCore(), the live
+ * per-frame settlement simulation, run headless against a fake world.
+ */
+
+import SettlementModule from '../SettlementModule';
+import { clearTasks, findBestTask, getTask } from '../../../systems/settlement/TaskAssignmentEngine';
+import { scanMiningZone } from '../../../systems/settlement/MiningZoneScanner';
+import { BlockTypes } from '../../../systems/chunks/blockTypes';
+import {
+  SETTLEMENT_CAMPFIRE_SCAN_INTERVAL,
+  ATTRACT_RECALC_INTERVAL,
+  ATTRACT_CAMPFIRE_SCORE,
+  ATTRACT_STOCKPILE_FOOD_SCORE,
+  ATTRACT_RIFT_PENALTY,
+  IMMIGRATION_CHECK_INTERVAL,
+  IMMIGRATION_THRESHOLD,
+  IMMIGRATION_THRESHOLD_PER_NPC,
+  IMMIGRATION_SPAWN_MIN_DIST,
+  IMMIGRATION_SPAWN_MAX_DIST,
+  IMMIGRATION_MAX_NPCS,
+  HOUSING_WALLS_PER_SLOT,
+  HOUSING_MIN_NPC_CAP,
+  NPC_NEEDS_TICK_INTERVAL,
+  NPC_HUNGER_DECAY_RATE,
+  NPC_LEAVING_TIMEOUT,
+  NPC_MINE_DURATION,
+  WORK_SCAN_INTERVAL,
+} from '../../../data/tuning';
+import {
+  makeFakeChunkManager,
+  makeChunkAdapter,
+  makeChunkBlocks,
+  makeFakeHost,
+  makeNPC,
+  makeStockpile,
+} from './helpers/fakeWorld';
+
+const CENTER = [5, 11, 7]; // world position of a campfire at local (2, 5, 3) in chunk (0, 0)
+
+function campfireChunk() {
+  return { x: 0, z: 0, blocks: makeChunkBlocks([2, 5, 3]), lastModified: 0 };
+}
+
+function emptyChunk(x) {
+  return { x, z: 0, blocks: makeChunkBlocks(), lastModified: 0 };
+}
+
+/**
+ * A headless game: the module, a fake world, and a stand-in for the bridge
+ * that feeds the module the current state and applies its results.
+ */
+function makeGame({ chunks = [campfireChunk()], settlement = {}, zones = [], constructionSites = [], materials = {}, rifts = [] } = {}) {
+  const chunkManager = makeFakeChunkManager(chunks);
+  const host = makeFakeHost({ zones, constructionSites, materials });
+  const module = new SettlementModule();
+  module.initialize();
+  module.setChunkAdapter(makeChunkAdapter(chunkManager));
+  module.setHost(host);
+
+  const state = {
+    settlement: { npcs: [], attractiveness: 0, wallCount: 0, settlementCenter: null, ...settlement },
+    zones: host.getZones(),
+    constructionSites: host.getConstructionSites(),
+    inventory: { materials: host.state.materials },
+    rifts,
+    worldTime: { elapsed: 0 },
+  };
+  const notifications = [];
+
+  /** One frame. Returns a copy of the (reused) results object. */
+  function tick(delta) {
+    state.zones = host.getZones();
+    state.constructionSites = host.getConstructionSites();
+    state.inventory = { materials: host.state.materials };
+
+    const results = module.tickSettlementCore(delta, state);
+    if (!results) return results;
+    const snapshot = { ...results };
+
+    const s = { ...state.settlement };
+    if (results.campfireCenter) {
+      s.settlementCenter = results.campfireCenter;
+    } else {
+      if (results.attractivenessUpdated) {
+        s.attractiveness = results.attractiveness;
+        s.wallCount = results.wallCount;
+      }
+      if (results.newNPC) s.npcs = [...s.npcs, results.newNPC];
+      if (results.batchUpdates) {
+        s.npcs = s.npcs.map((n) => (results.batchUpdates[n.id] ? { ...n, ...results.batchUpdates[n.id] } : n));
+      }
+      if (results.removeIds) s.npcs = s.npcs.filter((n) => !results.removeIds.includes(n.id));
+      if (results.notifications) notifications.push(...results.notifications);
+    }
+    state.settlement = s;
+    return snapshot;
+  }
+
+  return { module, host, chunkManager, state, tick, notifications };
+}
+
+beforeEach(() => {
+  clearTasks();
+});
+
+describe('readiness', () => {
+  test('returns null until initialized and given both ports', () => {
+    const state = { settlement: { npcs: [], settlementCenter: null }, worldTime: { elapsed: 0 } };
+    const module = new SettlementModule();
+    expect(module.tickSettlementCore(1, state)).toBeNull();
+
+    module.initialize();
+    expect(module.tickSettlementCore(1, state)).toBeNull();
+
+    module.setChunkAdapter(makeChunkAdapter(makeFakeChunkManager()));
+    expect(module.tickSettlementCore(1, state)).toBeNull();
+
+    module.setHost(makeFakeHost());
+    expect(module.tickSettlementCore(1, state)).not.toBeNull();
+  });
+
+  test('returns null when there is no settlement state', () => {
+    const { module } = makeGame();
+    expect(module.tickSettlementCore(1, { settlement: null })).toBeNull();
+  });
+});
+
+describe('campfire detection', () => {
+  test('does not scan before the scan interval', () => {
+    const { tick } = makeGame();
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL - 0.1).campfireCenter).toBeNull();
+  });
+
+  test('finds the campfire and reports its world position', () => {
+    const { tick, state } = makeGame();
+    const results = tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
+    expect(results.campfireCenter).toEqual(CENTER);
+    expect(state.settlement.settlementCenter).toEqual(CENTER);
+  });
+
+  test('scans one chunk per interval, round-robin', () => {
+    const { tick } = makeGame({ chunks: [emptyChunk(1), emptyChunk(2), campfireChunk()] });
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toEqual(CENTER);
+  });
+
+  test('wraps around to rescan chunks (a campfire placed later is found)', () => {
+    const first = emptyChunk(0);
+    const { tick } = makeGame({ chunks: [first, emptyChunk(1)] });
+    tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
+    tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
+    first.blocks = makeChunkBlocks([2, 5, 3]);
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toEqual(CENTER);
+  });
+
+  test('copes with no loaded chunks', () => {
+    const { tick } = makeGame({ chunks: [] });
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
+  });
+
+  test('nothing else runs until there is a center', () => {
+    const npc = makeNPC({ hunger: 50 });
+    const { tick } = makeGame({ chunks: [emptyChunk(0)], settlement: { npcs: [npc], attractiveness: 999 } });
+    const results = tick(IMMIGRATION_CHECK_INTERVAL + 1);
+    expect(results.attractivenessUpdated).toBe(false);
+    expect(results.newNPC).toBeNull();
+    expect(results.batchUpdates).toBeNull();
+    expect(results.needsTicked).toBe(false);
+  });
+
+  test('the store owns the center: when it is cleared (new game) the engine goes back to scanning', () => {
+    const { tick, state, module } = makeGame();
+    tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
+    module._warnedNPCs.add('npc_old');
+
+    state.settlement = { npcs: [], attractiveness: 0, wallCount: 0, settlementCenter: null };
+    const results = tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
+
+    expect(results.campfireCenter).toEqual(CENTER);
+    expect(module._warnedNPCs.size).toBe(0);
+  });
+
+  test('a center that comes from a loaded save is used without rescanning', () => {
+    const { tick } = makeGame({ chunks: [emptyChunk(0)], settlement: { settlementCenter: [100, 3, 100] } });
+    const results = tick(ATTRACT_RECALC_INTERVAL);
+    expect(results.campfireCenter).toBeNull();
+    expect(results.attractivenessUpdated).toBe(true);
+  });
+});
+
+describe('attractiveness', () => {
+  test('recalculates on its interval from the loaded chunks', () => {
+    const { tick, state } = makeGame({ settlement: { settlementCenter: CENTER } });
+
+    expect(tick(ATTRACT_RECALC_INTERVAL - 0.5).attractivenessUpdated).toBe(false);
+    const results = tick(0.5);
+
+    expect(results.attractivenessUpdated).toBe(true);
+    expect(results.attractiveness).toBe(ATTRACT_CAMPFIRE_SCORE);
+    expect(results.wallCount).toBe(0);
+    expect(state.settlement.attractiveness).toBe(ATTRACT_CAMPFIRE_SCORE);
+  });
+
+  test('counts stockpiled food and nearby rifts (needs zones and rifts from the game state)', () => {
+    const stockpile = makeStockpile({ storage: { items: { berry: 2 }, capacity: 100, usedCapacity: 2 } });
+    const { tick } = makeGame({
+      settlement: { settlementCenter: CENTER },
+      zones: [stockpile],
+      rifts: [{ x: CENTER[0] + 10, z: CENTER[2] }],
+    });
+
+    const results = tick(ATTRACT_RECALC_INTERVAL);
+
+    expect(results.attractiveness).toBe(
+      ATTRACT_CAMPFIRE_SCORE + 2 * ATTRACT_STOCKPILE_FOOD_SCORE + ATTRACT_RIFT_PENALTY
+    );
+  });
+});
+
+describe('immigration', () => {
+  const ATTRACTIVE = { settlementCenter: CENTER, attractiveness: IMMIGRATION_THRESHOLD, wallCount: 0 };
+
+  test('spawns an approaching NPC when the settlement is attractive enough', () => {
+    const { tick, state } = makeGame({ settlement: ATTRACTIVE });
+    state.worldTime.elapsed = 777;
+
+    expect(tick(IMMIGRATION_CHECK_INTERVAL - 1).newNPC).toBeNull();
+    const npc = tick(1).newNPC;
+
+    expect(npc).toMatchObject({
+      targetPosition: CENTER,
+      facingAngle: 0,
+      state: 'APPROACHING',
+      stateTimer: 0,
+      hunger: 80,
+      rest: 80,
+      social: 80,
+      happiness: 65,
+      unhappyDays: 0,
+      dayCheckpoint: 777,
+      currentJob: null,
+      arrivedAtSettlement: false,
+    });
+    expect(npc.id).toMatch(/^npc_\d+_1$/);
+    expect(typeof npc.fullName).toBe('string');
+    expect(npc.skills).toBeDefined();
+    expect(npc.targetPosition).not.toBe(CENTER); // its own copy
+
+    const dist = Math.hypot(npc.position[0] - CENTER[0], npc.position[2] - CENTER[2]);
+    expect(dist).toBeGreaterThanOrEqual(IMMIGRATION_SPAWN_MIN_DIST);
+    expect(dist).toBeLessThanOrEqual(IMMIGRATION_SPAWN_MAX_DIST);
+    expect(npc.position[1]).toBe(2); // no terrain in the fake world → fallback height
+  });
+
+  test('spawns on top of the terrain', () => {
+    const { tick, chunkManager } = makeGame({ settlement: ATTRACTIVE });
+    chunkManager.getBlock = (x, y) => (y === 9 ? BlockTypes.STONE : BlockTypes.AIR);
+    expect(tick(IMMIGRATION_CHECK_INTERVAL).newNPC.position[1]).toBe(10);
+  });
+
+  test('does not spawn below the threshold, which rises with population', () => {
+    const one = makeNPC({ state: 'APPROACHING', targetPosition: CENTER });
+    const needed = IMMIGRATION_THRESHOLD + IMMIGRATION_THRESHOLD_PER_NPC;
+
+    const tooLow = makeGame({ settlement: { ...ATTRACTIVE, npcs: [one], attractiveness: needed - 1 } });
+    expect(tooLow.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).toBeNull();
+
+    const enough = makeGame({ settlement: { ...ATTRACTIVE, npcs: [one], attractiveness: needed } });
+    expect(enough.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).not.toBeNull();
+  });
+
+  test('uses the attractiveness from before this frame, not the value recalculated in it', () => {
+    // The chunk scan will produce ATTRACT_CAMPFIRE_SCORE (>= threshold) on this
+    // very frame, but the settlement still shows 0 from before.
+    const { tick } = makeGame({ settlement: { ...ATTRACTIVE, attractiveness: 0 } });
+
+    const results = tick(IMMIGRATION_CHECK_INTERVAL);
+
+    expect(results.attractivenessUpdated).toBe(true);
+    expect(results.attractiveness).toBeGreaterThanOrEqual(IMMIGRATION_THRESHOLD);
+    expect(results.newNPC).toBeNull();
+  });
+
+  test('population is capped by housing (walls), with a floor and a ceiling', () => {
+    const crowd = (n) => Array.from({ length: n }, (_, i) =>
+      makeNPC({ id: `n${i}`, state: 'APPROACHING', targetPosition: CENTER }));
+    const veryAttractive = { ...ATTRACTIVE, attractiveness: 10000 };
+
+    const atFloor = makeGame({ settlement: { ...veryAttractive, npcs: crowd(HOUSING_MIN_NPC_CAP) } });
+    expect(atFloor.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).toBeNull();
+
+    const housed = makeGame({
+      settlement: {
+        ...veryAttractive,
+        npcs: crowd(HOUSING_MIN_NPC_CAP),
+        wallCount: (HOUSING_MIN_NPC_CAP + 1) * HOUSING_WALLS_PER_SLOT,
+      },
+    });
+    expect(housed.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).not.toBeNull();
+
+    const atCeiling = makeGame({
+      settlement: { ...veryAttractive, npcs: crowd(IMMIGRATION_MAX_NPCS), wallCount: 100000 },
+    });
+    expect(atCeiling.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).toBeNull();
+  });
+
+  test('each immigrant gets a distinct id', () => {
+    const { tick, state } = makeGame({ settlement: ATTRACTIVE });
+    const first = tick(IMMIGRATION_CHECK_INTERVAL).newNPC;
+    state.settlement = { ...state.settlement, attractiveness: 10000 };
+    const second = tick(IMMIGRATION_CHECK_INTERVAL).newNPC;
+    expect(second).not.toBeNull();
+    expect(second.id).not.toBe(first.id);
+  });
+});
+
+describe('NPC tick', () => {
+  const SETTLED = { settlementCenter: CENTER, attractiveness: 50 };
+
+  test('runs on the needs interval with the time that actually accumulated', () => {
+    const npc = makeNPC({ hunger: 50, state: 'SOCIALIZING' });
+    const { tick, state } = makeGame({ settlement: { ...SETTLED, npcs: [npc] } });
+
+    expect(tick(NPC_NEEDS_TICK_INTERVAL * 0.75).needsTicked).toBe(false);
+    const results = tick(NPC_NEEDS_TICK_INTERVAL * 0.75);
+
+    expect(results.needsTicked).toBe(true);
+    expect(state.settlement.npcs[0].hunger)
+      .toBeCloseTo(50 - NPC_HUNGER_DECAY_RATE * NPC_NEEDS_TICK_INTERVAL * 1.5, 10);
+    expect(tick(NPC_NEEDS_TICK_INTERVAL * 0.5).needsTicked).toBe(false);
+  });
+
+  test('every NPC gets an entry in the batch; expired leavers are removed instead', () => {
+    const npcs = [
+      makeNPC({ id: 'a', state: 'SOCIALIZING' }),
+      makeNPC({ id: 'b', state: 'APPROACHING', targetPosition: CENTER }),
+      makeNPC({ id: 'c', state: 'LEAVING', stateTimer: NPC_LEAVING_TIMEOUT, targetPosition: [500, 0, 500] }),
+    ];
+    const { tick, state } = makeGame({ settlement: { ...SETTLED, npcs } });
+
+    const results = tick(NPC_NEEDS_TICK_INTERVAL);
+
+    expect(Object.keys(results.batchUpdates).sort()).toEqual(['a', 'b']);
+    expect(results.removeIds).toEqual(['c']);
+    expect(state.settlement.npcs.map((n) => n.id)).toEqual(['a', 'b']);
+  });
+
+  test('collects notifications from all NPCs', () => {
+    const npcs = [
+      makeNPC({ id: 'a', fullName: 'Ada', state: 'EVALUATING', stateTimer: 100 }),
+      makeNPC({ id: 'b', fullName: 'Bo', state: 'IDLE', hunger: 1 }),
+    ];
+    const { tick, notifications } = makeGame({ settlement: { ...SETTLED, npcs } });
+
+    tick(NPC_NEEDS_TICK_INTERVAL);
+
+    expect(notifications.map((n) => n.title)).toEqual(['New Settler!', 'No Food']);
+  });
+
+  test('an evaluating NPC is judged on the attractiveness from before this frame', () => {
+    const npc = makeNPC({ state: 'EVALUATING', stateTimer: 100 });
+    // Chunk scan says 20 on this frame; the settlement still shows 0.
+    const { tick, state } = makeGame({ settlement: { settlementCenter: CENTER, attractiveness: 0, npcs: [npc] } });
+
+    tick(ATTRACT_RECALC_INTERVAL);
+
+    expect(state.settlement.attractiveness).toBeGreaterThanOrEqual(IMMIGRATION_THRESHOLD);
+    expect(state.settlement.npcs[0].state).toBe('LEAVING');
+  });
+
+  test('hungry NPCs eat through the host (stockpile first)', () => {
+    const stockpile = makeStockpile({ storage: { items: { meat: 1 }, capacity: 100, usedCapacity: 1 } });
+    const npc = makeNPC({ hunger: 1 });
+    const { tick, state, host } = makeGame({
+      settlement: { ...SETTLED, npcs: [npc] },
+      zones: [stockpile],
+      materials: { berry: 5 },
+    });
+
+    tick(NPC_NEEDS_TICK_INTERVAL);
+
+    expect(state.settlement.npcs[0].state).toBe('EATING');
+    expect(host.getZones()[0].storage.items).toEqual({});
+    expect(host.state.materials.berry).toBe(5);
+  });
+
+  test('the reused results object carries nothing over to the next frame', () => {
+    const npc = makeNPC({ state: 'SOCIALIZING' });
+    const { module, state } = makeGame({ settlement: { ...SETTLED, attractiveness: 0, npcs: [npc] } });
+
+    const first = module.tickSettlementCore(IMMIGRATION_CHECK_INTERVAL, state);
+    expect(first.needsTicked).toBe(true);
+    expect(first.attractivenessUpdated).toBe(true);
+
+    const second = module.tickSettlementCore(0.016, state);
+    expect(second).toBe(first);
+    expect(second).toMatchObject({
+      campfireCenter: null,
+      attractivenessUpdated: false,
+      newNPC: null,
+      batchUpdates: null,
+      removeIds: null,
+      notifications: null,
+      needsTicked: false,
+    });
+  });
+});
+
+describe('work loop', () => {
+  // A mining zone one step from the NPC, stone on the surface and underneath.
+  function miningGame(extra = {}) {
+    const game = makeGame({ settlement: { settlementCenter: CENTER, attractiveness: 50 }, ...extra });
+    game.chunkManager.place(101, 5, 101, BlockTypes.STONE);
+    game.chunkManager.place(101, 3, 101, BlockTypes.STONE);
+    const bounds = { minX: 100, minZ: 100, maxX: 102, maxZ: 102 };
+    const zone = { id: 'mine_1', type: 'MINING', bounds, storage: null, miningTasks: scanMiningZone(bounds, game.chunkManager) };
+    game.host.state.zones = [...game.host.state.zones, zone];
+    const npc = makeNPC({ position: [101, 6, 102], skills: { mining: 1.0 } });
+    game.state.settlement = { ...game.state.settlement, npcs: [npc] };
+    return game;
+  }
+  const npcOf = (game) => game.state.settlement.npcs[0];
+
+  test('tasks appear after the work scan interval', () => {
+    const game = miningGame();
+    game.tick(WORK_SCAN_INTERVAL - 1);
+    expect(findBestTask(npcOf(game))).toBeNull();
+    game.tick(1);
+    expect(findBestTask(npcOf(game))).toMatchObject({ type: 'MINE', position: [101, 5, 101] });
+  });
+
+  test('an idle NPC picks up a task, mines the block and banks the drop', () => {
+    const game = miningGame();
+
+    game.tick(WORK_SCAN_INTERVAL); // scan + needs tick → claims the task
+    expect(npcOf(game)).toMatchObject({ state: 'WORKING_MINE', targetPosition: [101, 5, 101] });
+
+    // Mining at skill 1.0 takes NPC_MINE_DURATION seconds of needs ticks
+    for (let t = 0; t < NPC_MINE_DURATION; t += NPC_NEEDS_TICK_INTERVAL) {
+      expect(game.chunkManager.setBlock).not.toHaveBeenCalled();
+      game.tick(NPC_NEEDS_TICK_INTERVAL);
+    }
+
+    expect(game.chunkManager.setBlock).toHaveBeenCalledWith(101, 5, 101, BlockTypes.AIR);
+    expect(game.host.state.materials.stone).toBe(1);
+    expect(npcOf(game)).toMatchObject({ state: 'IDLE', currentTaskId: null, workTimer: 0 });
+    expect(npcOf(game).skills.mining).toBe(1.0); // capped
+  });
+
+  test('completing a task rescans straight away, so the newly exposed block is available next tick', () => {
+    const game = miningGame();
+    game.tick(WORK_SCAN_INTERVAL);
+    for (let t = 0; t < NPC_MINE_DURATION; t += NPC_NEEDS_TICK_INTERVAL) game.tick(NPC_NEEDS_TICK_INTERVAL);
+    expect(npcOf(game).state).toBe('IDLE');
+
+    // No waiting for WORK_SCAN_INTERVAL: the very next needs tick claims the block below
+    game.tick(NPC_NEEDS_TICK_INTERVAL);
+
+    expect(npcOf(game)).toMatchObject({ state: 'WORKING_MINE', targetPosition: [101, 3, 101] });
+    expect(getTask(npcOf(game).currentTaskId).claimedBy).toBe('npc_1');
+  });
+
+  test('the periodic scan keeps existing claims', () => {
+    const game = miningGame();
+    game.tick(WORK_SCAN_INTERVAL);
+    const taskId = npcOf(game).currentTaskId;
+    game.state.settlement = { ...game.state.settlement, npcs: [{ ...npcOf(game), position: [200, 6, 200] }] };
+
+    game.tick(WORK_SCAN_INTERVAL); // rescan while the NPC is still walking
+
+    expect(getTask(taskId)).toMatchObject({ claimedBy: 'npc_1' });
+    expect(npcOf(game).currentTaskId).toBe(taskId);
+  });
+});

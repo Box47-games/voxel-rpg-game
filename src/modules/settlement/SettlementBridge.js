@@ -1,17 +1,42 @@
 /**
  * SettlementBridge.js — Bridges the React/Zustand world and the SettlementModule.
  *
- * Reads game state from useGameStore, passes it to the module's tickSettlementCore(),
- * and writes results back to the store.
+ * Each frame: hand the module the store state, let it run tickSettlementCore(),
+ * and write the settlement-slice results back. It also gives the module its two
+ * ports onto the game: the chunk adapter (blocks) and the host (store actions
+ * for stockpiles, inventory and construction).
  */
 
 import useGameStore from '../../stores/useGameStore';
+
+/**
+ * The module's host port, backed by useGameStore. Every call reads the store
+ * fresh, so effects applied earlier in the same tick are visible.
+ */
+function createStoreHost() {
+  const store = () => useGameStore.getState();
+  return {
+    getZones: () => store().zones,
+    getConstructionSites: () => store().constructionSites,
+    consumeFromStockpile: (zoneId, material, amount) =>
+      store().consumeFromStockpile(zoneId, material, amount),
+    updateZone: (zoneId, updates) => store().updateZone(zoneId, updates),
+    addMaterial: (material, amount) => store().addMaterial(material, amount),
+    removeMaterial: (material, amount) => store().removeMaterial(material, amount),
+    npcDeliverToConstruction: (siteId, material, amount) =>
+      store().npcDeliverToConstruction(siteId, material, amount),
+    advanceConstruction: (siteId) => store().advanceConstruction(siteId),
+    addPickupText: (text, color) => store().addPickupText(text, color),
+  };
+}
 
 class SettlementBridge {
   constructor(settlementModule) {
     this._module = settlementModule;
     this._chunkAdapter = null;
-    this._zoneSeedDone = false;
+    if (this._module.setHost) {
+      this._module.setHost(createStoreHost());
+    }
   }
 
   /**
@@ -22,54 +47,33 @@ class SettlementBridge {
     this._chunkAdapter = {
       iterateChunks: () => chunkManager.chunks.values(),
       getBlock: (wx, wy, wz) => chunkManager.getBlock(wx, wy, wz),
+      setBlock: (wx, wy, wz, blockType) => chunkManager.setBlock(wx, wy, wz, blockType),
       getRawChunkManager: () => chunkManager,
     };
     this._module.setChunkAdapter(this._chunkAdapter);
-
-    // Seed zones from store into module (for existing saves)
-    this._seedZonesToModule();
   }
 
   /**
-   * One-time seed of existing store zones into the module's ZoneManager.
-   * Called when chunkAdapter becomes available (game is ready).
-   */
-  _seedZonesToModule() {
-    if (this._zoneSeedDone) return;
-    this._zoneSeedDone = true;
-
-    const store = useGameStore.getState();
-    const zoneManager = this._module.zoneManager;
-    if (!zoneManager || !store.zones) return;
-
-    for (const zone of store.zones) {
-      // Skip if already in module (e.g., from deserialization)
-      if (zoneManager.getZone(zone.id)) continue;
-
-      zoneManager.createZone({
-        type: zone.type,
-        bounds: zone.bounds,
-      });
-    }
-  }
-
-  /**
-   * Read current game state from useGameStore as a snapshot.
-   * @returns {Object} Plain object with fields the module's tickSettlementCore needs
+   * The game state the module ticks against: the store state as of now.
+   * Returned as-is (no copy) so the per-frame tick allocates nothing; the
+   * module reads settlement, zones, constructionSites, inventory, rifts and
+   * worldTime from it and must not mutate it.
    */
   getGameState() {
-    const store = useGameStore.getState();
-    return {
-      gameState: store.gameState,
-      settlement: store.settlement,
-      inventory: store.inventory,
-      worldTimeElapsed: store.worldTime.elapsed,
-    };
+    return useGameStore.getState();
+  }
+
+  /**
+   * Run one frame of the settlement simulation.
+   * The caller is responsible for not calling this while the game is paused.
+   * @param {number} deltaSeconds
+   */
+  tick(deltaSeconds) {
+    this.syncToStore(this._module.tickSettlementCore(deltaSeconds, this.getGameState()));
   }
 
   /**
    * Write module results back to useGameStore.
-   * Execution order matters — food consumption before NPC updates.
    *
    * @param {Object} results - Return value from settlementModule.tickSettlementCore()
    */
@@ -78,10 +82,9 @@ class SettlementBridge {
 
     const store = useGameStore.getState();
 
-    // 1. Settlement center (early return if just detected — matches original behavior)
+    // 1. Settlement center just detected — nothing else happened this frame
     if (results.campfireCenter) {
       store.setSettlementCenter(results.campfireCenter);
-      // Original code returns early after setting center on the frame it's detected
       return;
     }
 
@@ -94,43 +97,34 @@ class SettlementBridge {
       });
     }
 
-    // 3. New NPCs from immigration
+    // 3. New NPC from immigration
     if (results.newNPC) {
       store.addSettlementNPC(results.newNPC);
       store.updateSettlementTimestamps({ lastImmigrationCheck: Date.now() });
     }
 
-    // 4. Food consumption BEFORE NPC updates (preserves original ordering)
-    if (results.foodConsumptions) {
-      for (const { material, qty } of results.foodConsumptions) {
-        store.removeMaterial(material, qty);
-      }
-    }
-
-    // 5. NPC batch updates
+    // 4. NPC batch updates (one store write for all NPCs)
     if (results.batchUpdates && Object.keys(results.batchUpdates).length > 0) {
       store.batchUpdateSettlementNPCs(results.batchUpdates);
     }
 
-    // 6. NPC removals
+    // 5. NPC removals
     if (results.removeIds) {
       for (const id of results.removeIds) {
         store.removeSettlementNPC(id);
       }
     }
 
-    // 7. Notifications
-    if (results.notifications) {
+    // 6. Notifications
+    if (results.notifications && window.addNotification) {
       for (const n of results.notifications) {
-        if (window.addNotification) {
-          window.addNotification(n);
-        }
+        window.addNotification(n);
       }
     }
 
-    // 8. Timestamps
-    if (results.timestamps) {
-      store.updateSettlementTimestamps(results.timestamps);
+    // 7. Needs tick timestamp
+    if (results.needsTicked) {
+      store.updateSettlementTimestamps({ lastNeedsUpdate: Date.now() });
     }
   }
 }
