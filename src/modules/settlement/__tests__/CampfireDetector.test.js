@@ -2,7 +2,7 @@
  * CampfireDetector.test.js — Tests for campfire scanning and terrain Y lookup.
  */
 
-import { scanForCampfire, getTerrainYAt } from '../CampfireDetector';
+import { scanChunkForCampfire, getTerrainYAt } from '../CampfireDetector';
 
 // Mock blockTypes module
 vi.mock('../../../systems/chunks/blockTypes', () => ({
@@ -27,54 +27,36 @@ function makeEmptyBlocks() {
   return new Uint8Array(16 * 16 * 64); // all zeros (AIR)
 }
 
-describe('scanForCampfire', () => {
-  test('returns null when no chunks have campfires', () => {
-    const blocks = makeEmptyBlocks();
-    const chunks = [{ x: 0, z: 0, blocks }];
-    const adapter = makeChunkAdapter(chunks);
-    expect(scanForCampfire(adapter)).toBeNull();
+describe('scanChunkForCampfire', () => {
+  test('returns null when the chunk has no campfire', () => {
+    expect(scanChunkForCampfire({ x: 0, z: 0, blocks: makeEmptyBlocks() })).toBeNull();
   });
 
   test('returns correct world position when campfire found', () => {
     const blocks = makeEmptyBlocks();
     // Place campfire at local x=2, z=3, y=5 in chunk (0,0)
     blocks[2 + (3 << 4) + (5 << 8)] = 42; // CAMPFIRE
-    const chunks = [{ x: 0, z: 0, blocks }];
-    const adapter = makeChunkAdapter(chunks);
-    const result = scanForCampfire(adapter);
-    expect(result).not.toBeNull();
-    // wx = (0*16 + 2) * 2 + 1 = 5
-    // wy = 5 * 2 + 1 = 11
-    // wz = (0*16 + 3) * 2 + 1 = 7
-    expect(result[0]).toBe(5);
-    expect(result[1]).toBe(11);
-    expect(result[2]).toBe(7);
+    // wx = (0*16 + 2) * 2 + 1 = 5; wy = 5 * 2 + 1 = 11; wz = (0*16 + 3) * 2 + 1 = 7
+    expect(scanChunkForCampfire({ x: 0, z: 0, blocks })).toEqual([5, 11, 7]);
   });
 
-  test('returns first campfire found (early exit)', () => {
-    const blocks1 = makeEmptyBlocks();
-    const blocks2 = makeEmptyBlocks();
-    blocks1[0 + (0 << 4) + (1 << 8)] = 42; // campfire at (0,1,0) in chunk 0
-    blocks2[1 + (1 << 4) + (2 << 8)] = 42; // campfire at (1,2,1) in chunk 1
-    const chunks = [
-      { x: 0, z: 0, blocks: blocks1 },
-      { x: 1, z: 0, blocks: blocks2 },
-    ];
-    const adapter = makeChunkAdapter(chunks);
-    const result = scanForCampfire(adapter);
-    // Should find the first chunk's campfire
-    // wx = (0*16 + 0) * 2 + 1 = 1
-    // wy = 1 * 2 + 1 = 3
-    // wz = (0*16 + 0) * 2 + 1 = 1
-    expect(result[0]).toBe(1);
-    expect(result[1]).toBe(3);
-    expect(result[2]).toBe(1);
+  test('offsets by the chunk position', () => {
+    const blocks = makeEmptyBlocks();
+    blocks[1 + (1 << 4) + (2 << 8)] = 42;
+    // wx = (1*16 + 1) * 2 + 1 = 35; wy = 2 * 2 + 1 = 5; wz = (-1*16 + 1) * 2 + 1 = -29
+    expect(scanChunkForCampfire({ x: 1, z: -1, blocks })).toEqual([35, 5, -29]);
   });
 
-  test('handles chunk with null blocks', () => {
-    const chunks = [{ x: 0, z: 0, blocks: null }];
-    const adapter = makeChunkAdapter(chunks);
-    expect(scanForCampfire(adapter)).toBeNull();
+  test('returns the lowest campfire when a chunk has several', () => {
+    const blocks = makeEmptyBlocks();
+    blocks[4 + (4 << 4) + (9 << 8)] = 42;
+    blocks[0 + (0 << 4) + (1 << 8)] = 42;
+    expect(scanChunkForCampfire({ x: 0, z: 0, blocks })).toEqual([1, 3, 1]);
+  });
+
+  test('handles a chunk with null blocks, or no chunk at all', () => {
+    expect(scanChunkForCampfire({ x: 0, z: 0, blocks: null })).toBeNull();
+    expect(scanChunkForCampfire(undefined)).toBeNull();
   });
 });
 

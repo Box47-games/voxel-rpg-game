@@ -41,7 +41,7 @@ ESLint (lints `.js` and `.jsx`; CI fails on errors): `no-unused-vars: warn`, `no
 
 The game is a single 3D real-time app: `index.jsx` → `App3D.jsx` → `Experience.jsx` → R3F components + the `useGameStore` Zustand store, inside a React Three Fiber `<Canvas>`. The old 2D game and the `GameManager`/`ModuleOrchestrator` module system were removed (they were never reachable from the app); `git log` has them if needed.
 
-`src/modules/` now holds only modules the 3D game uses or is about to: `character/` (attributes, skill trees), `crafting/`, and `settlement/` + `hauling/` + `construction/` + `voxel/` + `npc-system/NPCPersonality.js`, which form the headless settlement engine that `.claude/plans/phase2-settlement-unification.md` wires in via `SettlementBridge` (not yet active — `SettlementTick.jsx` still runs its own inline logic).
+`src/modules/` now holds only modules the 3D game uses or is about to: `character/` (attributes, skill trees), `crafting/`, and `settlement/` + `hauling/` + `construction/` + `voxel/` + `npc-system/NPCPersonality.js`, which form the headless settlement engine. The live game runs it through `SettlementBridge` (see Settlement System below).
 
 ### 3D Rendering Pipeline
 
@@ -66,11 +66,16 @@ Pattern: Game logic writes to stores via actions. 3D components subscribe to sli
 
 ### Settlement System
 
-Live today: `SettlementTick.jsx` (useFrame loop) runs campfire detection, attractiveness, immigration, NPC needs and the work loop inline, using `systems/settlement/*` (TaskAssignmentEngine, AttractivenessCalculator, MiningZoneScanner).
+Live path: `SettlementTick.jsx` (useFrame loop, early-returns unless `gameState === 'playing'`) → `SettlementBridge.js` → `SettlementModule.tickSettlementCore()`. `SettlementTick` creates the module on mount and publishes it as `store._settlementModule`; it holds no game logic.
 
-Planned (not active): `SettlementTick` → `SettlementBridge.js` → `SettlementModule.js` → ImmigrationManager, ZoneManager, StockpileManager, TaskAssignmentEngine, HousingManager, NPCStateMachine. `store._settlementModule` is never set yet, so the bridge branch is skipped.
+- `SettlementModule.tickSettlementCore` — campfire detection (one loaded chunk per scan), attractiveness (`systems/settlement/AttractivenessCalculator` via `ChunkAttractivenessAdapter`), immigration, the periodic task scan, and the per-NPC tick.
+- `NPCStateMachine.tickNPC` — needs decay, happiness, unhappy-day departure, and the APPROACHING/EVALUATING/IDLE/WANDERING/SOCIALIZING/EATING/SLEEPING/LEAVING states.
+- `NPCWorkBehavior` — the work loop (WORKING_MINE / WORKING_HAUL with `haulPhase` / WORKING_BUILD), needs interrupts and task resume. Tasks come from the singleton registry in `systems/settlement/TaskAssignmentEngine` (also read by `ConstructionTick`).
+- The store stays the source of truth for NPCs, zones, stockpiles and construction sites (that is what gets saved); the module only keeps timers. It reads the store state each frame and changes the world through two ports the bridge supplies: a chunk adapter (`getBlock`/`setBlock`) and a host (store actions for stockpiles, inventory and construction). Tests drive it headless with the fakes in `modules/settlement/__tests__/helpers/fakeWorld.js`.
+- `SettlerNPC.jsx` moves NPCs toward `targetPosition` and performs the on-arrival transitions (APPROACHING → EVALUATING, WANDERING/SOCIALIZING → IDLE).
+- The class-based sub-managers in `SettlementModule.initialize()` (ZoneManager, StockpileManager, HousingManager, Mining/FarmingZoneBehavior, HaulingManager, ConstructionManager, ImmigrationManager) and `SettlementModule.update()` are not on the live path; they are seams for later features.
 
-NPC states: `IDLE → THINKING → WORKING_MINE/WORKING_HAUL/WORKING_BUILD → EATING/SLEEPING → LEAVING`
+NPC states: `APPROACHING → EVALUATING → IDLE ⇄ WANDERING / SOCIALIZING / EATING / SLEEPING / WORKING_MINE / WORKING_HAUL / WORKING_BUILD → LEAVING`
 
 ### Web Workers
 
@@ -123,5 +128,5 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
 - `src/persistence/Game3DSaveManager.js` — Save/load
 - `src/data/tuning.js` — All gameplay balance constants
 - `src/systems/chunks/ChunkManager.js` — Terrain chunk loading/unloading
-- `src/components/3d/SettlementTick.jsx` — Live settlement simulation
-- `src/modules/settlement/SettlementBridge.js` — Planned module ↔ store bridge
+- `src/components/3d/SettlementTick.jsx` — Per-frame driver for the settlement engine (thin bridge loop)
+- `src/modules/settlement/SettlementBridge.js` — Module ↔ store bridge (chunk adapter, host port, result sync)
