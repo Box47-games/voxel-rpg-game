@@ -125,30 +125,8 @@ export function getSunPosition(timeOfDay) {
   return { x, y: Math.max(-10, y), z };
 }
 
-/**
- * Sky color keyframes. Returns interpolated hex color.
- * @param {number} timeOfDay - 0.0–1.0
- * @returns {string} Hex color
- */
-export function getSkyColor(timeOfDay) {
-  const t = timeOfDay;
-
-  // Define color stops: [timeOfDay, color]
-  const stops = [
-    [0.00, '#0a0a2e'], // midnight
-    [0.15, '#0a0a2e'], // deep night
-    [0.20, '#1a1a3e'], // pre-dawn
-    [0.25, '#ff7744'], // sunrise peak
-    [0.30, '#87ceeb'], // morning
-    [0.50, '#87ceeb'], // noon
-    [0.70, '#87ceeb'], // afternoon
-    [0.75, '#ff6633'], // sunset peak
-    [0.80, '#2a1a3e'], // dusk
-    [0.85, '#0a0a2e'], // night
-    [1.00, '#0a0a2e'], // midnight
-  ];
-
-  // Find the two surrounding stops
+/** Interpolate a list of [timeOfDay, '#rrggbb'] stops. */
+function colorAt(stops, t) {
   for (let i = 0; i < stops.length - 1; i++) {
     const [t0, c0] = stops[i];
     const [t1, c1] = stops[i + 1];
@@ -157,18 +135,90 @@ export function getSkyColor(timeOfDay) {
       return lerpColor(c0, c1, frac);
     }
   }
+  return stops[0][1];
+}
 
-  return '#0a0a2e'; // fallback: night
+// The sky is a gradient: deep color overhead (zenith), paler at the horizon.
+const ZENITH_STOPS = [
+  [0.00, '#060a1c'], // midnight
+  [0.15, '#060a1c'], // deep night
+  [0.20, '#151a3c'], // pre-dawn
+  [0.25, '#4a5f9c'], // sunrise
+  [0.30, '#3f86d6'], // morning
+  [0.50, '#3a7fd6'], // noon
+  [0.70, '#3f86d6'], // afternoon
+  [0.75, '#4c4f92'], // sunset
+  [0.80, '#1c1838'], // dusk
+  [0.85, '#060a1c'], // night
+  [1.00, '#060a1c'], // midnight
+];
+
+const HORIZON_STOPS = [
+  [0.00, '#111a33'],
+  [0.15, '#111a33'],
+  [0.20, '#2a2a4c'],
+  [0.25, '#ff9a5c'], // sunrise glow
+  [0.30, '#bfe1f6'],
+  [0.50, '#cde8f8'],
+  [0.70, '#c3e1f5'],
+  [0.75, '#ff8a4c'], // sunset glow
+  [0.80, '#3c2a4a'],
+  [0.85, '#111a33'],
+  [1.00, '#111a33'],
+];
+
+/**
+ * Sky color overhead (the top of the sky gradient).
+ * @param {number} timeOfDay - 0.0–1.0
+ * @returns {string} hex color
+ */
+export function getSkyColor(timeOfDay) {
+  return colorAt(ZENITH_STOPS, timeOfDay);
 }
 
 /**
- * Fog color — matches sky but slightly desaturated.
+ * Sky color at the horizon (the bottom of the sky gradient).
  * @param {number} timeOfDay - 0.0–1.0
- * @returns {string} Hex color
+ * @returns {string} hex color
+ */
+export function getHorizonColor(timeOfDay) {
+  return colorAt(HORIZON_STOPS, timeOfDay);
+}
+
+/**
+ * Fog color: the horizon, so distant terrain melts into the sky.
+ * @param {number} timeOfDay - 0.0–1.0
+ * @returns {string} hex color
  */
 export function getFogColor(timeOfDay) {
-  // Fog color matches sky to prevent horizon mismatch
-  return getSkyColor(timeOfDay);
+  return getHorizonColor(timeOfDay);
+}
+
+/**
+ * Sunlight color: warm white by day, orange at sunrise/sunset, cool moonlight at night.
+ * @param {number} timeOfDay - 0.0–1.0
+ * @returns {string} hex color
+ */
+export function getSunColor(timeOfDay) {
+  return colorAt([
+    [0.00, '#8796c8'],
+    [0.20, '#8796c8'],
+    [0.25, '#ffb070'],
+    [0.32, '#fff1dc'],
+    [0.68, '#fff1dc'],
+    [0.75, '#ff9a60'],
+    [0.80, '#8796c8'],
+    [1.00, '#8796c8'],
+  ], timeOfDay);
+}
+
+/**
+ * Light bounced up from the ground (the hemisphere light's lower color).
+ * @param {number} timeOfDay - 0.0–1.0
+ * @returns {string} hex color
+ */
+export function getGroundBounceColor(timeOfDay) {
+  return lerpColor('#1c1a26', '#6a5a3e', getDaylightFactor(timeOfDay));
 }
 
 /**
@@ -205,7 +255,7 @@ export function getAmbientColor(timeOfDay) {
  * Get all lighting parameters for a given time of day.
  * Apply weather and shelter modifiers externally.
  * @param {number} timeOfDay - 0.0–1.0
- * @returns {{ ambientIntensity: number, ambientColor: string, directionalIntensity: number, sunPosition: {x,y,z}, skyColor: string, fogColor: string, daylightFactor: number }}
+ * @returns {{ ambientIntensity: number, ambientColor: string, directionalIntensity: number, sunPosition: {x,y,z}, skyColor: string, horizonColor: string, fogColor: string, sunColor: string, groundColor: string, daylightFactor: number }}
  */
 export function getLightingState(timeOfDay) {
   return {
@@ -214,7 +264,10 @@ export function getLightingState(timeOfDay) {
     directionalIntensity: getDirectionalIntensity(timeOfDay),
     sunPosition: getSunPosition(timeOfDay),
     skyColor: getSkyColor(timeOfDay),
+    horizonColor: getHorizonColor(timeOfDay),
     fogColor: getFogColor(timeOfDay),
+    sunColor: getSunColor(timeOfDay),
+    groundColor: getGroundBounceColor(timeOfDay),
     daylightFactor: getDaylightFactor(timeOfDay),
   };
 }

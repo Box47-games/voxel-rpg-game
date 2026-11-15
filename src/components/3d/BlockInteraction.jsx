@@ -16,6 +16,7 @@ import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
 import { HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN, STOCKPILE_INTERACT_RANGE, CONSTRUCTION_INTERACT_RANGE, BUILDING_INTERACT_RANGE, NPC_INTERACT_RANGE } from '../../data/tuning';
 import { findNearestNPC } from '../../utils/npcQueries';
 import { getBuildingById } from '../../data/buildings';
+import { notePlayerAction } from '../../systems/playerActions';
 import { getSpellById, executeSpell } from '../../data/spells';
 import { performMeleeAttack, MELEE_COOLDOWN } from '../../data/meleeAttack';
 import { audioManager } from '../../utils/AudioManager';
@@ -136,6 +137,7 @@ function tryPlaceBlock(chunkManager, block, face, blockType) {
   }
 
   if (!chunkManager.setBlock(px, py, pz, blockType)) return false;
+  notePlayerAction('place');
   for (const [mat, qty] of Object.entries(cost)) {
     store.removeMaterial(mat, qty);
   }
@@ -567,6 +569,7 @@ export function BlockInteraction({ chunkManager }) {
 
     // Accumulate mining progress
     miningAccum.current += delta;
+    notePlayerAction('mine');
     const progress = Math.min(1, miningAccum.current / breakTime);
     setMiningProgress(progress);
 

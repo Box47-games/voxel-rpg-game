@@ -1,3 +1,4 @@
+import { notePlayerAction } from '../systems/playerActions';
 import { damageEnemy, getEnemiesInRadius, getEnemyPosition, isEnemyHittable, rollPlayerDamage } from '../systems/combat/enemyHits';
 import { Flame, Zap, Snowflake, Wind, Heart, Shield, Wand2, Cloud, Zap as Lightning, Droplets, Skull } from 'lucide-react';
 
@@ -359,6 +360,7 @@ export const executeSpell = (spell, player, store) => {
 
   // Consume mana
   store.consumeMana(spell.manaCost);
+  notePlayerAction('cast');
 
   // Execute based on type
   switch (spell.type) {

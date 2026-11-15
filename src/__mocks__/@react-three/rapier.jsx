@@ -22,6 +22,7 @@ export const RigidBody = React.forwardRef(({ children, ...props }, ref) => {
     bodyRef.current = {
       translation: vi.fn(() => ({ ...pos })),
       setTranslation: vi.fn((t) => { pos = { ...t }; }),
+      setNextKinematicTranslation: vi.fn((t) => { pos = { ...t }; }),
       linvel: vi.fn(() => ({ ...vel })),
       setLinvel: vi.fn((v) => { vel = { x: v.x, y: v.y, z: v.z }; }),
       applyImpulse: vi.fn(),

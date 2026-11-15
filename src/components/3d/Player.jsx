@@ -12,6 +12,13 @@ import { AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_
   PLAYER_MANA_REGEN, PLAYER_MOVE_SMOOTHING, CAMERA_FOLLOW_SMOOTHING,
   DODGE_STAMINA_COST, DODGE_DURATION, DODGE_SPEED, DODGE_DOUBLE_TAP_MS } from '../../data/tuning';
 import { isSolid as isBlockSolid, isTransparent as isBlockTransparent } from '../../systems/chunks/blockTypes';
+import { applyBonePose } from './voxelRig';
+import { createHumanoidInstance, PLAYER_LOOK } from './characters/humanoidModel';
+import { createHumanoidAnimState, stepHumanoidAnimation, triggerAction } from './characters/humanoidAnimation';
+import { getLastPlayerAction } from '../../systems/playerActions';
+
+// Mining keeps reporting while the button is held; it counts as ongoing this long after
+const MINE_ACTION_WINDOW_MS = 200;
 
 // Pre-compute spell key map (SPELLS is static)
 const SPELL_KEY_MAP = {
@@ -78,10 +85,11 @@ const Player = () => {
   // E key use/interact state
   const prevUseRef = useRef(false);
 
-  // Leg animation state
-  const leftLegRef = useRef();
-  const rightLegRef = useRef();
-  const walkPhaseRef = useRef(0);
+  // Voxel adventurer model and its animation state
+  const rig = useMemo(() => createHumanoidInstance(PLAYER_LOOK), []);
+  useEffect(() => () => rig.dispose(), [rig]);
+  const animRef = useRef(createHumanoidAnimState(0.2));
+  const lastActionSeqRef = useRef(0);
 
   // Auto-jump state (mobile/touch devices)
   const isMobileDevice = useRef(isTouchDevice());
@@ -369,18 +377,26 @@ const Player = () => {
     // Player position (included in batched write below)
     const newPos = [currentPos.x, currentPos.y, currentPos.z];
 
-    // Leg walk animation
+    // Animate the body: walk/run, jump, and whatever the player just did
     const xzSpeed = Math.sqrt(currentVel.x * currentVel.x + currentVel.z * currentVel.z);
-    if (xzSpeed > 0.5) {
-      walkPhaseRef.current += delta * 10;
-      const swing = Math.sin(walkPhaseRef.current) * 0.6;
-      if (leftLegRef.current?.rotation) leftLegRef.current.rotation.x = swing;
-      if (rightLegRef.current?.rotation) rightLegRef.current.rotation.x = -swing;
-    } else {
-      walkPhaseRef.current = 0;
-      if (leftLegRef.current?.rotation) leftLegRef.current.rotation.x = 0;
-      if (rightLegRef.current?.rotation) rightLegRef.current.rotation.x = 0;
+    const action = getLastPlayerAction();
+    let activity = null;
+    if (action) {
+      if (action.type === 'mine') {
+        if (performance.now() - action.at < MINE_ACTION_WINDOW_MS) activity = 'mine';
+      } else if (action.seq !== lastActionSeqRef.current) {
+        triggerAction(animRef.current, action.type);
+      }
+      lastActionSeqRef.current = action.seq;
     }
+    const pose = stepHumanoidAnimation(animRef.current, {
+      speed: xzSpeed,
+      airborne: !grounded,
+      activity,
+    }, delta);
+    applyBonePose(rig, pose);
+    // In first person the camera sits in the head: hide it so it doesn't block the view
+    if (cameraState.firstPerson) rig.bones.head.scale.setScalar(0);
 
     // Update camera based on mode (first-person or third-person)
     const targetCameraPos = _targetCameraPos.current;
@@ -579,41 +595,9 @@ const Player = () => {
     >
       <CapsuleCollider args={[0.8, 0.6]} position={[0, 1.4, 0]} friction={0} restitution={0} />
       <group ref={bodyGroupRef}>
-        {/* Player body (torso) */}
-        <mesh position={[0, 1.35, 0]}>
-          <boxGeometry args={[1.2, 1.3, 0.8]} />
-          <meshBasicMaterial color="#4169e1" />
-        </mesh>
-
-        {/* Left leg */}
-        <group ref={leftLegRef} position={[-0.28, 0.45, 0]}>
-          <mesh>
-            <boxGeometry args={[0.35, 0.9, 0.45]} />
-            <meshBasicMaterial color="#2a4cb0" />
-          </mesh>
-        </group>
-
-        {/* Right leg */}
-        <group ref={rightLegRef} position={[0.28, 0.45, 0]}>
-          <mesh>
-            <boxGeometry args={[0.35, 0.9, 0.45]} />
-            <meshBasicMaterial color="#2a4cb0" />
-          </mesh>
-        </group>
-
-        {/* Player head */}
-        <mesh position={[0, 2.4, 0]}>
-          <boxGeometry args={[0.9, 0.9, 0.9]} />
-          <meshBasicMaterial color="#5a7fd6" />
-        </mesh>
-
-        {/* Nose (small protruding box) */}
-        <mesh position={[0, 2.3, 0.5]}>
-          <boxGeometry args={[0.18, 0.15, 0.15]} />
-          <meshBasicMaterial color="#e8967a" />
-        </mesh>
+        {/* Voxel adventurer: one skinned mesh, animated through its bones */}
+        <primitive object={rig.mesh} dispose={null} />
       </group>
-
     </RigidBody>
   );
 };

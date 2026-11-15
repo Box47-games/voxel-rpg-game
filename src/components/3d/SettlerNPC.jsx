@@ -17,21 +17,36 @@ import { NPC_WALK_SPEED, NPC_APPROACH_SPEED, NPC_HAUL_SPEED } from '../../data/t
 import { VOXEL_SIZE, CHUNK_SIZE_Y } from '../../systems/chunks/coordinates';
 import { isSolid } from '../../systems/chunks/blockTypes';
 import NPCThoughtBubble from './NPCThoughtBubble';
+import { applyBonePose } from './voxelRig';
+import { createHumanoidInstance, getSettlerLook, SETTLER_UNIT } from './characters/humanoidModel';
+import { createHumanoidAnimState, stepHumanoidAnimation } from './characters/humanoidAnimation';
 
 // Pre-allocated vectors
 const _targetVec = new THREE.Vector3();
 const _currentVec = new THREE.Vector3();
 const _dirVec = new THREE.Vector3();
 
-// Shared geometries
-const headGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-const hairGeo = new THREE.BoxGeometry(0.62, 0.15, 0.62);
-const bodyGeo = new THREE.BoxGeometry(0.7, 0.9, 0.5);
-const legGeo = new THREE.BoxGeometry(0.25, 0.6, 0.25);
-const armGeo = new THREE.BoxGeometry(0.2, 0.6, 0.2);
-const indicatorGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-const statusGeo = new THREE.SphereGeometry(0.12, 6, 6);
-const carryGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+// Status gem floating above the settler's head
+const statusGeo = new THREE.OctahedronGeometry(0.16, 0);
+const STATUS_GEM_HEIGHT = 2.95;
+
+/**
+ * Which looping animation a settler plays in its current state. Work
+ * animations only play on site (not while walking there), except carrying.
+ */
+export function getSettlerActivity(npc, moving) {
+  if ((npc.state === 'WORKING_HAUL' && npc.carryingItem) || npc.state === 'HAULING') return 'carry';
+  if (moving) return null;
+  switch (npc.state) {
+    case 'WORKING_MINE': return 'mine';
+    case 'WORKING_BUILD':
+    case 'BUILDING': return 'build';
+    case 'WORKING_FARM': return 'farm';
+    case 'EATING': return 'eat';
+    case 'SOCIALIZING': return 'wave';
+    default: return null;
+  }
+}
 
 // Status colors
 const STATUS_COLORS = {
@@ -66,39 +81,32 @@ function getTerrainY(chunkManager, wx, wz) {
 
 const SettlerNPC = React.memo(({ npcData }) => {
   const bodyRef = useRef();
-  const groupRef = useRef();
-  const leftLegRef = useRef();
-  const rightLegRef = useRef();
-  const leftArmRef = useRef();
-  const rightArmRef = useRef();
-  const walkPhase = useRef(0);
-  const workPhase = useRef(0);
+  const statusRef = useRef();
   const lastTerrainCheck = useRef(0);
   const terrainY = useRef(npcData.position[1]);
   const evalRotation = useRef(0);
   const npcIndexRef = useRef(0);
 
-  // Materials (memoized per NPC, stable across state changes)
-  const materials = useMemo(() => ({
-    skin: new THREE.MeshLambertMaterial({ color: new THREE.Color(...npcData.appearance.skinColor) }),
-    hair: new THREE.MeshLambertMaterial({ color: new THREE.Color(...npcData.appearance.hairColor) }),
-    clothing: new THREE.MeshLambertMaterial({ color: new THREE.Color(...npcData.appearance.clothingPrimary) }),
-    clothingAlt: new THREE.MeshLambertMaterial({ color: new THREE.Color(...npcData.appearance.clothingSecondary) }),
-    indicator: new THREE.MeshBasicMaterial({ color: '#4488ff' }),
-    status: new THREE.MeshBasicMaterial({ color: '#44cc44' }), // color updated in useFrame
-    carry: new THREE.MeshBasicMaterial({ color: '#ddaa44' }),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [npcData.appearance]);
+  // Voxel villager dressed for their job; one skinned mesh per settler
+  const rig = useMemo(
+    () => createHumanoidInstance(getSettlerLook(npcData), { unit: SETTLER_UNIT }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [npcData.id, npcData.appearance, npcData.preferredJob]
+  );
+  const animRef = useRef(null);
+  if (!animRef.current) animRef.current = createHumanoidAnimState((npcData.id?.length || 3) * 0.137 % 1);
+  const statusMaterial = useMemo(() => new THREE.MeshBasicMaterial({ color: '#44cc44' }), []);
 
-  // Dispose materials on unmount
-  useEffect(() => {
-    return () => Object.values(materials).forEach(m => m.dispose());
-  }, [materials]);
+  useEffect(() => () => {
+    rig.dispose();
+    statusMaterial.dispose();
+  }, [rig, statusMaterial]);
 
   useFrame((_, delta) => {
     if (!bodyRef.current) return;
 
     const store = useGameStore.getState();
+    if (store.gameState === 'paused') return;
     // Fast path: check cached index first, fall back to find()
     const npcs = store.settlement.npcs;
     let npc = npcs[npcIndexRef.current];
@@ -131,6 +139,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
     }
 
     let moving = false;
+    let moveSpeed = 0;
 
     // This component moves the NPC toward targetPosition and performs the
     // on-arrival transitions below (APPROACHING→EVALUATING, WANDERING/SOCIALIZING→IDLE).
@@ -201,6 +210,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
 
         if (!blocked) {
           moving = true;
+          moveSpeed = speed;
           const moveY = stepUp ? terrainY.current + VOXEL_SIZE : terrainY.current;
           if (stepUp) terrainY.current = moveY;
 
@@ -231,82 +241,44 @@ const SettlerNPC = React.memo(({ npcData }) => {
     }
 
     // EVALUATING: slow look-around rotation
-    if (npc.state === 'EVALUATING' && groupRef.current) {
+    const model = rig.mesh;
+    if (npc.state === 'EVALUATING') {
       evalRotation.current += delta * 1.2;
-      groupRef.current.rotation.y = Math.sin(evalRotation.current) * 1.0;
-    } else if (groupRef.current) {
+      model.rotation.y = Math.sin(evalRotation.current) * 1.0;
+    } else {
       // Reset to facing angle
-      groupRef.current.rotation.y = npc.facingAngle || 0;
+      model.rotation.y = npc.facingAngle || 0;
       evalRotation.current = 0;
     }
 
     // ── Animations ──
-    const time = now / 1000;
+    const pose = stepHumanoidAnimation(animRef.current, {
+      speed: moveSpeed,
+      activity: getSettlerActivity(npc, moving),
+      alert: npc.state === 'EVALUATING',
+    }, delta);
+    applyBonePose(rig, pose);
 
-    // Walk animation (legs + subtle arm counterswing)
-    if (moving) {
-      walkPhase.current += delta * 8;
-      const swing = Math.sin(walkPhase.current) * 0.5;
-      if (leftLegRef.current) leftLegRef.current.rotation.x = swing;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -swing;
-      // Subtle arm counterswing when walking (unless in a work state)
-      if (!npc.state?.startsWith('WORKING_')) {
-        if (leftArmRef.current) leftArmRef.current.rotation.x = -swing * 0.4;
-        if (rightArmRef.current) rightArmRef.current.rotation.x = swing * 0.4;
-      }
-    } else {
-      walkPhase.current = 0;
-      if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
-      if (!npc.state?.startsWith('WORKING_')) {
-        if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
-        if (rightArmRef.current) rightArmRef.current.rotation.x = 0;
-      }
-    }
-
-    // Work animations (specific work states override walk arm swing)
-    if (npc.state === 'WORKING_MINE') {
-      // Right arm swings down (pickaxe motion)
-      if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(time * 6) * 0.8;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
-    } else if (npc.state === 'WORKING_BUILD') {
-      // Right arm taps forward (hammer motion)
-      if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(time * 4) * 0.6;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
-    } else if (npc.state === 'WORKING_FARM') {
-      // Both arms swing low and slow (hoeing / picking)
-      const hoe = Math.sin(time * 3) * 0.5 - 0.4;
-      if (rightArmRef.current) rightArmRef.current.rotation.x = hoe;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = hoe;
-    } else if (npc.state === 'WORKING_HAUL' && npc.carryingItem) {
-      // Both arms angled forward ~45deg
-      if (leftArmRef.current) leftArmRef.current.rotation.x = -0.8;
-      if (rightArmRef.current) rightArmRef.current.rotation.x = -0.8;
-    } else if (npc.state === 'HAULING' || npc.state === 'BUILDING') {
-      // Legacy work states — phase-based arm swing
-      workPhase.current += delta * 6;
-      const swing = Math.sin(workPhase.current) * 0.8;
-      if (rightArmRef.current) rightArmRef.current.rotation.x = swing;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = -swing * 0.3;
-    } else if (!moving) {
-      workPhase.current = 0;
+    // The status gem bobs and turns gently
+    if (statusRef.current?.position) {
+      statusRef.current.position.y = STATUS_GEM_HEIGHT + Math.sin(animRef.current.time * 2) * 0.06;
+      statusRef.current.rotation.y += delta * 1.5;
     }
 
     // Sleeping visual — lay NPC on side once it has reached its bed
-    if (npc.state === 'SLEEPING' && !moving && groupRef.current) {
-      groupRef.current.rotation.z = Math.PI / 2;
-    } else if (groupRef.current && npc.state !== 'EVALUATING') {
-      groupRef.current.rotation.z = 0;
+    if (npc.state === 'SLEEPING' && !moving) {
+      model.rotation.z = Math.PI / 2;
+    } else if (npc.state !== 'EVALUATING') {
+      model.rotation.z = 0;
     }
 
     // Update status color
     const stateColor = STATUS_COLORS[npc.state] || '#44cc44';
-    materials.status.color.set(stateColor);
+    statusMaterial.color.set(stateColor);
   });
 
   // Determine thought bubble type from current npc data
   const thoughtType = npcData.thoughtBubble?.type || null;
-  const isCarrying = npcData.carryingItem != null;
 
   return (
     <RigidBody
@@ -317,39 +289,10 @@ const SettlerNPC = React.memo(({ npcData }) => {
       userData={{ isNPC: true, npcId: npcData.id }}
     >
       <CapsuleCollider args={[0.6, 0.35]} position={[0, 1.2, 0]} />
-      <group ref={groupRef} rotation={[0, npcData.facingAngle || 0, 0]}>
-        {/* Head */}
-        <mesh geometry={headGeo} material={materials.skin} position={[0, 2.1, 0]} />
-        {/* Hair */}
-        <mesh geometry={hairGeo} material={materials.hair} position={[0, 2.45, 0]} />
-        {/* Body */}
-        <mesh geometry={bodyGeo} material={materials.clothing} position={[0, 1.35, 0]} />
-        {/* Left arm */}
-        <group ref={leftArmRef} position={[-0.45, 1.65, 0]}>
-          <mesh geometry={armGeo} material={materials.skin} position={[0, -0.3, 0]} />
-        </group>
-        {/* Right arm */}
-        <group ref={rightArmRef} position={[0.45, 1.65, 0]}>
-          <mesh geometry={armGeo} material={materials.skin} position={[0, -0.3, 0]} />
-        </group>
-        {/* Left leg */}
-        <group ref={leftLegRef} position={[-0.18, 0.6, 0]}>
-          <mesh geometry={legGeo} material={materials.clothingAlt} position={[0, 0, 0]} />
-        </group>
-        {/* Right leg */}
-        <group ref={rightLegRef} position={[0.18, 0.6, 0]}>
-          <mesh geometry={legGeo} material={materials.clothingAlt} position={[0, 0, 0]} />
-        </group>
-        {/* Carrying item (small colored cube at body front) */}
-        {isCarrying && (
-          <mesh geometry={carryGeo} material={materials.carry} position={[0, 1.2, 0.4]} />
-        )}
-      </group>
+      <primitive object={rig.mesh} rotation={[0, npcData.facingAngle || 0, 0]} dispose={null} />
 
-      {/* NPC indicator (blue cube above head) */}
-      <mesh geometry={indicatorGeo} material={materials.indicator} position={[0, 2.8, 0]} />
-      {/* State indicator (small sphere) */}
-      <mesh geometry={statusGeo} material={materials.status} position={[0.25, 2.8, 0]} />
+      {/* State gem above the head */}
+      <mesh ref={statusRef} geometry={statusGeo} material={statusMaterial} position={[0, STATUS_GEM_HEIGHT, 0]} />
 
       {/* Thought bubble */}
       <NPCThoughtBubble type={thoughtType} />

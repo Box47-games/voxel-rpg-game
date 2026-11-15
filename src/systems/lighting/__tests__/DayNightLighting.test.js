@@ -4,6 +4,10 @@ import {
   getDirectionalIntensity,
   getSunPosition,
   getSkyColor,
+  getHorizonColor,
+  getFogColor,
+  getSunColor,
+  getGroundBounceColor,
   getAmbientColor,
   getLightingState,
 } from '../DayNightLighting';
@@ -114,19 +118,45 @@ describe('DayNightLighting', () => {
     });
   });
 
-  describe('getSkyColor', () => {
-    test('noon is sky blue', () => {
-      expect(getSkyColor(0.5)).toBe('#87ceeb');
+  describe('sky gradient', () => {
+    const brightness = (hex) => parseInt(hex.slice(1, 3), 16) + parseInt(hex.slice(3, 5), 16) + parseInt(hex.slice(5, 7), 16);
+    const isBlue = (hex) => parseInt(hex.slice(5, 7), 16) > parseInt(hex.slice(1, 3), 16);
+
+    test('noon: a blue sky that pales toward the horizon', () => {
+      expect(getSkyColor(0.5)).toBe('#3a7fd6');
+      expect(isBlue(getHorizonColor(0.5))).toBe(true);
+      expect(brightness(getHorizonColor(0.5))).toBeGreaterThan(brightness(getSkyColor(0.5)));
     });
 
     test('midnight is dark', () => {
-      expect(getSkyColor(0)).toBe('#0a0a2e');
+      expect(getSkyColor(0)).toBe('#060a1c');
+      expect(brightness(getHorizonColor(0))).toBeLessThan(150);
+    });
+
+    test('sunrise and sunset glow orange at the horizon', () => {
+      for (const t of [0.25, 0.75]) {
+        const h = getHorizonColor(t);
+        expect(parseInt(h.slice(1, 3), 16)).toBeGreaterThan(parseInt(h.slice(5, 7), 16) + 80);
+      }
+    });
+
+    test('fog matches the horizon so distant terrain melts into the sky', () => {
+      for (let t = 0; t <= 1; t += 0.1) expect(getFogColor(t)).toBe(getHorizonColor(t));
+    });
+
+    test('sunlight is warm by day and cool by night; ground bounce dims at night', () => {
+      const day = getSunColor(0.5);
+      const night = getSunColor(0);
+      expect(parseInt(day.slice(1, 3), 16)).toBeGreaterThanOrEqual(parseInt(day.slice(5, 7), 16));
+      expect(parseInt(night.slice(5, 7), 16)).toBeGreaterThan(parseInt(night.slice(1, 3), 16));
+      expect(brightness(getGroundBounceColor(0.5))).toBeGreaterThan(brightness(getGroundBounceColor(0)));
     });
 
     test('returns valid hex for all times', () => {
       for (let t = 0; t <= 1; t += 0.05) {
-        const color = getSkyColor(t);
-        expect(color).toMatch(/^#[0-9a-f]{6}$/);
+        for (const fn of [getSkyColor, getHorizonColor, getSunColor, getGroundBounceColor]) {
+          expect(fn(t)).toMatch(/^#[0-9a-f]{6}$/);
+        }
       }
     });
   });

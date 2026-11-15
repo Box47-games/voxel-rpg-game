@@ -54,6 +54,8 @@ function App3D() {
       {/* Three.js Canvas */}
       <Canvas
         shadows
+        // No tone mapping: the art is authored as flat colors (ACES washed them out)
+        flat
         // preserveDrawingBuffer is only needed for QA tracker screenshots and costs performance
         gl={{ preserveDrawingBuffer: DEBUG_TOOLS_ENABLED }}
         camera={{

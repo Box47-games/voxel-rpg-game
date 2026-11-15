@@ -214,6 +214,12 @@ export function createRig(model, { geometry, glowGeometry }, {
   mesh.updateMatrixWorld(true);
   const skeleton = new THREE.Skeleton(boneNames.map((n) => bones[n]));
   mesh.bind(skeleton);
+  // three.js would compute a skinned mesh's bounds on first use, before the
+  // skeleton has been updated, collapsing them to a point at the feet (so the
+  // model vanishes when its feet leave the screen). Give it generous bounds
+  // up front instead: the rest-pose sphere, enlarged for swinging limbs.
+  mesh.boundingSphere = geometry.boundingSphere.clone();
+  mesh.boundingSphere.radius *= 1.6;
 
   // Unlit parts (glowing eyes) share the skeleton through a second mesh
   let glowMesh = null;
@@ -225,6 +231,7 @@ export function createRig(model, { geometry, glowGeometry }, {
     mesh.add(glowMesh);
     mesh.updateMatrixWorld(true);
     glowMesh.bind(skeleton, mesh.bindMatrix);
+    glowMesh.boundingSphere = mesh.boundingSphere.clone();
   }
 
   return {

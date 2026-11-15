@@ -21,13 +21,14 @@ export const SUNSET_START = 0.70;  // ~4:48 PM — sky starts to dim
 export const SUNSET_END = 0.80;    // ~7:12 PM — full darkness
 
 // ─── Day/Night Lighting ──────────────────────────────────────
-// Ambient light intensity. Range: 0.0–1.0.
-export const LIGHT_AMBIENT_NIGHT = 0.3;
-export const LIGHT_AMBIENT_DAY = 0.7;
+// Sky/ground (hemisphere) light intensity. Lights use physical units (diffuse
+// light is divided by π) and no tone mapping, so ~1.45 + the sun ≈ full daylight.
+export const LIGHT_AMBIENT_NIGHT = 0.5;
+export const LIGHT_AMBIENT_DAY = 1.45;
 
-// Directional (sun/moon) light intensity. Range: 0.0–1.5.
-export const LIGHT_DIRECTIONAL_NIGHT = 0.3;
-export const LIGHT_DIRECTIONAL_DAY = 1.0;
+// Directional (sun/moon) light intensity, same units.
+export const LIGHT_DIRECTIONAL_NIGHT = 0.5;
+export const LIGHT_DIRECTIONAL_DAY = 1.9;
 
 // Sky colors by time of day
 export const SKY_COLORS = {

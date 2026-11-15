@@ -41,30 +41,42 @@ const BlockTypes = {
   DEAD_WOOD: 21,
 };
 
-// Block colors [r, g, b] in 0-1 range
+/**
+ * Colors are authored as on-screen (sRGB) values; vertex colors are lit in
+ * linear space, so convert once here. Without this every color renders pale.
+ */
+function srgbToLinear(c) {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+function lin(rgb) {
+  return [srgbToLinear(rgb[0]), srgbToLinear(rgb[1]), srgbToLinear(rgb[2])];
+}
+
+// Block colors [r, g, b] in 0-1 sRGB (base tones; see TERRAIN ART below for
+// grass sides, meadow tints, bark and mottling), stored linear
 const BlockColors = {
-  [BlockTypes.AIR]: [0, 0, 0],
-  [BlockTypes.STONE]: [0.5, 0.5, 0.5],
-  [BlockTypes.DIRT]: [0.545, 0.271, 0.075],
-  [BlockTypes.GRASS]: [0.133, 0.545, 0.133],
-  [BlockTypes.SAND]: [0.76, 0.7, 0.5],
-  [BlockTypes.WATER]: [0.2, 0.4, 0.8],
-  [BlockTypes.WOOD]: [0.545, 0.353, 0.169],
-  [BlockTypes.LEAVES]: [0.2, 0.6, 0.2],
-  [BlockTypes.BEDROCK]: [0.2, 0.2, 0.2],
-  [BlockTypes.GRAVEL]: [0.5, 0.5, 0.55],
-  [BlockTypes.COAL_ORE]: [0.3, 0.3, 0.3],
-  [BlockTypes.IRON_ORE]: [0.6, 0.5, 0.45],
-  [BlockTypes.GOLD_ORE]: [0.8, 0.7, 0.2],
-  [BlockTypes.CLAY]: [0.6, 0.6, 0.65],
-  [BlockTypes.SNOW]: [0.95, 0.95, 0.98],
-  [BlockTypes.ICE]: [0.7, 0.85, 0.95],
-  [BlockTypes.BERRY_BUSH]: [0.2, 0.45, 0.15],
-  [BlockTypes.CAMPFIRE]: [0.9, 0.4, 0.1],
-  [BlockTypes.CORRUPTED_STONE]: [0.12, 0.05, 0.15],
-  [BlockTypes.CORRUPTED_GRASS]: [0.20, 0.30, 0.15],
-  [BlockTypes.DEAD_LEAVES]: [0.58, 0.42, 0.28],
-  [BlockTypes.DEAD_WOOD]: [0.45, 0.43, 0.40],
+  [BlockTypes.AIR]: lin([0, 0, 0]),
+  [BlockTypes.STONE]: lin([0.52, 0.53, 0.55]),
+  [BlockTypes.DIRT]: lin([0.47, 0.32, 0.2]),
+  [BlockTypes.GRASS]: lin([0.34, 0.6, 0.21]),
+  [BlockTypes.SAND]: lin([0.87, 0.79, 0.56]),
+  [BlockTypes.WATER]: lin([0.22, 0.45, 0.75]),
+  [BlockTypes.WOOD]: lin([0.41, 0.28, 0.17]),
+  [BlockTypes.LEAVES]: lin([0.24, 0.5, 0.19]),
+  [BlockTypes.BEDROCK]: lin([0.17, 0.17, 0.19]),
+  [BlockTypes.GRAVEL]: lin([0.56, 0.54, 0.51]),
+  [BlockTypes.COAL_ORE]: lin([0.3, 0.3, 0.32]),
+  [BlockTypes.IRON_ORE]: lin([0.64, 0.52, 0.43]),
+  [BlockTypes.GOLD_ORE]: lin([0.86, 0.72, 0.27]),
+  [BlockTypes.CLAY]: lin([0.62, 0.6, 0.66]),
+  [BlockTypes.SNOW]: lin([0.94, 0.96, 1.0]),
+  [BlockTypes.ICE]: lin([0.68, 0.84, 0.95]),
+  [BlockTypes.BERRY_BUSH]: lin([0.2, 0.42, 0.17]),
+  [BlockTypes.CAMPFIRE]: lin([0.9, 0.4, 0.1]),
+  [BlockTypes.CORRUPTED_STONE]: lin([0.12, 0.05, 0.15]),
+  [BlockTypes.CORRUPTED_GRASS]: lin([0.2, 0.3, 0.15]),
+  [BlockTypes.DEAD_LEAVES]: lin([0.58, 0.42, 0.28]),
+  [BlockTypes.DEAD_WOOD]: lin([0.45, 0.43, 0.4]),
 };
 
 // Transparent blocks
@@ -103,6 +115,263 @@ const FACES = {
     normal: [-1, 0, 0],
   },
 };
+
+// ============================================================================
+// TERRAIN ART
+// Purely visual: colors are computed per vertex from world coordinates, so
+// they are seamless across chunk borders and identical on every rebuild.
+// Nothing here changes which blocks exist.
+// ============================================================================
+
+// Gentle baked face shading: the scene's sun and sky light do most of the work
+const FACE_LIGHT_BOTTOM = 0.6;
+const FACE_LIGHT_NS = 0.9;
+const FACE_LIGHT_EW = 0.84;
+
+const GRASS_LUSH = lin([0.24, 0.5, 0.17]);
+const GRASS_DRY = lin([0.46, 0.58, 0.22]);
+const LEAF_DARK = lin([0.15, 0.4, 0.15]);
+const LEAF_LIGHT = lin([0.34, 0.58, 0.21]);
+const WOOD_RINGS = lin([0.68, 0.52, 0.33]);
+const CORRUPT_SOIL = lin([0.2, 0.12, 0.18]);
+
+// How much each block's color wobbles from vertex to vertex
+const MOTTLE = {
+  [BlockTypes.GRASS]: 0.13,
+  [BlockTypes.LEAVES]: 0.12,
+  [BlockTypes.BERRY_BUSH]: 0.12,
+  [BlockTypes.DIRT]: 0.07,
+  [BlockTypes.STONE]: 0.07,
+  [BlockTypes.SAND]: 0.04,
+  [BlockTypes.SNOW]: 0.02,
+  [BlockTypes.GRAVEL]: 0.1,
+  [BlockTypes.CLAY]: 0.05,
+  [BlockTypes.WOOD]: 0.1,
+  [BlockTypes.CORRUPTED_GRASS]: 0.08,
+};
+
+/** Deterministic hash of integer world coordinates → [0, 1). */
+function hash3(x, y, z) {
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(z | 0, 1274126177)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1103515245);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/** Smooth 2D value noise with the given cell size (in blocks) → [0, 1]. */
+function valueNoise2(x, z, cell, salt) {
+  const fx = x / cell;
+  const fz = z / cell;
+  const ix = Math.floor(fx);
+  const iz = Math.floor(fz);
+  let tx = fx - ix;
+  let tz = fz - iz;
+  tx = tx * tx * (3 - 2 * tx);
+  tz = tz * tz * (3 - 2 * tz);
+  const a = hash3(ix, salt, iz);
+  const b = hash3(ix + 1, salt, iz);
+  const c = hash3(ix, salt, iz + 1);
+  const d = hash3(ix + 1, salt, iz + 1);
+  return (a + (b - a) * tx) + ((c + (d - c) * tx) - (a + (b - a) * tx)) * tz;
+}
+
+/** Broad patches of lusher and drier ground (0 = lush, 1 = dry). */
+function meadowTint(x, z) {
+  return valueNoise2(x, z, 14, 11) * 0.75 + valueNoise2(x, z, 5, 23) * 0.25;
+}
+
+function mix3(a, b, t, out) {
+  out[0] = a[0] + (b[0] - a[0]) * t;
+  out[1] = a[1] + (b[1] - a[1]) * t;
+  out[2] = a[2] + (b[2] - a[2]) * t;
+  return out;
+}
+
+/**
+ * Base color of one vertex of a block face, before lighting/AO.
+ * (wx, wy, wz): the block's world block coordinates; (vx, vy, vz): the
+ * vertex's world block coordinates (shared by neighbouring faces, so mottling
+ * blends smoothly across a surface). vTop: the vertex is on the block's top edge.
+ */
+function vertexBaseColor(blockType, face, vTop, wx, wy, wz, vx, vy, vz, out) {
+  const base = BlockColors[blockType] || [1, 0, 1];
+  switch (blockType) {
+    case BlockTypes.GRASS: {
+      // Grass on top; the sides fade from a grassy lip down to dirt
+      mix3(GRASS_LUSH, GRASS_DRY, meadowTint(vx, vz), out);
+      if (face === 'bottom' || (face !== 'top' && !vTop)) {
+        out[0] = BlockColors[BlockTypes.DIRT][0];
+        out[1] = BlockColors[BlockTypes.DIRT][1];
+        out[2] = BlockColors[BlockTypes.DIRT][2];
+      } else if (face !== 'top') {
+        out[0] *= 0.9; out[1] *= 0.9; out[2] *= 0.9;
+      }
+      break;
+    }
+    case BlockTypes.SNOW:
+      if (face !== 'top' && !vTop) mix3(base, BlockColors[BlockTypes.DIRT], 0.55, out);
+      else mix3(base, base, 0, out);
+      break;
+    case BlockTypes.CORRUPTED_GRASS:
+      if (face !== 'top' && !vTop) mix3(CORRUPT_SOIL, CORRUPT_SOIL, 0, out);
+      else mix3(base, base, 0, out);
+      break;
+    case BlockTypes.LEAVES:
+    case BlockTypes.BERRY_BUSH: {
+      // Each tree leans a little lighter or darker, and shades vary across the land
+      const t = meadowTint(wx, wz) * 0.6 + hash3(wx, wy, wz) * 0.4;
+      mix3(LEAF_DARK, LEAF_LIGHT, t, out);
+      if (blockType === BlockTypes.BERRY_BUSH) { out[0] *= 0.85; out[1] *= 0.9; out[2] *= 0.85; }
+      break;
+    }
+    case BlockTypes.WOOD:
+      if (face === 'top' || face === 'bottom') mix3(WOOD_RINGS, WOOD_RINGS, 0, out);
+      else mix3(base, base, 0, out);
+      break;
+    default:
+      out[0] = base[0]; out[1] = base[1]; out[2] = base[2];
+  }
+
+  const amp = MOTTLE[blockType] || 0.05;
+  if (amp > 0) {
+    // Bark streaks run vertically; everything else mottles in 3D
+    const n = blockType === BlockTypes.WOOD && face !== 'top' && face !== 'bottom'
+      ? hash3(vx * 3 + vz * 5, 0, 7)
+      : hash3(vx, vy, vz);
+    const m = 1 + (n - 0.5) * 2 * amp;
+    out[0] *= m; out[1] *= m; out[2] *= m;
+  }
+  return out;
+}
+
+// ── Decorations ──────────────────────────────────────────────
+// Small non-solid details (grass tufts, flowers, pebbles, berries) built into
+// a separate mesh with no physics collider. They are derived from the blocks,
+// so they vanish with the block under them on the next rebuild.
+
+const FLOWER_COLORS = [
+  lin([0.92, 0.26, 0.24]), // poppy red
+  lin([0.98, 0.84, 0.25]), // buttercup yellow
+  lin([0.96, 0.95, 0.9]),  // daisy white
+  lin([0.62, 0.42, 0.86]), // violet
+  lin([0.36, 0.58, 0.95]), // cornflower blue
+];
+const PEBBLE_COLOR = lin([0.6, 0.6, 0.6]);
+const BERRY_COLOR = lin([0.8, 0.12, 0.22]);
+const DEAD_TUFT = lin([0.32, 0.26, 0.3]);
+const PEBBLE_TOP = lin([0.68, 0.68, 0.68]);
+const SHELL_COLOR = lin([0.72, 0.66, 0.55]);
+const SHELL_TOP = lin([0.8, 0.74, 0.62]);
+const FLOWER_HEART = lin([0.98, 0.84, 0.32]);
+
+/** Builder for the decoration mesh: boxes without bottoms, darker at the base. */
+function createDecorBuilder(maxVertices) {
+  const positions = new Float32Array(maxVertices * 3);
+  const normals = new Float32Array(maxVertices * 3);
+  const colors = new Float32Array(maxVertices * 3);
+  const indices = [];
+  let count = 0;
+
+  const SIDE_SHADE = { top: 1.05, north: 0.85, south: 0.85, east: 0.78, west: 0.78 };
+  const DECOR_FACES = ['top', 'north', 'south', 'east', 'west'];
+
+  /** A box centered at (cx, cz) standing on y0, in chunk-local world units. */
+  function box(cx, y0, cz, sx, sy, sz, color, topColor) {
+    if (count + 20 > maxVertices) return;
+    for (const face of DECOR_FACES) {
+      const f = FACES[face];
+      const start = count;
+      for (let i = 0; i < 4; i++) {
+        const v = f.vertices[i];
+        const o = count * 3;
+        positions[o] = cx + (v[0] - 0.5) * sx;
+        positions[o + 1] = y0 + v[1] * sy;
+        positions[o + 2] = cz + (v[2] - 0.5) * sz;
+        normals[o] = f.normal[0];
+        normals[o + 1] = f.normal[1];
+        normals[o + 2] = f.normal[2];
+        const c = v[1] === 1 && topColor ? topColor : color;
+        const shade = SIDE_SHADE[face] * (v[1] === 1 ? 1 : 0.75); // grounded at the base
+        colors[o] = Math.min(1, c[0] * shade);
+        colors[o + 1] = Math.min(1, c[1] * shade);
+        colors[o + 2] = Math.min(1, c[2] * shade);
+        count++;
+      }
+      indices.push(start, start + 2, start + 1, start, start + 3, start + 2); // counter-clockwise: front faces out
+    }
+  }
+
+  function result() {
+    return {
+      positions: positions.slice(0, count * 3),
+      normals: normals.slice(0, count * 3),
+      colors: colors.slice(0, count * 3),
+      indices: new Uint32Array(indices),
+      vertexCount: count,
+    };
+  }
+
+  return { box, result };
+}
+
+/**
+ * Add the decorations that sit on block (x, y, z) (chunk-local) with world
+ * block coordinates (wx, wy, wz). `above` is the block on top of it.
+ */
+function decorateBlock(decor, blockType, above, x, y, z, wx, wy, wz) {
+  const S = VOXEL_SIZE;
+  const top = (y + 1) * S;
+  const r = hash3(wx, wy, wz);
+  const jx = (k) => x * S + S * (0.2 + hash3(wx, wy + k, wz + 97) * 0.6);
+  const jz = (k) => z * S + S * (0.2 + hash3(wx + 53, wy + k, wz) * 0.6);
+
+  if ((blockType === BlockTypes.GRASS || blockType === BlockTypes.CORRUPTED_GRASS) && above === BlockTypes.AIR) {
+    const dead = blockType === BlockTypes.CORRUPTED_GRASS;
+    const grass = dead ? DEAD_TUFT : mix3(GRASS_LUSH, GRASS_DRY, meadowTint(wx, wz), [0, 0, 0]);
+    const tip = dead ? DEAD_TUFT : [grass[0] * 1.15 + 0.04, grass[1] * 1.12 + 0.04, grass[2] * 1.05];
+    if (r < 0.3) {
+      // A tuft of 2-4 blades
+      const blades = 2 + Math.floor(hash3(wx, wy + 5, wz) * 3);
+      const cx = jx(0);
+      const cz = jz(0);
+      for (let i = 0; i < blades; i++) {
+        const h = S * (0.18 + hash3(wx + i, wy, wz + 11) * 0.22);
+        const ox = (hash3(wx + i, wy + 2, wz) - 0.5) * S * 0.3;
+        const oz = (hash3(wx, wy + 3, wz + i) - 0.5) * S * 0.3;
+        decor.box(cx + ox, top, cz + oz, S * 0.06, h, S * 0.06, grass, tip);
+      }
+    } else if (!dead && r < 0.36) {
+      // A flower: stem and petals
+      const color = FLOWER_COLORS[Math.floor(hash3(wx, wy + 9, wz) * FLOWER_COLORS.length)];
+      const cx = jx(1);
+      const cz = jz(1);
+      const h = S * (0.22 + hash3(wx, wy + 4, wz) * 0.12);
+      decor.box(cx, top, cz, S * 0.04, h, S * 0.04, grass, grass);
+      decor.box(cx, top + h, cz, S * 0.13, S * 0.08, S * 0.13, color, color);
+      decor.box(cx, top + h + S * 0.08, cz, S * 0.05, S * 0.03, S * 0.05, FLOWER_HEART, FLOWER_HEART);
+    } else if (r < 0.38) {
+      decor.box(jx(2), top, jz(2), S * 0.2, S * 0.09, S * 0.15, PEBBLE_COLOR, PEBBLE_TOP);
+    }
+  } else if (blockType === BlockTypes.SAND && above === BlockTypes.AIR && r < 0.05) {
+    decor.box(jx(2), top, jz(2), S * 0.16, S * 0.07, S * 0.12, SHELL_COLOR, SHELL_TOP);
+  } else if (blockType === BlockTypes.BERRY_BUSH) {
+    // Berries dotted over the top and sides of the bush, half sunk into the leaves
+    const n = 4 + Math.floor(r * 4);
+    const b = S * 0.12;
+    for (let i = 0; i < n; i++) {
+      const side = Math.floor(hash3(wx + i, wy, wz + 31) * 5);
+      const u = x * S + S * (0.15 + hash3(wx, wy + i, wz + 41) * 0.7);
+      const w = z * S + S * (0.15 + hash3(wx + 61, wy + i, wz) * 0.7);
+      const h = y * S + S * (0.2 + hash3(wx + 7, wy + i, wz + 3) * 0.6);
+      if (side === 0) {
+        if (above === BlockTypes.AIR) decor.box(u, top - b / 2, w, b, b, b, BERRY_COLOR, BERRY_COLOR);
+      } else if (side === 1) decor.box(x * S, h, w, b, b, b, BERRY_COLOR, BERRY_COLOR);
+      else if (side === 2) decor.box((x + 1) * S, h, w, b, b, b, BERRY_COLOR, BERRY_COLOR);
+      else if (side === 3) decor.box(u, h, z * S, b, b, b, BERRY_COLOR, BERRY_COLOR);
+      else decor.box(u, h, (z + 1) * S, b, b, b, BERRY_COLOR, BERRY_COLOR);
+    }
+  }
+}
 
 // ============================================================================
 // NOISE GENERATION
@@ -491,6 +760,11 @@ function generateTree(blocks, x, baseY, z, random) {
 
 function buildChunkMesh(params) {
   const { blocks, neighborNorth, neighborSouth, neighborEast, neighborWest } = params;
+  // World block offset of this chunk (colors and decorations use world coordinates)
+  const baseX = (params.chunkX || 0) * CHUNK_SIZE;
+  const baseZ = (params.chunkZ || 0) * CHUNK_SIZE;
+  const decor = createDecorBuilder(16000);
+  const vertexColor = [0, 0, 0];
 
   const maxVertices = 40000;
   const positions = new Float32Array(maxVertices * 3);
@@ -664,19 +938,21 @@ function buildChunkMesh(params) {
     if (vertexCount + 4 > maxVertices) return;
 
     const faceData = FACES[face];
-    const color = BlockColors[blockType] || [1, 0, 1];
+    const wx = baseX + x;
+    const wz = baseZ + z;
 
+    // Light baked per face, on top of the scene's sun and sky light
     let lightMod = 1.0;
-    if (face === 'bottom') lightMod = 0.5;
-    else if (face === 'north' || face === 'south') lightMod = 0.8;
-    else if (face === 'east' || face === 'west') lightMod = 0.7;
+    if (face === 'bottom') lightMod = FACE_LIGHT_BOTTOM;
+    else if (face === 'north' || face === 'south') lightMod = FACE_LIGHT_NS;
+    else if (face === 'east' || face === 'west') lightMod = FACE_LIGHT_EW;
 
     // Height-based brightness: lower blocks are slightly darker, higher are brighter
     // Range: ~0.88 at y=0 to ~1.08 at y=15 (subtle but visible at elevation changes)
     const heightMod = 0.88 + (y / CHUNK_SIZE_Y) * 0.20;
 
     // Per-block noise: ±4% brightness variation to break up uniform surfaces
-    const noiseMod = 0.96 + blockHash(x, y, z) * 0.08;
+    const noiseMod = 0.96 + hash3(wx, y, wz) * 0.08;
 
     // Warm glow from nearby campfires
     const campGlow = campfirePositions.length > 0 ? getCampfireGlow(x, y, z) : 0;
@@ -715,15 +991,11 @@ function buildChunkMesh(params) {
         // Dark purple with vein variation — keeps AO/height darkening
         const vein = blockHash(x + i, y, z + i) * 0.08;
         const finalMod = lightMod * aoMod * heightMod;
-        colors[idx] = Math.min(1, (0.12 + vein) * finalMod);
-        colors[idx + 1] = Math.min(1, 0.05 * finalMod);
-        colors[idx + 2] = Math.min(1, (0.15 + vein) * finalMod);
-      } else if (blockType === BlockTypes.CORRUPTED_GRASS) {
-        const finalMod = lightMod * aoMod * heightMod * noiseMod;
-        colors[idx] = Math.min(1, 0.20 * finalMod);
-        colors[idx + 1] = Math.min(1, 0.30 * finalMod);
-        colors[idx + 2] = Math.min(1, 0.15 * finalMod);
+        colors[idx] = Math.min(1, srgbToLinear(0.12 + vein) * finalMod);
+        colors[idx + 1] = Math.min(1, srgbToLinear(0.05) * finalMod);
+        colors[idx + 2] = Math.min(1, srgbToLinear(0.15 + vein) * finalMod);
       } else {
+        const color = vertexBaseColor(blockType, face, v[1] === 1, wx, y, wz, wx + v[0], y + v[1], wz + v[2], vertexColor);
         const finalMod = lightMod * aoMod * heightMod * noiseMod;
         let r = color[0] * finalMod;
         let g = color[1] * finalMod;
@@ -743,9 +1015,11 @@ function buildChunkMesh(params) {
       vertexCount++;
     }
 
+    // Counter-clockwise seen from outside, so the front face points along the
+    // normal (the FACES vertex lists run clockwise)
     indices.push(
-      startVertex, startVertex + 1, startVertex + 2,
-      startVertex, startVertex + 2, startVertex + 3
+      startVertex, startVertex + 2, startVertex + 1,
+      startVertex, startVertex + 3, startVertex + 2
     );
   }
 
@@ -761,11 +1035,13 @@ function buildChunkMesh(params) {
         if (shouldRenderFace(blockType, getBlock(x, y, z - 1))) addFace(x, y, z, 'south', blockType);
         if (shouldRenderFace(blockType, getBlock(x + 1, y, z))) addFace(x, y, z, 'east', blockType);
         if (shouldRenderFace(blockType, getBlock(x - 1, y, z))) addFace(x, y, z, 'west', blockType);
+        decorateBlock(decor, blockType, getBlock(x, y + 1, z), x, y, z, baseX + x, y, baseZ + z);
       }
     }
   }
 
   return {
+    decor: decor.result(),
     positions: positions.slice(0, vertexCount * 3),
     normals: normals.slice(0, vertexCount * 3),
     colors: colors.slice(0, vertexCount * 3),
@@ -837,6 +1113,11 @@ function buildLODMesh(params) {
   const { blocks, lodLevel } = params;
   const { lodBlocks, lodSize, lodSizeY } = generateLODBlocks(blocks, lodLevel);
   const voxelScale = LOD_MERGE_FACTORS[lodLevel] * VOXEL_SIZE;
+  // World block coordinates of LOD cell (x, z): same tints as full-detail chunks
+  const merge = LOD_MERGE_FACTORS[lodLevel];
+  const baseX = (params.chunkX || 0) * CHUNK_SIZE;
+  const baseZ = (params.chunkZ || 0) * CHUNK_SIZE;
+  const lodColor = [0, 0, 0];
 
   const maxVertices = 16000;
   const positions = new Float32Array(maxVertices * 3);
@@ -917,11 +1198,11 @@ function buildLODMesh(params) {
   function addFace(x, y, z, face, blockType) {
     if (vertexCount + 4 > maxVertices) return;
     const faceData = FACES[face];
-    const color = BlockColors[blockType] || [1, 0, 1];
+    // Light baked per face, on top of the scene's sun and sky light
     let lightMod = 1.0;
-    if (face === 'bottom') lightMod = 0.5;
-    else if (face === 'north' || face === 'south') lightMod = 0.8;
-    else if (face === 'east' || face === 'west') lightMod = 0.7;
+    if (face === 'bottom') lightMod = FACE_LIGHT_BOTTOM;
+    else if (face === 'north' || face === 'south') lightMod = FACE_LIGHT_NS;
+    else if (face === 'east' || face === 'west') lightMod = FACE_LIGHT_EW;
 
     const heightMod = 0.88 + (y / lodSizeY) * 0.20;
     const noiseMod = 0.96 + lodBlockHash(x, y, z) * 0.08;
@@ -953,15 +1234,14 @@ function buildLODMesh(params) {
       } else if (blockType === BlockTypes.CORRUPTED_STONE) {
         const vein = lodBlockHash(x + i, y, z + i) * 0.08;
         const finalMod = lightMod * AO_BRIGHTNESS_LOD[ao] * heightMod;
-        colors[idx] = Math.min(1, (0.12 + vein) * finalMod);
-        colors[idx + 1] = Math.min(1, 0.05 * finalMod);
-        colors[idx + 2] = Math.min(1, (0.15 + vein) * finalMod);
-      } else if (blockType === BlockTypes.CORRUPTED_GRASS) {
-        const finalMod = lightMod * AO_BRIGHTNESS_LOD[ao] * heightMod * noiseMod;
-        colors[idx] = Math.min(1, 0.20 * finalMod);
-        colors[idx + 1] = Math.min(1, 0.30 * finalMod);
-        colors[idx + 2] = Math.min(1, 0.15 * finalMod);
+        colors[idx] = Math.min(1, srgbToLinear(0.12 + vein) * finalMod);
+        colors[idx + 1] = Math.min(1, srgbToLinear(0.05) * finalMod);
+        colors[idx + 2] = Math.min(1, srgbToLinear(0.15 + vein) * finalMod);
       } else {
+        const wx = baseX + x * merge;
+        const wz = baseZ + z * merge;
+        const color = vertexBaseColor(blockType, face, v[1] === 1, wx, y * merge, wz,
+          wx + v[0] * merge, (y + v[1]) * merge, wz + v[2] * merge, lodColor);
         const finalMod = lightMod * AO_BRIGHTNESS_LOD[ao] * heightMod * noiseMod;
         colors[idx] = Math.min(1, color[0] * finalMod);
         colors[idx + 1] = Math.min(1, color[1] * finalMod);
@@ -969,7 +1249,7 @@ function buildLODMesh(params) {
       }
       vertexCount++;
     }
-    indices.push(startVertex, startVertex + 1, startVertex + 2, startVertex, startVertex + 2, startVertex + 3);
+    indices.push(startVertex, startVertex + 2, startVertex + 1, startVertex, startVertex + 3, startVertex + 2);
   }
 
   for (let y = 0; y < lodSizeY; y++) {
@@ -1031,6 +1311,16 @@ self.onmessage = function(event) {
   }
 };
 
+/** Buffers of a mesh result (and its decorations) to transfer, not copy. */
+function meshTransferables(mesh) {
+  var list = [mesh.positions.buffer, mesh.normals.buffer, mesh.colors.buffer, mesh.indices.buffer];
+  if (mesh.emissive) list.push(mesh.emissive.buffer);
+  if (mesh.decor) {
+    list.push(mesh.decor.positions.buffer, mesh.decor.normals.buffer, mesh.decor.colors.buffer, mesh.decor.indices.buffer);
+  }
+  return list;
+}
+
 function handleGenerateTerrain(requestId, data) {
   activeTasks.set(requestId, { cancelled: false });
   try {
@@ -1073,11 +1363,13 @@ function handleBuildMesh(requestId, data) {
         positions: result.positions,
         normals: result.normals,
         colors: result.colors,
+        emissive: result.emissive,
         indices: result.indices,
         vertexCount: result.vertexCount,
-        faceCount: result.faceCount
+        faceCount: result.faceCount,
+        decor: result.decor
       },
-      [result.positions.buffer, result.normals.buffer, result.colors.buffer, result.indices.buffer]
+      meshTransferables(result)
     );
   } catch (error) {
     self.postMessage({ type: 'error', requestId: requestId, error: error.message });
@@ -1102,12 +1394,13 @@ function handleBuildLODMesh(requestId, data) {
         positions: result.positions,
         normals: result.normals,
         colors: result.colors,
+        emissive: result.emissive,
         indices: result.indices,
         vertexCount: result.vertexCount,
         faceCount: result.faceCount,
         lodLevel: result.lodLevel
       },
-      [result.positions.buffer, result.normals.buffer, result.colors.buffer, result.indices.buffer]
+      meshTransferables(result)
     );
   } catch (error) {
     self.postMessage({ type: 'error', requestId: requestId, error: error.message });
@@ -1130,7 +1423,9 @@ function handleGenerateAndBuildMesh(requestId, data) {
       neighborNorth: data.neighborNorth || null,
       neighborSouth: data.neighborSouth || null,
       neighborEast: data.neighborEast || null,
-      neighborWest: data.neighborWest || null
+      neighborWest: data.neighborWest || null,
+      chunkX: terrain.chunkX,
+      chunkZ: terrain.chunkZ
     });
     task = activeTasks.get(requestId);
     if (task && task.cancelled) {
@@ -1147,11 +1442,13 @@ function handleGenerateAndBuildMesh(requestId, data) {
         positions: mesh.positions,
         normals: mesh.normals,
         colors: mesh.colors,
+        emissive: mesh.emissive,
         indices: mesh.indices,
         vertexCount: mesh.vertexCount,
-        faceCount: mesh.faceCount
+        faceCount: mesh.faceCount,
+        decor: mesh.decor
       },
-      [terrain.blocks.buffer, mesh.positions.buffer, mesh.normals.buffer, mesh.colors.buffer, mesh.indices.buffer]
+      [terrain.blocks.buffer].concat(meshTransferables(mesh))
     );
   } catch (error) {
     self.postMessage({ type: 'error', requestId: requestId, error: error.message });

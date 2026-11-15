@@ -97,6 +97,8 @@ outgoingLight += vColor * vEmissive * nightBoost * 2.0;
 // Shared material instances (one per component type to avoid re-creation)
 const _physicsMaterial = createEmissiveChunkMaterial();
 const _visualMaterial = createEmissiveChunkMaterial();
+// Grass tufts, flowers, pebbles and berries (no physics)
+const _decorMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 
 /**
  * Select LOD level with hysteresis to prevent oscillation at boundaries
@@ -125,6 +127,8 @@ function buildMeshRequest(chunk, lodLevel) {
   if (lodLevel === 0) {
     return {
       type: 'buildMesh',
+      chunkX: chunk.x,
+      chunkZ: chunk.z,
       blocks: chunk.blocks,
       neighborNorth: chunk.neighbors.north?.blocks || null,
       neighborSouth: chunk.neighbors.south?.blocks || null,
@@ -134,6 +138,8 @@ function buildMeshRequest(chunk, lodLevel) {
   }
   return {
     type: 'buildLODMesh',
+    chunkX: chunk.x,
+    chunkZ: chunk.z,
     blocks: chunk.blocks,
     lodLevel,
   };
@@ -170,6 +176,34 @@ function useChunkGeometry(meshData) {
   }, [geometry]);
 
   return geometry;
+}
+
+/** Geometry for a chunk's decorations (null when it has none). */
+function useDecorGeometry(meshData) {
+  const decor = meshData?.decor;
+  const geometry = useMemo(() => {
+    if (!decor?.vertexCount) return null;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(decor.positions, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(decor.normals, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(decor.colors, 3));
+    geo.setIndex(new THREE.BufferAttribute(decor.indices, 1));
+    geo.computeBoundingSphere();
+    return geo;
+  }, [decor]);
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+  return geometry;
+}
+
+/** Decorations sit outside the RigidBody so they never collide. */
+function ChunkDecor({ position, meshData }) {
+  const geometry = useDecorGeometry(meshData);
+  if (!geometry) return null;
+  return (
+    <group position={position}>
+      <mesh geometry={geometry} material={_decorMaterial} />
+    </group>
+  );
 }
 
 /**
@@ -215,6 +249,7 @@ function PhysicsChunkMesh({ chunk, meshData }) {
 
   return (
     <>
+      <ChunkDecor position={position} meshData={meshData} />
       {bodies.map((b, i) => (
         <RigidBody key={b.id} type="fixed" colliders="trimesh" position={position}>
           <mesh
@@ -242,9 +277,12 @@ function VisualChunkMesh({ chunk, meshData }) {
   if (!geometry) return null;
 
   return (
-    <group position={position}>
-      <mesh geometry={geometry} frustumCulled={false} material={_visualMaterial} />
-    </group>
+    <>
+      <group position={position}>
+        <mesh geometry={geometry} frustumCulled={false} material={_visualMaterial} />
+      </group>
+      <ChunkDecor position={position} meshData={meshData} />
+    </>
   );
 }
 

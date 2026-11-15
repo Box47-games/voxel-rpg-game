@@ -2,7 +2,8 @@
  * DayNightCycle.jsx — R3F component that drives day/night lighting
  *
  * Owns a TimeManager instance, updates it each frame, and syncs
- * lighting params (ambient, directional, sky, fog) to the Three.js scene.
+ * lighting params (hemisphere sky/ground light, sun, sky dome, fog) to the
+ * Three.js scene.
  * Pushes time state to the Zustand store so other systems can read it.
  */
 
@@ -12,6 +13,10 @@ import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { TimeManager } from '../../systems/time/TimeManager';
 import { getLightingState } from '../../systems/lighting/DayNightLighting';
+import SkyDome from './SkyDome';
+
+// The hemisphere light's sky color leans this far toward the horizon tint
+const SKY_LIGHT_TINT = 0.3;
 
 const DayNightCycle = () => {
   const { scene, camera } = useThree();
@@ -57,14 +62,15 @@ const DayNightCycle = () => {
   const skyColor = useMemo(() => new THREE.Color(), []);
   const fogColor = useMemo(() => new THREE.Color(), []);
   const ambientColor = useMemo(() => new THREE.Color(), []);
+  const horizonTint = useMemo(() => new THREE.Color(), []);
   const celestialColor = useMemo(() => new THREE.Color(), []);
 
   // Initialize lighting immediately on mount (before first frame)
   useEffect(() => {
     const lighting = getLightingState(timeManager.timeOfDay);
 
-    // Set initial background color
-    skyColor.set(lighting.skyColor);
+    // Background shows only where the sky dome doesn't (it matches the horizon)
+    skyColor.set(lighting.horizonColor);
     scene.background = skyColor;
 
     // Create fog if it doesn't exist, or update existing fog
@@ -83,16 +89,19 @@ const DayNightCycle = () => {
     // Get lighting state for current time
     const lighting = getLightingState(timeManager.timeOfDay);
 
-    // Update ambient light
+    // Sky/ground light: from above tinted by the sky, from below by the ground
     if (ambientRef.current) {
       ambientRef.current.intensity = lighting.ambientIntensity;
       ambientColor.set(lighting.ambientColor);
-      ambientRef.current.color.copy(ambientColor);
+      horizonTint.set(lighting.horizonColor);
+      ambientRef.current.color.copy(ambientColor).lerp(horizonTint, SKY_LIGHT_TINT);
+      ambientRef.current.groundColor.set(lighting.groundColor);
     }
 
-    // Update directional light (sun)
+    // Update directional light (sun by day, moon by night)
     if (directionalRef.current) {
       directionalRef.current.intensity = lighting.directionalIntensity;
+      directionalRef.current.color.set(lighting.sunColor);
       directionalRef.current.position.set(
         lighting.sunPosition.x,
         lighting.sunPosition.y,
@@ -100,8 +109,8 @@ const DayNightCycle = () => {
       );
     }
 
-    // Update sky color (scene background)
-    skyColor.set(lighting.skyColor);
+    // Background behind the sky dome matches its horizon
+    skyColor.set(lighting.horizonColor);
     scene.background = skyColor;
 
     // Update fog
@@ -126,17 +135,16 @@ const DayNightCycle = () => {
         Math.max(5, camPos.y + ny * celestialDist),
         camPos.z + nz * celestialDist
       );
-      // Sun = yellow/white, Moon = pale blue
+      // A square sun (warm white) or moon (pale blue), always facing the camera
       if (isDay) {
-        celestialColor.set('#ffdd44');
-        celestialRef.current.scale.setScalar(8);
+        celestialColor.set('#fff4c8');
+        celestialRef.current.scale.setScalar(14);
       } else {
-        celestialColor.set('#aabbdd');
-        celestialRef.current.scale.setScalar(6);
+        celestialColor.set('#d6e0f5');
+        celestialRef.current.scale.setScalar(9);
       }
       celestialRef.current.material.color.copy(celestialColor);
-      celestialRef.current.material.emissive.copy(celestialColor);
-      celestialRef.current.material.emissiveIntensity = isDay ? 1.0 : 0.5;
+      celestialRef.current.lookAt(camPos);
       celestialRef.current.visible = true;
     }
 
@@ -158,7 +166,12 @@ const DayNightCycle = () => {
 
   return (
     <>
-      <ambientLight ref={ambientRef} intensity={initialLighting.ambientIntensity} />
+      <hemisphereLight
+        ref={ambientRef}
+        intensity={initialLighting.ambientIntensity}
+        color={initialLighting.ambientColor}
+        groundColor={initialLighting.groundColor}
+      />
       <directionalLight
         ref={directionalRef}
         position={[
@@ -167,11 +180,13 @@ const DayNightCycle = () => {
           initialLighting.sunPosition.z,
         ]}
         intensity={initialLighting.directionalIntensity}
+        color={initialLighting.sunColor}
       />
+      <SkyDome />
       {/* Sun/Moon celestial body */}
-      <mesh ref={celestialRef} visible={true}>
-        <sphereGeometry args={[1, 16, 16]} />
-        <meshStandardMaterial color="#ffdd44" emissive="#ffdd44" emissiveIntensity={1.0} />
+      <mesh ref={celestialRef} visible={true} renderOrder={-997}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color="#fff4c8" fog={false} depthWrite={false} />
       </mesh>
     </>
   );

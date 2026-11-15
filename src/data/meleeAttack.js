@@ -19,6 +19,7 @@ import {
 } from './tuning';
 import { audioManager } from '../utils/AudioManager';
 import { getSpellById } from './spells';
+import { notePlayerAction } from '../systems/playerActions';
 import { getEnemyPosition, isEnemyHittable, rollPlayerDamage } from '../systems/combat/enemyHits';
 
 // Convert degrees to radians once
@@ -34,6 +35,7 @@ const CONE_HALF_ANGLE_RAD = (MELEE_CONE_ANGLE * Math.PI) / 180;
  * @returns {{ hit: boolean, enemiesHit: number }}
  */
 export function performMeleeAttack(store, playerPos, facingAngle, enemies) {
+  notePlayerAction('melee');
   if (!enemies || enemies.length === 0) {
     return { hit: false, enemiesHit: 0 };
   }
