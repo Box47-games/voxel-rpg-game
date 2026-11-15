@@ -156,6 +156,8 @@ export default function ZoneInteraction({ chunkManager }) {
       const miningTasks = scanMiningZone(zone.bounds, chunkManager);
       store.updateZone(zone.id, { miningTasks });
       store.addPickupText(`Mining Zone created (${miningTasks.length} blocks)`, '#ff8c00');
+    } else if (zone.type === 'STOCKPILE') {
+      store.addPickupText(`Stockpile created (${zone.storage.capacity} capacity)`, '#4488ff');
     } else {
       store.addPickupText(`${zone.type} Zone created`, '#4488ff');
     }

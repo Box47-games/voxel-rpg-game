@@ -5,6 +5,8 @@
 import useGameStore from '../../stores/useGameStore';
 import Game3DSaveManager, { validateSaveData } from '../Game3DSaveManager';
 import { ChunkManager } from '../../systems/chunks/ChunkManager';
+import { getStockpileCapacity } from '../../data/zoneTypes';
+import { scanForTasks, findBestTask, claimTask } from '../../systems/settlement/TaskAssignmentEngine';
 
 async function loadChunksAround(cm, x, z) {
   cm.updatePlayerPosition(x, z);
@@ -84,6 +86,40 @@ describe('Game3DSaveManager', () => {
     // The unloaded edit comes back when the player returns
     await loadChunksAround(cm, 0, 0);
     expect(cm.getBlock(1, 61, 1)).toBe(5);
+  });
+
+  test('loading repairs stockpiles saved with zero capacity', async () => {
+    const bounds = { minX: 0, minZ: 0, maxX: 8, maxZ: 8 };
+    useGameStore.setState({
+      zones: [{ id: 'z1', type: 'STOCKPILE', bounds, storage: { items: { stone: 2 }, capacity: 0, usedCapacity: 2 } }],
+    });
+    await manager.saveGame(useGameStore, null, 'zones1');
+    useGameStore.getState().reset();
+    expect((await manager.loadGame(useGameStore, null, 'zones1')).success).toBe(true);
+
+    const storage = useGameStore.getState().zones[0].storage;
+    expect(storage.capacity).toBe(getStockpileCapacity(bounds));
+    expect(storage.items).toEqual({ stone: 2 });
+  });
+
+  test('loading releases task claims held before the load', async () => {
+    const zone = {
+      id: 'mine1', type: 'MINING', bounds: { minX: 0, minZ: 0, maxX: 4, maxZ: 4 },
+      miningTasks: [{ wx: 1, wy: 1, wz: 1, blockType: 1, status: 'pending' }],
+    };
+    scanForTasks([zone], [], null);
+    const taskId = findBestTask({ id: 'npc_a', position: [0, 0, 0], skills: {} })?.id;
+    expect(taskId).toBeTruthy();
+    expect(claimTask(taskId, 'npc_a')).toBe(true);
+
+    await manager.saveGame(useGameStore, null, 'tasks1');
+    await manager.loadGame(useGameStore, null, 'tasks1');
+
+    // The claim is gone: a rescan offers the block to any settler again
+    scanForTasks([zone], [], null);
+    const task = findBestTask({ id: 'npc_b', position: [0, 0, 0], skills: {} });
+    expect(task).not.toBeNull();
+    expect(task.claimedBy).toBeNull();
   });
 
   test('rejects corrupted saves', () => {

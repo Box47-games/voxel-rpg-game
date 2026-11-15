@@ -220,7 +220,7 @@ export function getTask(taskId) {
 }
 
 /**
- * Drop every task and claim (new game / tests). The next scanForTasks rebuilds the list.
+ * Drop every task and claim (on load, and in tests). The next scanForTasks rebuilds the list.
  */
 export function clearTasks() {
   _tasks.clear();

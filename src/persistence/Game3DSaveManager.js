@@ -14,6 +14,8 @@
 
 import { Chunk } from '../systems/chunks/Chunk';
 import useQuestStore from '../stores/useQuestStore';
+import { getStockpileCapacity } from '../data/zoneTypes';
+import { clearTasks } from '../systems/settlement/TaskAssignmentEngine';
 
 const SAVE_VERSION = 6;
 const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
@@ -380,8 +382,17 @@ class Game3DSaveManager {
       }
 
       // ── Zones / construction ──
+      // Stockpiles used to be created with capacity 0, which blocked all deposits
+      const zones = (saveData.zones || []).map((zone) => (
+        zone.type === 'STOCKPILE' && zone.storage && !(zone.storage.capacity > 0)
+          ? { ...zone, storage: { ...zone.storage, capacity: getStockpileCapacity(zone.bounds) } }
+          : zone
+      ));
+      // NPC task assignments were reset above; drop their claims so the next
+      // task scan doesn't leave those tasks claimed forever
+      clearTasks();
       setState({
-        zones: saveData.zones || [],
+        zones,
         constructionSites: saveData.constructionSites || [],
         activeStockpileZoneId: null,
         activeConstructionSiteId: null,
