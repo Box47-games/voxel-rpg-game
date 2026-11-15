@@ -32,7 +32,7 @@ describe('App3D Component', () => {
       const mainDiv = container.firstChild;
 
       expect(mainDiv).toHaveStyle({ position: 'fixed', overflow: 'hidden' });
-      expect(mainDiv.style.inset).toBe('0px');
+      expect(['0', '0px']).toContain(mainDiv.style.inset);
     });
 
     test('renders GameUI overlay', () => {
