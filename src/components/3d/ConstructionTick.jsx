@@ -9,7 +9,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import useGameStore from '../../stores/useGameStore';
 import { getBuildingById, parseLayers } from '../../data/buildings';
-import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
+import { placeNextBlock } from '../../modules/settlement/buildingInfo';
 import { CONSTRUCTION_BLOCK_INTERVAL } from '../../data/tuning';
 import { siteHasNPCBuilder } from '../../systems/settlement/TaskAssignmentEngine';
 
@@ -35,20 +35,15 @@ export default function ConstructionTick({ chunkManager }) {
       const building = getBuildingById(site.buildingId);
       if (!building) continue;
 
-      const blocks = parseLayers(building);
+      const total = parseLayers(building).length;
       const nextIndex = site.blocksPlaced;
-      if (nextIndex >= blocks.length) continue;
+      if (nextIndex >= total) continue;
 
-      const block = blocks[nextIndex];
-      const wx = site.position[0] + block.x * VOXEL_SIZE + VOXEL_SIZE / 2;
-      const wy = site.position[1] + block.y * VOXEL_SIZE + VOXEL_SIZE / 2;
-      const wz = site.position[2] + block.z * VOXEL_SIZE + VOXEL_SIZE / 2;
-
-      chunkManager.setBlock(wx, wy, wz, block.blockType);
+      placeNextBlock(site, chunkManager);
       store.advanceConstruction(site.id);
 
       // Check if this was the last block
-      if (nextIndex + 1 >= blocks.length) {
+      if (nextIndex + 1 >= total) {
         store.addPickupText('Building complete!', '#44ff44');
       }
     }

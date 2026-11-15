@@ -28,8 +28,9 @@ import {
   POTION_COOLDOWN,
 } from '../data/tuning';
 import { ActionHistory, createActionMiddleware } from '../systems/state/ActionSystem';
-import { getBuildingById } from '../data/buildings';
-import { getPlacedBlocks, getDemolishRefund } from '../modules/settlement/buildingInfo';
+import { getBuildingById, parseLayers } from '../data/buildings';
+import { getPlacedBlocks, getDemolishRefund, getUpgradeProblem } from '../modules/settlement/buildingInfo';
+import { isSettled } from '../modules/settlement/housing';
 
 // Action history for replay/rollback/debugging
 export const actionHistory = new ActionHistory(1000);
@@ -1714,13 +1715,69 @@ const useGameStore = create((rawSet, get, api) => {
     return refund;
   },
 
+  /**
+   * Start upgrading a completed building in place: the site switches to the
+   * bigger blueprint and collects the upgrade's materials like a new site.
+   * Its id is kept, so residents keep their beds meanwhile.
+   * @returns {string|null} Why it couldn't start, or null when it started
+   */
+  upgradeBuilding: (siteId) => {
+    const state = get();
+    const site = state.constructionSites.find((s) => s.id === siteId);
+    if (!site) return 'No such building';
+    const cm = state._chunkManager;
+    const problem = getUpgradeProblem(site, {
+      constructionSites: state.constructionSites,
+      settledCount: state.settlement.npcs.filter(isSettled).length,
+      getBlock: cm ? (x, y, z) => cm.getBlock(x, y, z) : null,
+    });
+    if (problem) return problem;
+    const { upgrade } = getBuildingById(site.buildingId);
+    set({
+      constructionSites: state.constructionSites.map((s) => (s.id === siteId ? {
+        ...s,
+        buildingId: upgrade.to,
+        upgradeFrom: site.buildingId,
+        status: 'PLACED',
+        materialsRequired: { ...upgrade.cost },
+        materialsDelivered: {},
+        blocksPlaced: 0,
+        totalBlocks: parseLayers(getBuildingById(upgrade.to)).length,
+      } : s)),
+    });
+    return null;
+  },
+
   removeConstructionSite: (siteId) => set((state) => {
     const site = state.constructionSites.find(s => s.id === siteId);
     if (!site) return state;
+    // An upgrade can only be called off before it starts replacing blocks
+    if (site.upgradeFrom && site.status !== 'PLACED') return state;
     // Return delivered materials to player
     const newMaterials = { ...state.inventory.materials };
     for (const [mat, qty] of Object.entries(site.materialsDelivered)) {
       if (qty > 0) newMaterials[mat] = (newMaterials[mat] || 0) + qty;
+    }
+    if (site.upgradeFrom) {
+      // Back to the building that is still standing
+      const original = getBuildingById(site.upgradeFrom);
+      const total = parseLayers(original).length;
+      return {
+        constructionSites: state.constructionSites.map((s) => {
+          if (s.id !== siteId) return s;
+          const { upgradeFrom, ...rest } = s; // eslint-disable-line no-unused-vars
+          return {
+            ...rest,
+            buildingId: original.id,
+            status: 'COMPLETE',
+            materialsRequired: { ...original.cost },
+            materialsDelivered: { ...original.cost },
+            blocksPlaced: total,
+            totalBlocks: total,
+          };
+        }),
+        inventory: { ...state.inventory, materials: newMaterials },
+      };
     }
     return {
       constructionSites: state.constructionSites.filter(s => s.id !== siteId),

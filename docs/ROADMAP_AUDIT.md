@@ -105,13 +105,13 @@ Three patterns explain most gaps:
 | Stockpiles | ✅ | `zone.storage` with capacity; `StockpilePanel.jsx`. (Map-based, not slot-based as the plan specified.) |
 | Blueprint placement + NPC construction | ✅ | `BuildingCatalog`, `BuildingPlacement`, `ConstructionTick`, `ConstructionVisual`. |
 | **Building effects** (housing, storage, production, happiness) | 🟡 | Housing done (2026-11-15): `effects.housing` beds set the population cap (`modules/settlement/housing.js`). No storage/production effects. |
-| **Building upgrades** | ❌ | Not implemented. |
+| **Building upgrades** | ✅ | Done 2026-11-15: Shelter → House → Manor, grown in place from the same corner (`buildingInfo.getUpgradeProblem` checks settlers, overlap, clear and level ground). Residents keep their beds during the upgrade; it can be cancelled until blocks start being replaced. |
 | NPC needs (eat, rest, social) interrupting work | ✅ | EATING/SLEEPING states, needs decay, happiness, unhappy-departure warnings. |
 | **Daily schedule (work/eat/sleep by time of day)** | ✅ | Done 2026-11-15 (`modules/settlement/schedule.js`): work shifts, mealtimes, evening socializing, sleep at home at night; diligent/lazy shift work hours. No emergency override yet (nothing to respond to until Phase 3 raids). |
 | **Housing assignment, sleep at home** | ✅ | Done 2026-11-15: settlers get a bed in completed Shelters/Houses, sleep on their home's doorstep (they can't path inside), homeless ones sleep by the campfire with a happiness penalty. No manual reassignment or housing preferences yet. |
 | **Settlement dashboard** | ✅ | Done 2026-11-15: N key / HUD button. Population (sortable settler list → NPC panel), stockpile resources, buildings, alerts. No production/consumption rates yet. |
 | **NPC detail panel** (click an NPC) | ❌ | Only the developer NPC panel exists. |
-| **Building panel** (status, occupants, upgrades) | 🟡 | Done 2026-11-15 except upgrades: E on a completed building shows its effects, residents (click → NPC panel), farms a plot powers, and Demolish (confirm, 50% refund); construction sites show builder and ETA. No health/repair (no damage yet), no worker assignment (no production buildings), upgrades pending design. |
+| **Building panel** (status, occupants, upgrades) | ✅ | Done 2026-11-15: E on a completed building shows its effects, residents (click → NPC panel), farms a plot powers, its upgrade (cost, settlers, benefits, what blocks it), and Demolish (confirm, 50% refund); construction sites show builder and ETA. No health/repair (no damage yet), no worker assignment (no production buildings). |
 | Settlement loop campfire → arrive → zones → mine → haul → build → grow | ✅ | Works end to end (minus growth from building housing). |
 | Save/load settlement state | ✅ | NPCs, zones, stockpiles, construction sites. |
 

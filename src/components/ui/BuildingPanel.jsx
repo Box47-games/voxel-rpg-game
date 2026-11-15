@@ -13,7 +13,9 @@ import {
   getConstructionEta,
   getDemolishRefund,
   getFarmsPoweredBy,
+  getUpgradeProblem,
 } from '../../modules/settlement/buildingInfo';
+import { isSettled } from '../../modules/settlement/housing';
 
 const MATERIAL_COLORS = {
   wood: '#8B4513', stone: '#808080', iron: '#C0C0C0', coal: '#333333',
@@ -88,6 +90,53 @@ function formatEta(seconds) {
 const formatMaterials = (obj) =>
   Object.entries(obj).map(([m, n]) => `${n} ${m.replace(/_/g, ' ')}`).join(', ');
 
+const selectSettledCount = (s) => (s.settlement?.npcs || []).filter(isSettled).length;
+
+function UpgradeSection({ site, building }) {
+  const settledCount = useGameStore(selectSettledCount);
+  const constructionSites = useGameStore((s) => s.constructionSites);
+  const { upgrade } = building;
+  const target = getBuildingById(upgrade.to);
+  const cm = useGameStore.getState()._chunkManager;
+  const problem = getUpgradeProblem(site, {
+    constructionSites,
+    settledCount,
+    getBlock: cm ? (x, y, z) => cm.getBlock(x, y, z) : null,
+  });
+
+  const start = () => {
+    const store = useGameStore.getState();
+    const why = store.upgradeBuilding(site.id);
+    store.addPickupText(why || `Upgrade to ${target.name} started: deliver the materials`, why ? '#ff6666' : '#44aaff');
+  };
+
+  const from = building.effects || {};
+  const to = target.effects || {};
+  return (
+    <div style={{ marginTop: 12, padding: 8, border: '1px solid #345', borderRadius: 4, fontSize: 13 }}>
+      <div style={{ color: '#88aaff', marginBottom: 4 }}>Upgrade to {target.name}</div>
+      <div style={{ color: '#aaa', fontSize: 12 }}>
+        Beds {from.housing || 0} → {to.housing || 0}, attractiveness +{from.attractiveness || 0} → +{to.attractiveness || 0}
+      </div>
+      <div style={{ color: '#aaa', fontSize: 12, marginBottom: 8 }}>
+        Costs {formatMaterials(upgrade.cost)}; needs {upgrade.settlers} settler{upgrade.settlers === 1 ? '' : 's'}
+      </div>
+      {problem && <div style={{ color: '#ffb347', fontSize: 12, marginBottom: 8 }}>{problem}</div>}
+      <button
+        onClick={start}
+        disabled={!!problem}
+        style={{
+          width: '100%', padding: '6px 0', borderRadius: 4, fontFamily: 'monospace', fontSize: 13, touchAction: 'manipulation',
+          background: problem ? '#2a2a2a' : '#2a3a5a', color: problem ? '#666' : '#9cf',
+          border: '1px solid #456', cursor: problem ? 'default' : 'pointer',
+        }}
+      >
+        Upgrade
+      </button>
+    </div>
+  );
+}
+
 function CompletedBuilding({ site, building, onDemolished }) {
   const residents = useGameStore(useShallow(selectResidents(site.id)));
   const zones = useGameStore((s) => s.zones);
@@ -140,6 +189,8 @@ function CompletedBuilding({ site, building, onDemolished }) {
       {effects.attractiveness > 0 && (
         <div style={row}>Attractiveness +{effects.attractiveness}</div>
       )}
+
+      {building.upgrade && <UpgradeSection site={site} building={building} />}
 
       {!confirming ? (
         <button
@@ -235,9 +286,10 @@ export default function BuildingPanel() {
   // Cancel construction
   const handleCancel = useCallback(() => {
     if (!activeSiteId) return;
+    const wasUpgrade = !!site?.upgradeFrom;
     removeConstructionSite(activeSiteId);
-    addPickupText('Construction canceled — materials returned', '#ffaa00');
-  }, [activeSiteId, removeConstructionSite, addPickupText]);
+    addPickupText(wasUpgrade ? 'Upgrade canceled — materials returned' : 'Construction canceled — materials returned', '#ffaa00');
+  }, [activeSiteId, site?.upgradeFrom, removeConstructionSite, addPickupText]);
 
   if (!activeSiteId || !site || !building) return null;
 
@@ -290,6 +342,11 @@ export default function BuildingPanel() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div>
             <span style={{ fontSize: 16, fontWeight: 'bold', color: '#4488ff' }}>{building.name}</span>
+            {site.upgradeFrom && site.status !== 'COMPLETE' && (
+              <span style={{ marginLeft: 6, fontSize: 11, color: '#aaa' }}>
+                upgrading the {getBuildingById(site.upgradeFrom)?.name}
+              </span>
+            )}
             <span style={{
               marginLeft: 8,
               fontSize: 11,
@@ -380,7 +437,7 @@ export default function BuildingPanel() {
         )}
 
         {/* Cancel button (only for non-complete sites) */}
-        {site.status !== 'COMPLETE' && (
+        {site.status !== 'COMPLETE' && !(site.upgradeFrom && site.status !== 'PLACED') && (
           <button
             onClick={handleCancel}
             style={{
@@ -389,7 +446,7 @@ export default function BuildingPanel() {
               fontFamily: 'monospace', fontSize: 13, touchAction: 'manipulation',
             }}
           >
-            Cancel Construction
+            {site.upgradeFrom ? 'Cancel upgrade' : 'Cancel Construction'}
           </button>
         )}
 

@@ -68,6 +68,28 @@ describe('BuildingPanel', () => {
     expect(screen.getByText('Builder: Bria')).toBeInTheDocument();
   });
 
+  test('a Shelter offers its upgrade, blocked until there is a settler', () => {
+    open([{ id: 'h1', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [0, 0, 0], ...DONE }]);
+    expect(screen.getByText('Upgrade to Stone House')).toBeInTheDocument();
+    expect(screen.getByText(/Beds 1 → 2/)).toBeInTheDocument();
+    expect(screen.getByText(/Costs 40 wood, 30 stone; needs 1 settler/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upgrade' })).toBeDisabled();
+    expect(screen.getByText(/Needs 1 settler/)).toBeInTheDocument();
+
+    const s = useGameStore.getState();
+    act(() => useGameStore.setState({ settlement: { ...s.settlement, npcs: [npc('a', 'Aldric')] } }));
+    fireEvent.click(screen.getByRole('button', { name: 'Upgrade' }));
+    const [site] = useGameStore.getState().constructionSites;
+    expect(site).toMatchObject({ buildingId: 'stone_house', upgradeFrom: 'wooden_shelter', status: 'PLACED' });
+    expect(screen.getByText(/upgrading the Wooden Shelter/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel upgrade' })).toBeInTheDocument();
+  });
+
+  test('an upgrade that is already building cannot be cancelled', () => {
+    open([{ id: 'h1', buildingId: 'stone_house', upgradeFrom: 'wooden_shelter', status: 'BUILDING', position: [0, 0, 0], materialsRequired: { wood: 40 }, materialsDelivered: { wood: 40 }, blocksPlaced: 2, totalBlocks: 40 }]);
+    expect(screen.queryByRole('button', { name: /Cancel/ })).toBeNull();
+  });
+
   test('closes with a notice when the last material arrives', () => {
     const site = { id: 'c1', buildingId: 'wooden_shelter', status: 'PLACED', position: [0, 0, 0], blocksPlaced: 0, totalBlocks: 24, materialsRequired: { wood: 25 }, materialsDelivered: { wood: 24 } };
     open([site]);

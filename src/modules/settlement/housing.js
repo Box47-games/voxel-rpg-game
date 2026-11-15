@@ -28,8 +28,10 @@ export function isSettled(npc) {
 export function getHomes(constructionSites) {
   const homes = [];
   for (const site of constructionSites || []) {
-    if (site.status !== 'COMPLETE') continue;
-    const building = getBuildingById(site.buildingId);
+    // While an upgrade is under way, the old building still houses its residents
+    const standingId = site.status === 'COMPLETE' ? site.buildingId : site.upgradeFrom;
+    if (!standingId) continue;
+    const building = getBuildingById(standingId);
     const beds = building?.effects?.housing || 0;
     if (beds <= 0) continue;
     // Settlers can't walk inside (walls and roofs block them), so they sleep

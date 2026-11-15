@@ -138,6 +138,7 @@ export const TEST_PHASES = [
           { id: 'p2-npc-personality', label: 'Personality effects', description: 'Personality traits affect behavior: diligent/lazy change idle timers, brave/cautious change wander radius, cheerful/grumpy adjust happiness' },
           { id: 'p2-npc-housing-cap', label: 'Housing-based pop cap', description: 'Max NPC count = beds from completed Shelters (1) and Houses (2), minimum 1 (the pioneer), max IMMIGRATION_MAX_NPCS' },
           { id: 'p2-building-panel', label: 'Building panel', description: 'E next to a completed building (within 5 units) shows its description, beds and residents (click a name for their panel), farms a Farm Plot powers, and Demolish with confirmation (blocks removed, half the cost refunded, residents lose their beds). A site under construction shows its builder and ETA' },
+          { id: 'p2-building-upgrade', label: 'Building upgrades', description: 'E on a completed Wooden Shelter shows "Upgrade to Stone House" (40 wood, 30 stone, 1 settler); a Stone House upgrades to a Manor (80 stone, 20 iron, 2 settlers). The site collects materials like new construction, residents keep their beds meanwhile, and the bigger building grows from the same corner. Blocked (with a reason) if another building or terrain is in the way; cancellable until building starts' },
           { id: 'p2-dashboard', label: 'Settlement dashboard', description: 'N (or the Settlement HUD button) opens the dashboard: population with a sortable settler list (click a settler for details), stockpile resources, buildings with construction progress, and alerts (leaving, starving, homeless, stalled buildings). Escape / N / clicking outside closes it; readable on a phone' },
           { id: 'p2-npc-schedule', label: 'Daily routine', description: 'Settlers work during the morning/afternoon shifts, eat at dawn/lunch/evening, socialize in the evening, and go home to sleep at night (workers park their task and resume it at dawn). Use the dev overlay time controls to check each block; the NPC panel shows the current block' },
           { id: 'p2-npc-housing-assign', label: 'Settlers get homes', description: 'When a Shelter/House completes, a homeless settler is assigned a bed (NPC panel shows "Lives in…"); tired settlers walk to their home\'s doorstep to sleep, homeless ones sleep by the campfire with a happiness penalty' },
@@ -296,6 +297,7 @@ export const TOTAL_CRITERIA_COUNT = ALL_CRITERIA.length;
  * Used to auto-promote 'untested' → 'pass'; never overrides manual status.
  */
 export const AUTO_CHECKS = {
+  'p2-building-upgrade': (s) => s.constructionSites.some((c) => c.upgradeFrom && c.status === 'COMPLETE'),
   'p2-dashboard': (s) => s.settlementDashboardOpen === true,
   'p2-zone-farm': (s) => s.zones.some((z) => z.type === 'FARMING' && z.farmTiles?.some((t) => t.plantedAt != null)),
   // Phase 1 — Survival & Gathering

@@ -89,7 +89,9 @@ export function summarizeBuildings(constructionSites) {
   const completed = {};
   const inProgress = [];
   for (const site of constructionSites) {
-    const name = getBuildingById(site.buildingId)?.name || site.buildingId;
+    const built = getBuildingById(site.buildingId)?.name || site.buildingId;
+    const from = site.upgradeFrom && site.status !== 'COMPLETE' ? getBuildingById(site.upgradeFrom)?.name : null;
+    const name = from ? `${built} (upgrading the ${from})` : built;
     if (site.status === 'COMPLETE') {
       completed[name] = (completed[name] || 0) + 1;
     } else {

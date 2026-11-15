@@ -6,6 +6,7 @@
  */
 
 import { tickNPC } from '../NPCStateMachine';
+import { getNextBlock } from '../buildingInfo';
 import {
   scanForTasks,
   clearTasks,
@@ -451,6 +452,17 @@ describe('WORKING_BUILD', () => {
     expect(updates.state).toBeUndefined();
     expect(taskCompleted).toBe(false);
     expect(ctx.host.addPickupText).not.toHaveBeenCalled();
+  });
+
+  test('puts the blueprint block in the world, not just the count', () => {
+    const ctx = buildWorld({ buildingId: 'wooden_shelter', totalBlocks: 3 });
+    ctx.chunkAdapter = { ...ctx.chunkAdapter, setBlock: vi.fn() };
+    const npc = { ...startWork(makeNPC(), ctx), position: AT_SITE, workTimer: ALMOST };
+
+    tickNPC(npc, 2, ctx);
+
+    const first = getNextBlock(ctx.constructionSites[0]);
+    expect(ctx.chunkAdapter.setBlock).toHaveBeenCalledWith(first.x, first.y, first.z, first.blockType);
   });
 
   test('placing the last block completes the building', () => {

@@ -159,7 +159,7 @@ export default function BuildingCatalog() {
           overflowY: 'auto',
           maxHeight: '60vh',
         }}>
-          {BUILDINGS.map(b => (
+          {BUILDINGS.filter(b => !b.upgradeOnly).map(b => (
             <BuildingCard key={b.id} building={b} />
           ))}
         </div>

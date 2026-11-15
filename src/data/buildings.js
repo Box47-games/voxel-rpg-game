@@ -8,6 +8,12 @@
  */
 
 import { BlockTypes } from '../systems/chunks/blockTypes';
+import {
+  UPGRADE_SHELTER_TO_HOUSE_COST,
+  UPGRADE_SHELTER_TO_HOUSE_SETTLERS,
+  UPGRADE_HOUSE_TO_MANOR_COST,
+  UPGRADE_HOUSE_TO_MANOR_SETTLERS,
+} from './tuning';
 
 const BLOCK_CHAR_MAP = {
   'W': BlockTypes.WOOD,
@@ -24,6 +30,7 @@ export const BUILDINGS = [
     size: { width: 3, height: 3, depth: 3 },
     cost: { wood: 25 },
     effects: { housing: 1, attractiveness: 5 },
+    upgrade: { to: 'stone_house', cost: UPGRADE_SHELTER_TO_HOUSE_COST, settlers: UPGRADE_SHELTER_TO_HOUSE_SETTLERS },
     layers: [
       'WWW|W.W|WWW',   // Layer 0 (floor)
       'W.W|...|W.W',   // Layer 1 (walls with opening)
@@ -37,11 +44,27 @@ export const BUILDINGS = [
     size: { width: 4, height: 4, depth: 4 },
     cost: { stone: 40, wood: 10 },
     effects: { housing: 2, attractiveness: 15 },
+    upgrade: { to: 'manor', cost: UPGRADE_HOUSE_TO_MANOR_COST, settlers: UPGRADE_HOUSE_TO_MANOR_SETTLERS },
     layers: [
       'SSSS|S..S|S..S|SSSS',   // Layer 0 (floor)
       'SWWS|W..W|W..W|SWWS',   // Layer 1 (walls)
       'SWWS|W..W|W..W|SWWS',   // Layer 2 (walls)
       'SSSS|SSSS|SSSS|SSSS',   // Layer 3 (roof)
+    ],
+  },
+  {
+    id: 'manor',
+    name: 'Manor',
+    description: 'A large stone hall with iron-framed windows. Provides 4 housing slots. Built by upgrading a Stone House.',
+    size: { width: 5, height: 4, depth: 5 },
+    cost: { stone: 120, wood: 20, iron: 20 },
+    effects: { housing: 4, attractiveness: 30 },
+    upgradeOnly: true,
+    layers: [
+      'SSSSS|SSSSS|SSSSS|SSSSS|SSSSS',   // Layer 0 (floor)
+      'SW.WS|W...W|W...W|W...W|SWWWS',   // Layer 1 (walls, front doorway)
+      'SWIWS|I...I|W...W|I...I|SWIWS',   // Layer 2 (walls with iron windows)
+      'SSSSS|SSSSS|SSSSS|SSSSS|SSSSS',   // Layer 3 (roof)
     ],
   },
   {

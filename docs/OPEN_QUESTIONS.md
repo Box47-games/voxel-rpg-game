@@ -15,7 +15,7 @@ From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#de
 
 | # | Question | Proposed default |
 |---|----------|------------------|
-| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | **Decided: finish all Phase 2 leftovers first** (changed from the default on 2026-11-15). Order: housing → day/night schedule → farming zone → settlement dashboard → building panel → building upgrades (needs a short design pass first). NPC panel, housing, day/night schedule, farming zone, settlement dashboard and building panel done; building upgrades need a design pass |
+| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | **Decided: finish all Phase 2 leftovers first** (changed from the default on 2026-11-15). Order: housing → day/night schedule → farming zone → settlement dashboard → building panel → building upgrades (needs a short design pass first). **All done** (NPC panel, housing, day/night schedule, farming zone, settlement dashboard, building panel, building upgrades). Upgrade design chosen: grow in place, plan's path and costs, building effects (Storage Shed capacity, Well/Watchtower auras) left for later |
 | 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | **Decided: yes — done.** `SettlementTick` now drives `SettlementModule` through `SettlementBridge` |
 | 3 | Permanent NPC death? | No — NPCs are knocked down and recover (or leave if hit again while down) |
 | 4 | Enemy navigation: full pathfinding or simple steering? | Steering + breaking through walls; A* only if playtests show stuck raids |
@@ -35,6 +35,7 @@ From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#de
 
 ## Known bugs found while planning
 
+- **Fixed: buildings finished by a settler never appeared** — the settler builder only advanced the block count; it now places each block (`buildingInfo.placeNextBlock`, shared with `ConstructionTick`). This predated the settlement refactor.
 - **Fixed: closed rifts reopened after a reload** — rift state is now saved (schema v7, Phase 3 task 3.0.1).
 - **Fixed: the rift anchor was almost never attacked** — the anchor check now uses live positions from `store._enemyPositions`, and reinforcements walk to their anchor while the rift is closing unless the player is closer. The rest of task 3.0.2 (target registry, single damage path, removing the legacy Monster path) is still to do.
 

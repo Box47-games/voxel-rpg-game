@@ -43,6 +43,7 @@ import {
   FARM_CROP_MATERIAL,
 } from '../../data/tuning';
 import { getTileStage, TileStage, withTile } from './farming';
+import { placeNextBlock } from './buildingInfo';
 
 const WORK_STATE_BY_TASK_TYPE = {
   MINE: 'WORKING_MINE',
@@ -397,6 +398,9 @@ function tickBuild(npc, tickDelta, updates, ctx) {
   updates.workTimer = wt;
   if (wt < adjustedDuration) return false;
 
+  // Put the block in the world, then count it (the count alone used to be all
+  // a settler builder did, so settler-built buildings never appeared)
+  placeNextBlock(site, ctx.chunkAdapter);
   ctx.host.advanceConstruction(site.id);
   updates.workTimer = 0;
 
