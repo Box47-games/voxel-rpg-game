@@ -59,8 +59,8 @@ Tick components use `useFrame` inside R3F Canvas to drive game logic each frame.
 
 ### State Management
 
-- **`useGameStore`** (`src/stores/useGameStore.js`, ~1650 lines) — Primary store. Player, enemies, projectiles, settlement NPCs, zones, world time, UI state, inventory. Almost all 3D components read/write here.
-- **`useQuestStore`** — Quest progress and objectives (driven by `systems/QuestManager.js`; no quest UI yet).
+- **`useGameStore`** (`src/stores/useGameStore.js`, ~1730 lines) — Primary store. Player, enemies, projectiles, settlement NPCs, zones, world time, UI state, inventory. Almost all 3D components read/write here. Store actions are wrapped by `ActionHistory` middleware (`src/systems/state/ActionSystem.js`) for replay/rollback/debugging.
+- **`useQuestStore`** — Quest progress and objectives (driven by `systems/QuestManager.js` + JSON definitions in `src/config/quests/`; no quest UI yet).
 
 Pattern: Game logic writes to stores via actions. 3D components subscribe to slices. No circular deps — modules don't read components.
 
@@ -83,15 +83,35 @@ NPC states: `APPROACHING → EVALUATING → IDLE ⇄ WANDERING / SOCIALIZING / E
 |--------|---------|
 | `chunkWorker.js` | Seeded terrain generation (height maps, biomes, ores) and block → geometry meshing with face culling and LOD |
 
-WorkerPool caps at `Math.min(navigator.hardwareConcurrency, 4)` threads.
+WorkerPool (`src/systems/workers/WorkerPool.js`) caps at `Math.min(navigator.hardwareConcurrency, 4)` threads.
+
+### Game Systems (`src/systems/`)
+
+| System | Key files | Purpose |
+|--------|-----------|---------|
+| `chunks/` | ChunkManager, Chunk, LODGenerator, coordinates, blockTypes | Voxel terrain loading/unloading, coordinate math |
+| `combat/` | enemyHits.js | Enemy damage pipeline via `store._enemyHandlers` |
+| `survival/` | HungerSystem, ShelterDetector, CorruptionManager, RiftManager | Hunger/shelter/rift mechanics |
+| `settlement/` | AttractivenessCalculator, MiningZoneScanner, TaskAssignmentEngine | Settlement utilities used by the settlement engine (`modules/settlement/`) |
+| `lighting/` | DayNightLighting.js | Day/night cycle lighting |
+| `time/` | TimeManager.js | World time progression |
+| `story/` | DialogueEngine.js | NPC dialogue system |
+| `workers/` | WorkerPool.js | Thread pool for chunk workers |
+| `state/` | ActionSystem.js | Action history middleware (replay, rollback, debugging) |
+| `LootGenerator`, `LootTable`, `LootIntegration` | (root-level) | Loot drop/pickup pipeline |
+| `QuestManager` | (root-level) | Quest state machine driven by `src/config/quests/*.json` |
 
 ### Key Data Files
 
 - **`src/data/tuning.js`** — Single source of truth for ALL balance constants (day length, hunger rates, mining speeds, immigration thresholds, rift spawning, etc.). Never hardcode gameplay numbers.
 - **`src/data/zoneTypes.js`** — Zone type definitions (MINING, STOCKPILE, FARMING, BUILDING, RESTRICTED).
-- **`src/data/blockDrops.js`** — Block → loot tables, calculated via `calculateDrops(blockType, toolTier)`.
+- **`src/data/blockDrops.js`** — Block → loot tables, calculated via `calculateDrops(blockType, toolTier)`. Also defines `BLOCK_PLACEMENT_COSTS`.
 - **`src/data/spells.js`** — Spell definitions with cooldowns and mana costs.
 - **`src/data/buildings.js`** — Building blueprints for the construction system.
+- **`src/data/craftingRecipes.js`** — Crafting recipe definitions.
+- **`src/data/wildlifeTypes.js`** — Wildlife animal type definitions.
+- **`src/config/loot/*.json`** — Item templates, properties, rarity config, monster loot tables (JSON data, not code).
+- **`src/config/quests/*.json`** — Quest definitions (story, exploration, settlement) consumed by QuestManager.
 
 ### Persistence
 
@@ -99,7 +119,7 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
 
 ### Chunk System Constants
 
-`VOXEL_SIZE=2`, `CHUNK_SIZE=16`. ChunkManager exposes `getBlock(wx,wy,wz)` and `setBlock()` for world-space block access. Coordinate conversion in `src/systems/chunks/coordinates.js`.
+`VOXEL_SIZE=2`, `CHUNK_SIZE=16`, `CHUNK_SIZE_Y=32` (taller for underground depth). Block types are `Uint8Array` IDs (0–255) in `src/systems/chunks/blockTypes.js`. ChunkManager exposes `getBlock(wx,wy,wz)` and `setBlock()` for world-space block access. Coordinate conversion in `src/systems/chunks/coordinates.js`.
 
 ## Key Patterns
 
@@ -124,9 +144,12 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
 
 - `src/App3D.jsx` — Main 3D game component entry point
 - `src/components/3d/Experience.jsx` — Scene setup, entity rendering, tick orchestration
-- `src/stores/useGameStore.js` — Central Zustand store (~1650 lines)
+- `src/stores/useGameStore.js` — Central Zustand store (~1730 lines)
 - `src/persistence/Game3DSaveManager.js` — Save/load
 - `src/data/tuning.js` — All gameplay balance constants
 - `src/systems/chunks/ChunkManager.js` — Terrain chunk loading/unloading
 - `src/components/3d/SettlementTick.jsx` — Per-frame driver for the settlement engine (thin bridge loop)
 - `src/modules/settlement/SettlementBridge.js` — Module ↔ store bridge (chunk adapter, host port, result sync)
+- `src/entities/Item.js`, `src/entities/Quest.js` — Data classes for loot items and quests
+
+**Note:** `README.md` describes the old 2D architecture (GameManager, ModuleOrchestrator, Canvas 2D) that no longer exists. This CLAUDE.md is the authoritative architecture reference.
