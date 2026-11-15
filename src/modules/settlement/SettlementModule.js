@@ -94,7 +94,7 @@ class SettlementModule {
     this._warnedNPCs = new Set();
     this._npcIdCounter = 0;
     this._campfireAccum = 0;
-    this._campfireScanIdx = 0;
+    this._campfireScanned = new Map(); // chunk key → lastModified when last scanned
     this._attractAccum = 0;
     this._immigrationAccum = 0;
     this._needsAccum = 0;
@@ -104,7 +104,6 @@ class SettlementModule {
       campfireCenter: null,
       attractivenessUpdated: false,
       attractiveness: 0,
-      wallCount: 0,
       newNPC: null,
       batchUpdates: null,
       removeIds: null,
@@ -350,7 +349,7 @@ class SettlementModule {
 
       if (this._campfireAccum >= SETTLEMENT_CAMPFIRE_SCAN_INTERVAL) {
         this._campfireAccum = 0;
-        results.campfireCenter = this._scanNextChunkForCampfire();
+        results.campfireCenter = this._scanForCampfire();
       }
       return results; // No center yet — skip everything else
     }
@@ -361,7 +360,6 @@ class SettlementModule {
       this._attractAccum = 0;
       this.chunkAttractiveness.recalculate(center, this.chunkAdapter, state);
       results.attractiveness = this.chunkAttractiveness.getScore();
-      results.wallCount = this.chunkAttractiveness.getWallCount();
       results.attractivenessUpdated = true;
     }
 
@@ -397,13 +395,25 @@ class SettlementModule {
     return results;
   }
 
-  /** Scan one loaded chunk per call (round-robin) to amortize the cost. */
-  _scanNextChunkForCampfire() {
-    const chunks = Array.from(this.chunkAdapter.iterateChunks());
-    if (chunks.length === 0) return null;
-    const scanIdx = this._campfireScanIdx % chunks.length;
-    this._campfireScanIdx = scanIdx + 1;
-    return scanChunkForCampfire(chunks[scanIdx]);
+  /**
+   * Look for a campfire in the chunks the player has edited since the last
+   * scan. Terrain generation never places campfires, so untouched chunks are
+   * skipped; this finds a new campfire within one scan interval however many
+   * chunks are loaded.
+   */
+  _scanForCampfire() {
+    for (const chunk of this.chunkAdapter.iterateChunks()) {
+      if (!(chunk.lastModified > 0)) continue;
+      const key = `${chunk.x},${chunk.z}`;
+      if (this._campfireScanned.get(key) === chunk.lastModified) continue;
+      this._campfireScanned.set(key, chunk.lastModified);
+      const found = scanChunkForCampfire(chunk);
+      if (found) {
+        this._campfireScanned.clear();
+        return found;
+      }
+    }
+    return null;
   }
 
   /** @returns {Object|null} A new APPROACHING NPC if one is attracted this check */

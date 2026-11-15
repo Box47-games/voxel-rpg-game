@@ -10,7 +10,6 @@ const mockStoreState = {
   settlement: {
     npcs: [],
     attractiveness: 0,
-    wallCount: 0,
     settlementCenter: null,
   },
   inventory: { materials: { meat: 5 } },
@@ -154,7 +153,6 @@ describe('SettlementBridge', () => {
         campfireCenter: null,
         attractivenessUpdated: true,
         attractiveness: 42,
-        wallCount: 50,
         batchUpdates: {},
         removeIds: [],
         notifications: [],
@@ -163,7 +161,7 @@ describe('SettlementBridge', () => {
       });
       expect(mockStoreState.updateSettlementAttractiveness).toHaveBeenCalledWith(42);
       expect(mockStoreState.updateSettlementTimestamps).toHaveBeenCalledWith(
-        expect.objectContaining({ wallCount: 50 })
+        expect.objectContaining({ lastAttractivenessCalc: expect.any(Number) })
       );
     });
 

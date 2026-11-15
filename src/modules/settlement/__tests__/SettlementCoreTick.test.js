@@ -40,8 +40,9 @@ import {
 
 const CENTER = [5, 11, 7]; // world position of a campfire at local (2, 5, 3) in chunk (0, 0)
 
+// Placing a block marks its chunk modified; untouched terrain has lastModified 0.
 function campfireChunk() {
-  return { x: 0, z: 0, blocks: makeChunkBlocks([2, 5, 3]), lastModified: 0 };
+  return { x: 0, z: 0, blocks: makeChunkBlocks([2, 5, 3]), lastModified: 1 };
 }
 
 function emptyChunk(x) {
@@ -63,7 +64,7 @@ function makeGame({ chunks = [campfireChunk()], settlement = {}, zones = [], con
   module.setHost(host);
 
   const state = {
-    settlement: { npcs: [], attractiveness: 0, wallCount: 0, settlementCenter: null, ...settlement },
+    settlement: { npcs: [], attractiveness: 0, settlementCenter: null, ...settlement },
     zones: host.getZones(),
     constructionSites: host.getConstructionSites(),
     inventory: { materials: host.state.materials },
@@ -89,7 +90,6 @@ function makeGame({ chunks = [campfireChunk()], settlement = {}, zones = [], con
     } else {
       if (results.attractivenessUpdated) {
         s.attractiveness = results.attractiveness;
-        s.wallCount = results.wallCount;
       }
       if (results.newNPC) s.npcs = [...s.npcs, results.newNPC];
       if (results.batchUpdates) {
@@ -144,19 +144,27 @@ describe('campfire detection', () => {
     expect(state.settlement.settlementCenter).toEqual(CENTER);
   });
 
-  test('scans one chunk per interval, round-robin', () => {
-    const { tick } = makeGame({ chunks: [emptyChunk(1), emptyChunk(2), campfireChunk()] });
-    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
-    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
+  test('finds a campfire in one scan however many chunks are loaded', () => {
+    const chunks = Array.from({ length: 200 }, (_, i) => emptyChunk(i + 1));
+    chunks.push(campfireChunk());
+    const { tick } = makeGame({ chunks });
     expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toEqual(CENTER);
   });
 
-  test('wraps around to rescan chunks (a campfire placed later is found)', () => {
-    const first = emptyChunk(0);
+  test('skips chunks the player has not edited', () => {
+    const natural = { ...campfireChunk(), lastModified: 0 };
+    const { tick } = makeGame({ chunks: [natural] });
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
+  });
+
+  test('rescans a chunk when it is edited again (a campfire placed later is found)', () => {
+    const first = { ...emptyChunk(0), lastModified: 1 };
     const { tick } = makeGame({ chunks: [first, emptyChunk(1)] });
-    tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
-    tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
     first.blocks = makeChunkBlocks([2, 5, 3]);
+    // Unchanged since the last scan: not scanned again
+    expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toBeNull();
+    first.lastModified = 2;
     expect(tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL).campfireCenter).toEqual(CENTER);
   });
 
@@ -181,7 +189,7 @@ describe('campfire detection', () => {
     tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
     module._warnedNPCs.add('npc_old');
 
-    state.settlement = { npcs: [], attractiveness: 0, wallCount: 0, settlementCenter: null };
+    state.settlement = { npcs: [], attractiveness: 0, settlementCenter: null };
     const results = tick(SETTLEMENT_CAMPFIRE_SCAN_INTERVAL);
 
     expect(results.campfireCenter).toEqual(CENTER);
@@ -205,7 +213,6 @@ describe('attractiveness', () => {
 
     expect(results.attractivenessUpdated).toBe(true);
     expect(results.attractiveness).toBe(ATTRACT_CAMPFIRE_SCORE);
-    expect(results.wallCount).toBe(0);
     expect(state.settlement.attractiveness).toBe(ATTRACT_CAMPFIRE_SCORE);
   });
 
@@ -233,7 +240,7 @@ function shelters(n) {
 }
 
 describe('immigration', () => {
-  const ATTRACTIVE = { settlementCenter: CENTER, attractiveness: IMMIGRATION_THRESHOLD, wallCount: 0 };
+  const ATTRACTIVE = { settlementCenter: CENTER, attractiveness: IMMIGRATION_THRESHOLD };
 
   test('spawns an approaching NPC when the settlement is attractive enough', () => {
     const { tick, state } = makeGame({ settlement: ATTRACTIVE });

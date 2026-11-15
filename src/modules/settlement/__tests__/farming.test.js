@@ -124,6 +124,18 @@ describe('farm tasks', () => {
     expect(findBestTask(farmer('a'))).toBeNull();
   });
 
+  test('a designated farm beats a mine next door, even for a miner', () => {
+    // A mine zone never runs out of blocks; with equal priority a closer mine
+    // kept the only settler off a farm ~20 units away while the food ran out.
+    const mine = {
+      id: 'mine_1', type: 'MINING', bounds: BOUNDS,
+      miningTasks: [{ wx: 21, wy: 2, wz: 1, blockType: 1, status: 'pending' }],
+    };
+    scanForTasks([mine, farmZone()], [plot()], null, T0);
+    const miner = makeNPC({ id: 'm', position: [20, 2, 0], preferredJob: 'miner', skills: { mining: 1 } });
+    expect(findBestTask(miner).type).toBe('FARM');
+  });
+
   test(`at most ${MAX_FARMERS_PER_ZONE} settlers work one farm`, () => {
     scanForTasks([farmZone()], [plot()], null, T0); // 4 empty tiles
     for (let i = 0; i < MAX_FARMERS_PER_ZONE; i++) {

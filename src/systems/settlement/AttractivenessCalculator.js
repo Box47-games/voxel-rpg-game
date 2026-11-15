@@ -1,20 +1,25 @@
 /**
  * AttractivenessCalculator — Scores how appealing the settlement is to immigrants.
  *
- * Scans loaded chunks near settlement center for campfires, structural blocks, etc.
+ * Score = campfires near the center (chunk scan) + food (inventory and
+ * stockpiles) + completed buildings (with a bonus per bed) − nearby rifts,
+ * scaled by settler happiness.
+ *
+ * It used to add points for "walls": every stone/dirt/sand/wood block in any
+ * chunk the player had modified. That counted natural terrain too (placing a
+ * campfire marks its chunk modified), so scores ran into the thousands and
+ * every threshold was met at once. Housing now comes from beds in completed
+ * buildings, which is counted below.
  */
 
 import { BlockTypes } from '../chunks/blockTypes';
 import { CHUNK_SIZE, CHUNK_SIZE_Y, VOXEL_SIZE, worldToChunk } from '../chunks/coordinates';
 import {
   ATTRACT_CAMPFIRE_SCORE,
-  ATTRACT_WALL_SCORE,
-  ATTRACT_WALL_CAP,
   ATTRACT_FOOD_SCORE,
   ATTRACT_FOOD_CAP,
   ATTRACT_RIFT_PENALTY,
   ATTRACT_SCAN_RADIUS,
-  ATTRACT_HOUSING_SCORE,
   ATTRACT_HAPPINESS_MIN_MULT,
   ATTRACT_HAPPINESS_MAX_MULT,
   ATTRACT_STOCKPILE_FOOD_SCORE,
@@ -24,16 +29,6 @@ import {
 } from '../../data/tuning';
 import { getBuildingById } from '../../data/buildings';
 
-// Block types that count as player-placed structural blocks
-const STRUCTURAL_BLOCKS = new Set([
-  BlockTypes.STONE,
-  BlockTypes.DIRT,
-  BlockTypes.WOOD,
-  BlockTypes.SAND,
-  BlockTypes.GRAVEL,
-  BlockTypes.CLAY,
-]);
-
 // Food materials in inventory
 const FOOD_MATERIALS = ['berry', 'vegetable', 'meat'];
 
@@ -42,14 +37,13 @@ const FOOD_MATERIALS = ['berry', 'vegetable', 'meat'];
  * @param {number[]} center - [x, y, z] world position of settlement center
  * @param {Object} chunkManager - ChunkManager instance
  * @param {Object} gameState - Current zustand state snapshot
- * @returns {{ score: number, wallCount: number }} Attractiveness score and wall count
+ * @returns {{ score: number }} Attractiveness score
  */
 export function calculateAttractiveness(center, chunkManager, gameState) {
-  if (!center || !chunkManager) return { score: 0, wallCount: 0 };
+  if (!center || !chunkManager) return { score: 0 };
 
   const [cx, , cz] = center;
   let campfireScore = 0;
-  let wallCount = 0;
 
   // Convert scan radius from world units to chunk radius
   const scanChunkRadius = Math.ceil(ATTRACT_SCAN_RADIUS / (CHUNK_SIZE * VOXEL_SIZE));
@@ -72,21 +66,11 @@ export function calculateAttractiveness(center, chunkManager, gameState) {
 
           if (blockType === BlockTypes.CAMPFIRE) {
             campfireScore += ATTRACT_CAMPFIRE_SCORE;
-          } else if (STRUCTURAL_BLOCKS.has(blockType) && chunk.lastModified > 0) {
-            // Only count structural blocks in modified chunks (likely player-placed)
-            wallCount++;
           }
         }
       }
     }
   }
-
-  // Cap wall score
-  const wallScore = Math.min(wallCount, ATTRACT_WALL_CAP) * ATTRACT_WALL_SCORE;
-
-  // Housing bonus: each 25 structural blocks ≈ 1 housing slot
-  const housingSlots = Math.floor(wallCount / 25);
-  const housingScore = housingSlots * ATTRACT_HOUSING_SCORE;
 
   // Food bonus from inventory
   let foodCount = 0;
@@ -137,7 +121,7 @@ export function calculateAttractiveness(center, chunkManager, gameState) {
     }
   }
 
-  let baseScore = campfireScore + wallScore + housingScore + foodScore + stockpileFoodScore + buildingScore + riftPenalty;
+  let baseScore = campfireScore + foodScore + stockpileFoodScore + buildingScore + riftPenalty;
 
   // Happiness multiplier: if NPCs exist, scale by average happiness
   const npcs = gameState.settlement?.npcs;
@@ -152,5 +136,5 @@ export function calculateAttractiveness(center, chunkManager, gameState) {
     baseScore *= mult;
   }
 
-  return { score: Math.max(0, Math.round(baseScore)), wallCount };
+  return { score: Math.max(0, Math.round(baseScore)) };
 }

@@ -434,7 +434,6 @@ function SettlementTab({ state }) {
       <Section title="Overview">
         <Row label="Center" value={center ? `${fmt(center[0])}, ${fmt(center[1])}, ${fmt(center[2])}` : 'none — place a campfire'} color={center ? C.ok : C.dim} />
         <Row label="Attractiveness" value={fmt(settlement.attractiveness)} color={level(settlement.attractiveness, 20, 10, true)} />
-        <Row label="Wall blocks" value={fmtInt(settlement.wallCount)} />
         <Row label="Beds (housed)" value={`${beds} (${housed})`} />
         <Row label="NPCs / cap" value={`${npcs.length} / ${popCap}`} />
         <Row label="Zones / sites" value={`${zones.length} / ${constructionSites.length}`} />

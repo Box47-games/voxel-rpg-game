@@ -88,13 +88,10 @@ class SettlementBridge {
       return;
     }
 
-    // 2. Attractiveness + wall count
+    // 2. Attractiveness
     if (results.attractivenessUpdated) {
       store.updateSettlementAttractiveness(results.attractiveness);
-      store.updateSettlementTimestamps({
-        lastAttractivenessCalc: Date.now(),
-        wallCount: results.wallCount,
-      });
+      store.updateSettlementTimestamps({ lastAttractivenessCalc: Date.now() });
     }
 
     // 3. New NPC from immigration

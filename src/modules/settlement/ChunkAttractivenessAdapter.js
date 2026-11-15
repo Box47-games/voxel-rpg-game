@@ -1,6 +1,6 @@
 /**
  * ChunkAttractivenessAdapter.js — Wraps the chunk-scanning AttractivenessCalculator
- * so it fits the module interface (getScore/getWallCount pattern).
+ * so it fits the module interface (getScore pattern).
  */
 
 import { calculateAttractiveness } from '../../systems/settlement/AttractivenessCalculator';
@@ -8,7 +8,6 @@ import { calculateAttractiveness } from '../../systems/settlement/Attractiveness
 class ChunkAttractivenessAdapter {
   constructor() {
     this._score = 0;
-    this._wallCount = 0;
   }
 
   /**
@@ -21,15 +20,10 @@ class ChunkAttractivenessAdapter {
   recalculate(center, chunkAdapter, storeSnapshot) {
     const result = calculateAttractiveness(center, chunkAdapter.getRawChunkManager(), storeSnapshot);
     this._score = result.score;
-    this._wallCount = result.wallCount;
   }
 
   getScore() {
     return this._score;
-  }
-
-  getWallCount() {
-    return this._wallCount;
   }
 }
 

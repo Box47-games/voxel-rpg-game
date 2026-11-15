@@ -151,7 +151,6 @@ const createInitialShelter = () => ({
 const createInitialSettlement = () => ({
   npcs: [],              // Settler NPC entities
   attractiveness: 0,
-  wallCount: 0,          // Structural blocks counted (for housing cap)
   settlementCenter: null, // [x,y,z] of first campfire
   lastImmigrationCheck: 0,
   lastAttractivenessCalc: 0,

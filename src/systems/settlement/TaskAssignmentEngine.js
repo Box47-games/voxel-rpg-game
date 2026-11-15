@@ -147,7 +147,9 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
           material: null,
           amount: 0,
           claimedBy: existing ? existing.claimedBy : null,
-          priority: farmAction === 'HARVEST' ? 2 : 1,
+          // Both above mining (1): a mine zone never runs out of work, and a
+          // nearby one would otherwise keep settlers off the farm for good.
+          priority: farmAction === 'HARVEST' ? 3 : 2,
           _tileIndex: i,
         });
       });

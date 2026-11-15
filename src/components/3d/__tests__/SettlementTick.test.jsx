@@ -38,7 +38,7 @@ const settlement = () => store().settlement;
 
 function makeWorld() {
   return makeFakeChunkManager([
-    { x: 0, z: 0, blocks: makeChunkBlocks([2, 5, 3]), lastModified: 0 },
+    { x: 0, z: 0, blocks: makeChunkBlocks([2, 5, 3]), lastModified: 1 }, // player-placed campfire
   ]);
 }
 
@@ -177,7 +177,7 @@ describe('SettlementTick', () => {
       unhappyDays: 0, dayCheckpoint: 0, skills: {},
     };
     act(() => useGameStore.setState({
-      settlement: { ...settlement(), npcs: [loaded], settlementCenter: [40, 3, 40], attractiveness: 12, wallCount: 30 },
+      settlement: { ...settlement(), npcs: [loaded], settlementCenter: [40, 3, 40], attractiveness: 12 },
     }));
 
     run(4);

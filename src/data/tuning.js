@@ -207,14 +207,11 @@ export const ATTRACTIVENESS_HAPPINESS_MAX_MULT = 1.5;      // Multiplier at 100%
 export const ATTRACTIVENESS_RECALC_INTERVAL = 5;           // Seconds between full recalculations. Range: 1–30.
 // Simplified attractiveness aliases (used by some callers)
 export const ATTRACT_CAMPFIRE_SCORE = ATTRACTIVENESS_CAMPFIRE_BONUS;
-export const ATTRACT_WALL_SCORE = 1;                // Points per structural block (capped)
-export const ATTRACT_WALL_CAP = 100;                // Max structural blocks counted
 export const ATTRACT_FOOD_SCORE = 2;                // Points per food item
 export const ATTRACT_FOOD_CAP = 20;                 // Max food items counted
 export const ATTRACT_RIFT_PENALTY = ATTRACTIVENESS_RIFT_PENALTY;
 export const ATTRACT_SCAN_RADIUS = 48;              // World units to scan
 export const ATTRACT_RECALC_INTERVAL = ATTRACTIVENESS_RECALC_INTERVAL;
-export const ATTRACT_HOUSING_SCORE = ATTRACTIVENESS_PER_HOUSING_SLOT;
 export const ATTRACT_HAPPINESS_MIN_MULT = ATTRACTIVENESS_HAPPINESS_MIN_MULT;
 export const ATTRACT_HAPPINESS_MAX_MULT = ATTRACTIVENESS_HAPPINESS_MAX_MULT;
 
