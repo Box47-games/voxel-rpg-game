@@ -215,7 +215,7 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
         position={collider.center.map((v) => v * s)}
       />
       {/* One skinned mesh per animal: a single draw call, posed by its bones */}
-      <primitive object={rig.mesh} scale={s} />
+      <primitive object={rig.mesh} scale={s} dispose={null} />
     </RigidBody>
   );
 });

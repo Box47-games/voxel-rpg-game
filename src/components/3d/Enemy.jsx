@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody } from '@react-three/rapier';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { audioManager } from '../../utils/AudioManager';
 import { getQuestManager } from '../../systems/QuestManager';
 // NOTE: Billboard and Text from drei removed - they caused WebGL shader errors
@@ -16,6 +16,60 @@ import {
   STATUS_BURN_DAMAGE_TAKEN_MULT,
   RIFT_ANCHOR_ATTACK_RANGE,
 } from '../../data/tuning';
+import { applyBonePose, hashString, hash01 } from './voxelRig';
+import {
+  createEnemyInstance,
+  getEnemyModel,
+  getEnemyColliderBox,
+  getEnemyHeight,
+} from './enemies/enemyModels';
+import {
+  createEnemyAnimState,
+  stepEnemyAnimation,
+  stepDeath,
+  triggerAttack,
+  triggerHurt,
+  DEATH_DURATION,
+} from './enemies/enemyAnimation';
+
+const TURN_RATE = 10; // how quickly a monster turns to face its target
+const HITBOX_PADDING = 1.25; // invisible click/tap target is a bit larger than the body
+
+// Emissive tints while a status effect is active
+const STATUS_TINTS = {
+  freeze: [0.15, 0.35, 0.6],
+  slow: [0.1, 0.2, 0.4],
+  burn: [0.6, 0.25, 0.0],
+  poison: [0.1, 0.45, 0.1],
+  stun: [0.45, 0.45, 0.15],
+};
+
+/** Shortest signed angle from a to b. */
+function angleDelta(a, b) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+/**
+ * Set the body's glow: a white flash when hit, tinted by active status
+ * effects (burn flickers).
+ */
+function updateEmissive(material, flash, effects, time) {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  for (const e of effects) {
+    const tint = STATUS_TINTS[e.type];
+    if (!tint) continue;
+    const k = e.type === 'burn' ? 0.7 + Math.sin(time * 18) * 0.3 : 1;
+    r = Math.max(r, tint[0] * k);
+    g = Math.max(g, tint[1] * k);
+    b = Math.max(b, tint[2] * k);
+  }
+  material.emissive.setRGB(Math.max(r, flash), Math.max(g, flash), Math.max(b, flash * 0.9));
+}
 
 /** True while the rift a reinforcement was sent to is still being closed. */
 function isAnchorActive(rifts, riftId) {
@@ -55,7 +109,7 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
   const isDead = useRef(false); // Immediate flag to prevent multi-frame death
   const deathPosition = useRef(null); // Capture actual death position
   const attackCooldownRef = useRef(0); // Ref to avoid per-frame re-renders
-  const [damageFlash, setDamageFlash] = useState(0);
+  const hitFlashRef = useRef(0); // 1 when just hit, fades to 0
 
   const mDamage = monsterData?.damage || 5;
   const mSpeed = monsterData?.speed || 2;
@@ -63,6 +117,18 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
   const mXp = monsterData?.xp || 25;
   const mName = monsterData?.name || name;
   const mType = monsterData?.type || type;
+
+  // Voxel model: own skeleton over shared geometry, slight per-monster shade
+  const seed = useMemo(() => hash01(hashString(monsterData?.id || mType), 7), [monsterData?.id, mType]);
+  const rig = useMemo(() => createEnemyInstance(mType, { tint: 0.92 + seed * 0.12 }), [mType, seed]);
+  useEffect(() => () => rig.dispose(), [rig]);
+  const animSpec = getEnemyModel(mType).anim;
+  const animRef = useRef(null);
+  if (!animRef.current) animRef.current = createEnemyAnimState(seed);
+  const yawRef = useRef(seed * Math.PI * 2);
+  const deathTimeRef = useRef(0);
+  const collider = useMemo(() => getEnemyColliderBox(mType), [mType]);
+  const modelHeight = useMemo(() => getEnemyHeight(mType), [mType]);
 
   // Reusable Vector3 refs to avoid per-frame allocations
   const _playerPos = useRef(new THREE.Vector3());
@@ -83,9 +149,9 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
       return newHealth;
     });
 
-    // Trigger damage flash effect
-    setDamageFlash(1);
-    setTimeout(() => setDamageFlash(0), 300);
+    // Flash and recoil
+    hitFlashRef.current = 1;
+    triggerHurt(animRef.current);
 
     // Spawn floating damage number and apply knockback
     if (enemyRef.current) {
@@ -95,13 +161,13 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
 
       // Add damage number
       store.addDamageNumber({
-        position: [enemyPos.x, enemyPos.y + 1.5, enemyPos.z],
+        position: [enemyPos.x, enemyPos.y + modelHeight + 0.3, enemyPos.z],
         damage: damage,
       });
 
       // Add hit particle burst
       store.addParticleEffect({
-        position: [enemyPos.x, enemyPos.y + 0.5, enemyPos.z],
+        position: [enemyPos.x, enemyPos.y + modelHeight * 0.5, enemyPos.z],
         color: '#ffaa00',
         type: 'burst',
         count: 8,
@@ -121,7 +187,7 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
         z: knockbackDir.z * knockbackForce,
       }, true);
     }
-  }, []);
+  }, [modelHeight]);
 
   // Apply (or refresh) a status effect such as stun/freeze/poison/burn
   const applyStatusEffect = useCallback((effect) => {
@@ -158,11 +224,29 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
 
   // Enemy AI behavior
   useFrame((state, delta) => {
-    if (!enemyRef.current || !isAlive || isDead.current) return;
-
     const gameStore = useGameStore.getState();
     // Frozen while paused / not playing (physics is paused too)
     if (gameStore.gameState !== 'playing') return;
+
+    // Death animation: topple / melt / curl up, then fade out
+    if (isDead.current) {
+      if (isAlive) return; // the corpse mounts on the next render
+      deathTimeRef.current += delta;
+      const death = stepDeath(animSpec, deathTimeRef.current);
+      applyBonePose(rig, death.pose);
+      rig.mesh.rotation.set(0, yawRef.current, 0);
+      rig.mesh.rotateZ(death.tilt);
+      rig.mesh.position.y = -death.sink;
+      const opacity = 1 - death.fade;
+      for (const mat of [rig.material, rig.glowMaterial]) {
+        if (!mat) continue;
+        mat.transparent = opacity < 1;
+        mat.opacity = opacity;
+      }
+      rig.mesh.visible = deathTimeRef.current < DEATH_DURATION;
+      return;
+    }
+    if (!enemyRef.current || !isAlive) return;
 
     const body = enemyRef.current;
     const currentPos = body.translation();
@@ -260,6 +344,7 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
         if (attackCooldownRef.current <= 0) {
           gameStore.dealDamageToPlayer(mDamage, `Killed by ${mName}`);
           attackCooldownRef.current = 1.0;
+          triggerAttack(animRef.current);
         }
       }
     } else {
@@ -274,6 +359,24 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
         true
       );
     }
+
+    // Face the target (or the way it's moving), then animate
+    const moveVel = body.linvel();
+    const horizSpeed = Math.sqrt(moveVel.x * moveVel.x + moveVel.z * moveVel.z);
+    const alert = chasingAnchor || distance < detectionRange;
+    let targetYaw = yawRef.current;
+    if (chasingAnchor) targetYaw = Math.atan2(anchor[0] - enemyPos.x, anchor[2] - enemyPos.z);
+    else if (alert) targetYaw = Math.atan2(playerPos.x - enemyPos.x, playerPos.z - enemyPos.z);
+    else if (horizSpeed > 0.3) targetYaw = Math.atan2(moveVel.x, moveVel.z);
+    if (speedMult > 0) {
+      yawRef.current += angleDelta(yawRef.current, targetYaw) * Math.min(1, delta * TURN_RATE);
+    }
+    rig.mesh.rotation.y = yawRef.current;
+
+    const pose = stepEnemyAnimation(animRef.current, animSpec, { speed: horizSpeed, alert }, speedMult > 0 ? delta : 0);
+    applyBonePose(rig, pose);
+    hitFlashRef.current = Math.max(0, hitFlashRef.current - delta * 4);
+    updateEmissive(rig.material, hitFlashRef.current, statusEffectsRef.current, animRef.current.time);
 
     // Update cooldowns (ref — no re-render)
     if (attackCooldownRef.current > 0) {
@@ -343,53 +446,36 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
   });
 
   if (!isAlive) {
-    // Render corpse at actual death position, not spawn position
+    // The corpse plays its death animation where the monster fell
     const pos = deathPosition.current || position;
     return (
       <group position={pos}>
-        {/* Death animation - fade out */}
-        <mesh>
-          <boxGeometry args={[1, 0.5, 1]} />
-          <meshBasicMaterial color={mColor} transparent opacity={0.3} />
-        </mesh>
+        <primitive object={rig.mesh} dispose={null} />
       </group>
     );
   }
 
+  const hitbox = collider.halfExtents.map((v) => v * 2 * HITBOX_PADDING);
   return (
     <RigidBody
       ref={enemyRef}
       position={position}
       enabledRotations={[false, false, false]}
       type="dynamic"
-      colliders="cuboid"
+      colliders={false}
       mass={0.8}
       linearDamping={0.8}
       userData={hitUserData}
     >
-      <group userData={hitUserData} scale={damageFlash > 0 ? [1.15, 1.15, 1.15] : [1, 1, 1]}>
-        {/* Invisible larger hitbox for easier tap detection on mobile */}
-        <mesh position={[0, 0.5, 0]} userData={hitUserData}>
-          <boxGeometry args={[1.5, 1.5, 1.5]} />
+      <CuboidCollider args={collider.halfExtents} position={collider.center} />
+      <group userData={hitUserData}>
+        {/* Invisible larger hitbox for easier click/tap targeting */}
+        <mesh position={collider.center} userData={hitUserData}>
+          <boxGeometry args={hitbox} />
           <meshBasicMaterial visible={false} />
         </mesh>
-
-        {/* Enemy body */}
-        <mesh position={[0, 0.5, 0]} userData={hitUserData}>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshBasicMaterial color={damageFlash > 0 ? "#ffff00" : mColor} />
-        </mesh>
-
-        {/* Enemy eyes */}
-        <mesh position={[-0.2, 0.7, 0.51]}>
-          <sphereGeometry args={[0.1, 8, 8]} />
-          <meshBasicMaterial color="#000000" />
-        </mesh>
-        <mesh position={[0.2, 0.7, 0.51]}>
-          <sphereGeometry args={[0.1, 8, 8]} />
-          <meshBasicMaterial color="#000000" />
-        </mesh>
-
+        {/* Voxel model: one skinned mesh (plus one for glowing eyes) */}
+        <primitive object={rig.mesh} userData={hitUserData} dispose={null} />
       </group>
     </RigidBody>
   );

@@ -6,34 +6,25 @@
  * one skinned geometry per species (cached), so every animal is a single draw
  * call while its legs, head, tail and wings still animate (animalAnimation.js).
  *
- * Authoring conventions (model space, before `unit` scaling):
- *  - The animal faces +Z, Y is up and its feet stand on Y = 0.
- *  - The animal's left side is +X. `pair()` mirrors a left part to the right
- *    bone (…L → …R); `sym()` mirrors a part onto the same bone.
- *  - Parts are [bone, colorKey, [sx, sy, sz], [cx, cy, cz], opts?] with the box
- *    center at c. `opts.variant` parts appear only on that variant (antlers).
- *  - Bones are { pivot, parent? }; a bone without a parent hangs off the root.
+ * The model format (facing +Z, feet on Y = 0, left side +X) and the geometry
+ * builder are shared with the enemies: see ../voxelRig.js. Every species uses
+ * the same bone list (BONE_NAMES) so one pose function drives them all.
  */
 
-import * as THREE from 'three';
+import {
+  pair,
+  sym,
+  hash01,
+  hashString,
+  getModelParts,
+  getModelBounds,
+  getColliderBox as getRigColliderBox,
+  buildRigGeometry,
+  createGeometryCache,
+  createRig,
+} from '../voxelRig';
 
-// ── Authoring helpers ────────────────────────────────────────
-
-/** Left part on `<bone>L` plus its mirror on `<bone>R`. */
-function pair(bone, color, size, [x, y, z], opts) {
-  return [
-    [`${bone}L`, color, size, [x, y, z], opts],
-    [`${bone}R`, color, size, [-x, y, z], opts],
-  ];
-}
-
-/** A part and its mirror image on the same bone. */
-function sym(bone, color, size, [x, y, z], opts) {
-  return [
-    [bone, color, size, [x, y, z], opts],
-    [bone, color, size, [-x, y, z], opts],
-  ];
-}
+export { getModelParts, getModelBounds };
 
 /** Four leg bones: front legs at (±fx, hipY, fz), back legs at (±bx, hipY, bz). */
 function legBones(hipY, fx, fz, bx = fx, bz = -fz) {
@@ -511,182 +502,44 @@ export const BONE_NAMES = [
   'body', 'head', 'tail', 'legFL', 'legFR', 'legBL', 'legBR', 'wingL', 'wingR',
 ];
 
-// ── Geometry ─────────────────────────────────────────────────
-
-const FACE_SHADE = { top: 1.06, side: 0.94, bottom: 0.72 };
-
-/** Small deterministic hash → [0, 1) for per-box color jitter. */
-function hash01(a, b) {
-  let h = (a * 374761393 + b * 668265263) >>> 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-/** The parts of a species that appear on `variant`. */
-export function getModelParts(model, variant = null) {
-  return model.parts.filter(([, , , , opts]) => !opts?.variant || opts.variant === variant);
-}
+// ── Geometry and instances ───────────────────────────────────
 
 /**
- * World-space bounds of a model (min/max over all its boxes).
- * @returns {{ min: number[], max: number[], size: number[] }}
- */
-export function getModelBounds(model, variant = null, bonesFilter = null) {
-  const min = [Infinity, Infinity, Infinity];
-  const max = [-Infinity, -Infinity, -Infinity];
-  for (const [bone, , size, center] of getModelParts(model, variant)) {
-    if (bonesFilter && !bonesFilter(bone)) continue;
-    for (let i = 0; i < 3; i++) {
-      min[i] = Math.min(min[i], (center[i] - size[i] / 2) * model.unit);
-      max[i] = Math.max(max[i], (center[i] + size[i] / 2) * model.unit);
-    }
-  }
-  return { min, max, size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]] };
-}
-
-/**
- * Half extents and center of the physics box: the body, legs and head,
- * leaving out wings, tails and antlers so they don't snag on terrain.
+ * Physics box: the body, legs and head, leaving out wings and tails so they
+ * don't snag on terrain.
  */
 export function getColliderBox(model) {
-  const { min, max } = getModelBounds(model, null, (bone) => !bone.startsWith('wing') && bone !== 'tail');
-  return {
-    halfExtents: [(max[0] - min[0]) / 2, (max[1] - min[1]) / 2, (max[2] - min[2]) / 2],
-    center: [(max[0] + min[0]) / 2, (max[1] + min[1]) / 2, (max[2] + min[2]) / 2],
-  };
+  return getRigColliderBox(model, (bone) => !bone.startsWith('wing') && bone !== 'tail');
 }
 
-/**
- * Merge a species' boxes into one skinned BufferGeometry: vertex colors (with
- * a little per-box jitter and darker undersides) and a rigid skin weight to
- * the bone each box belongs to.
- */
+/** Merge a species' boxes into one skinned geometry. */
 export function buildAnimalGeometry(model, variant = null) {
-  const parts = getModelParts(model, variant);
-  const vertsPerBox = 24;
-  const indicesPerBox = 36;
-  const positions = new Float32Array(parts.length * vertsPerBox * 3);
-  const normals = new Float32Array(parts.length * vertsPerBox * 3);
-  const colors = new Float32Array(parts.length * vertsPerBox * 3);
-  const skinIndex = new Uint16Array(parts.length * vertsPerBox * 4);
-  const skinWeight = new Float32Array(parts.length * vertsPerBox * 4);
-  const indices = new Uint16Array(parts.length * indicesPerBox);
-  const color = new THREE.Color();
-
-  parts.forEach(([bone, colorKey, size, center], p) => {
-    const boneIndex = BONE_NAMES.indexOf(bone);
-    if (boneIndex < 0) throw new Error(`Unknown bone "${bone}"`);
-    const hex = model.colors[colorKey];
-    if (!hex) throw new Error(`Unknown color "${colorKey}"`);
-
-    const box = new THREE.BoxGeometry(size[0] * model.unit, size[1] * model.unit, size[2] * model.unit);
-    box.translate(center[0] * model.unit, center[1] * model.unit, center[2] * model.unit);
-    const pos = box.attributes.position.array;
-    const nor = box.attributes.normal.array;
-    const base = p * vertsPerBox;
-    positions.set(pos, base * 3);
-    normals.set(nor, base * 3);
-
-    const jitter = 0.95 + hash01(p, boneIndex) * 0.1;
-    color.set(hex);
-    for (let v = 0; v < vertsPerBox; v++) {
-      const ny = nor[v * 3 + 1];
-      const shade = (ny > 0.5 ? FACE_SHADE.top : ny < -0.5 ? FACE_SHADE.bottom : FACE_SHADE.side) * jitter;
-      const o = (base + v) * 3;
-      colors[o] = Math.min(1, color.r * shade);
-      colors[o + 1] = Math.min(1, color.g * shade);
-      colors[o + 2] = Math.min(1, color.b * shade);
-      skinIndex[(base + v) * 4] = boneIndex;
-      skinWeight[(base + v) * 4] = 1;
-    }
-    const idx = box.index.array;
-    for (let i = 0; i < idx.length; i++) indices[p * indicesPerBox + i] = idx[i] + base;
-    box.dispose();
-  });
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndex, 4));
-  geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skinWeight, 4));
-  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-  geometry.computeBoundingBox();
-  geometry.computeBoundingSphere();
-  return geometry;
+  return buildRigGeometry(model, { variant, boneNames: BONE_NAMES }).geometry;
 }
 
-const _geometryCache = new Map();
+const cachedGeometry = createGeometryCache();
 
 /** Cached geometry for a species and variant (shared by every instance). */
 export function getAnimalGeometry(type, variant = null) {
-  const key = `${type}:${variant || ''}`;
-  if (!_geometryCache.has(key)) {
-    const model = ANIMAL_MODELS[type];
-    if (!model) return null;
-    _geometryCache.set(key, buildAnimalGeometry(model, variant));
-  }
-  return _geometryCache.get(key);
+  const model = ANIMAL_MODELS[type];
+  if (!model) return null;
+  return cachedGeometry(`${type}:${variant || ''}`, () => buildAnimalGeometry(model, variant));
 }
 
 /**
  * A posable animal: a SkinnedMesh with its own skeleton. `bones` maps bone
  * names to THREE.Bone; `rest` holds each bone's rest position for animation.
- * Bones a species doesn't define stay at the origin with nothing skinned to them.
  */
 export function createAnimalInstance(type, { variant = null, tint = 1 } = {}) {
   const model = ANIMAL_MODELS[type];
   const geometry = getAnimalGeometry(type, variant);
   if (!model || !geometry) return null;
-
-  const bones = {};
-  const rest = {};
-  for (const name of BONE_NAMES) {
-    const bone = new THREE.Bone();
-    bone.name = name;
-    bones[name] = bone;
-  }
-  const roots = [];
-  for (const name of BONE_NAMES) {
-    const def = model.bones[name];
-    const bone = bones[name];
-    const pivot = def ? def.pivot : [0, 0, 0];
-    const parentDef = def?.parent ? model.bones[def.parent] : null;
-    const parentPivot = parentDef ? parentDef.pivot : [0, 0, 0];
-    bone.position.set(
-      (pivot[0] - parentPivot[0]) * model.unit,
-      (pivot[1] - parentPivot[1]) * model.unit,
-      (pivot[2] - parentPivot[2]) * model.unit,
-    );
-    rest[name] = bone.position.clone();
-    if (def?.parent) bones[def.parent].add(bone);
-    else roots.push(bone);
-  }
-
-  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0 });
-  material.color.setScalar(tint);
-  const mesh = new THREE.SkinnedMesh(geometry, material);
-  for (const bone of roots) mesh.add(bone);
-  mesh.castShadow = true;
-  mesh.updateMatrixWorld(true);
-  const skeleton = new THREE.Skeleton(BONE_NAMES.map((n) => bones[n]));
-  mesh.bind(skeleton);
-
-  return {
-    mesh,
-    bones,
-    rest,
-    dispose() {
-      material.dispose();
-      skeleton.dispose();
-    },
-  };
+  return createRig(model, { geometry, glowGeometry: null }, { boneNames: BONE_NAMES, tint });
 }
 
 /** Deterministic per-animal traits from its id: size, shade and variant. */
 export function getAnimalTraits(id, type) {
-  let h = 2166136261;
-  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619) >>> 0;
+  const h = hashString(id);
   const r1 = hash01(h, 1);
   const r2 = hash01(h, 2);
   const r3 = hash01(h, 3);
