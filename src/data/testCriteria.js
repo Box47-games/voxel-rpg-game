@@ -137,6 +137,7 @@ export const TEST_PHASES = [
           { id: 'p2-npc-departure-leave', label: 'NPC leaves', description: 'NPC unhappy for 3+ in-game days enters LEAVING state (red indicator), walks to edge, and is removed' },
           { id: 'p2-npc-personality', label: 'Personality effects', description: 'Personality traits affect behavior: diligent/lazy change idle timers, brave/cautious change wander radius, cheerful/grumpy adjust happiness' },
           { id: 'p2-npc-housing-cap', label: 'Housing-based pop cap', description: 'Max NPC count = beds from completed Shelters (1) and Houses (2), minimum 1 (the pioneer), max IMMIGRATION_MAX_NPCS' },
+          { id: 'p2-npc-schedule', label: 'Daily routine', description: 'Settlers work during the morning/afternoon shifts, eat at dawn/lunch/evening, socialize in the evening, and go home to sleep at night (workers park their task and resume it at dawn). Use the dev overlay time controls to check each block; the NPC panel shows the current block' },
           { id: 'p2-npc-housing-assign', label: 'Settlers get homes', description: 'When a Shelter/House completes, a homeless settler is assigned a bed (NPC panel shows "Lives in…"); tired settlers walk to their home\'s doorstep to sleep, homeless ones sleep by the campfire with a happiness penalty' },
         ],
       },
@@ -318,6 +319,7 @@ export const AUTO_CHECKS = {
   'p2-npc-departure-leave': (s) => s.settlement.npcs.some((n) => n.state === 'LEAVING'),
   'p2-npc-housing-cap': (s) => s.constructionSites.some((c) => c.status === 'COMPLETE' && (getBuildingById(c.buildingId)?.effects?.housing || 0) > 0),
   'p2-npc-housing-assign': (s) => s.settlement.npcs.some((n) => n.homeId),
+  'p2-npc-schedule': (s) => s.worldTime.isNight && s.settlement.npcs.some((n) => n.state === 'SLEEPING'),
 
   // Phase 2 — Zone Designation (2.2)
   'p2-zone-create-mining': (s) => s.zones.some((z) => z.type === 'MINING'),

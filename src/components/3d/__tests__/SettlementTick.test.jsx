@@ -24,6 +24,7 @@ import {
   NPC_EVALUATION_DURATION,
   NPC_MINE_DURATION,
   WORK_SCAN_INTERVAL,
+  DAY_LENGTH_SECONDS,
 } from '../../../data/tuning';
 
 const CENTER = [5, 11, 7];
@@ -49,7 +50,11 @@ describe('SettlementTick', () => {
     clearTasks();
     act(() => {
       store().reset();
-      useGameStore.setState({ gameState: 'playing' });
+      // Morning shift, so the settler works (see modules/settlement/schedule.js)
+      useGameStore.setState({
+        gameState: 'playing',
+        worldTime: { ...store().worldTime, elapsed: 0.4 * DAY_LENGTH_SECONDS, timeOfDay: 0.4 },
+      });
     });
     chunkManager = makeWorld();
     originalAddNotification = window.addNotification;

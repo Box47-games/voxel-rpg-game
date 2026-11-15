@@ -46,6 +46,7 @@ import ChunkAttractivenessAdapter from './ChunkAttractivenessAdapter.js';
 import { scanChunkForCampfire, getTerrainYAt } from './CampfireDetector.js';
 import { tickNPC } from './NPCStateMachine.js';
 import { getHomes, getPopulationCap, assignHomes } from './housing.js';
+import { getTimeOfDay } from './schedule.js';
 import { generateNPCIdentity } from '../../data/npcIdentity.js';
 import { scanForTasks } from '../../systems/settlement/TaskAssignmentEngine.js';
 
@@ -449,6 +450,7 @@ class SettlementModule {
       center,
       homes: new Map(homes.map((h) => [h.id, h])),
       homeAssignments: assignHomes(settlement.npcs, homes),
+      timeOfDay: getTimeOfDay(state.worldTime),
       attractiveness: settlement.attractiveness,
       npcs: settlement.npcs,
       zones: state.zones,

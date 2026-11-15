@@ -107,7 +107,7 @@ Three patterns explain most gaps:
 | **Building effects** (housing, storage, production, happiness) | 🟡 | Housing done (2026-11-15): `effects.housing` beds set the population cap (`modules/settlement/housing.js`). No storage/production effects. |
 | **Building upgrades** | ❌ | Not implemented. |
 | NPC needs (eat, rest, social) interrupting work | ✅ | EATING/SLEEPING states, needs decay, happiness, unhappy-departure warnings. |
-| **Daily schedule (work/eat/sleep by time of day)** | ❌ | Sleep is driven by the rest stat, not night; `SettlementTick` never reads `isNight`. |
+| **Daily schedule (work/eat/sleep by time of day)** | ✅ | Done 2026-11-15 (`modules/settlement/schedule.js`): work shifts, mealtimes, evening socializing, sleep at home at night; diligent/lazy shift work hours. No emergency override yet (nothing to respond to until Phase 3 raids). |
 | **Housing assignment, sleep at home** | ✅ | Done 2026-11-15: settlers get a bed in completed Shelters/Houses, sleep on their home's doorstep (they can't path inside), homeless ones sleep by the campfire with a happiness penalty. No manual reassignment or housing preferences yet. |
 | **Settlement dashboard** | ❌ | No dashboard UI. |
 | **NPC detail panel** (click an NPC) | ❌ | Only the developer NPC panel exists. |

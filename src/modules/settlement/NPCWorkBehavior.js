@@ -131,13 +131,18 @@ export function checkNeedsInterrupt(npc, newHunger, newRest, updates, ctx) {
     return true;
   }
   if (newRest < NPC_REST_CRITICAL) {
-    suspendTask(npc, updates);
-    updates.state = 'SLEEPING';
-    updates.targetPosition = getSleepTarget(npc, ctx);
-    updates.thoughtBubble = { type: 'sleeping', timer: NPC_THOUGHT_DURATION };
+    goToSleep(npc, updates, ctx);
     return true;
   }
   return false;
+}
+
+/** Head to bed: park any task (resumed on waking) and walk to the sleep spot. */
+export function goToSleep(npc, updates, ctx) {
+  suspendTask(npc, updates);
+  updates.state = 'SLEEPING';
+  updates.targetPosition = getSleepTarget(npc, ctx);
+  updates.thoughtBubble = { type: 'sleeping', timer: NPC_THOUGHT_DURATION };
 }
 
 /**

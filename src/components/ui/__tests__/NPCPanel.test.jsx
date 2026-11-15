@@ -46,6 +46,7 @@ describe('NPCPanel', () => {
     expect(screen.getByText('Mira Thorne')).toBeInTheDocument();
     expect(screen.getByText('Curious · prefers miner work')).toBeInTheDocument();
     expect(screen.getByText('Sleeping')).toBeInTheDocument();
+    expect(screen.getByText(/Dawn|Night|shift|Lunch|Evening/)).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Food' })).toHaveAttribute('aria-valuenow', '72');
     expect(screen.getByRole('meter', { name: 'Rest' })).toHaveAttribute('aria-valuenow', '10');
     expect(screen.getByRole('meter', { name: 'Mining' })).toHaveAttribute('aria-valuenow', '91');
@@ -113,6 +114,17 @@ describe('describeMood', () => {
     const daysLeft = NPC_LEAVE_DEPARTURE_DAYS - NPC_LEAVE_WARNING_DAYS;
     expect(describeMood(10, NPC_LEAVE_WARNING_DAYS)).toMatch(`may leave in ${daysLeft} day`);
     expect(describeMood(10, NPC_LEAVE_DEPARTURE_DAYS)).toBe('Unhappy — about to leave');
+  });
+});
+
+describe('schedule line', () => {
+  test('shows the settler\'s current schedule block', () => {
+    setNPCs([settler()]);
+    act(() => useGameStore.setState({ worldTime: { ...useGameStore.getState().worldTime, timeOfDay: 0.4 } }));
+    render(<NPCPanel />);
+    expect(screen.getByText(/Morning shift/)).toBeInTheDocument();
+    act(() => useGameStore.setState({ worldTime: { ...useGameStore.getState().worldTime, timeOfDay: 0.9 } }));
+    expect(screen.getByText(/Night/)).toBeInTheDocument();
   });
 });
 

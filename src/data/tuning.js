@@ -394,7 +394,18 @@ export const NPC_HAPPINESS_REST_WEIGHT = 0.3;
 export const NPC_HAPPINESS_SOCIAL_WEIGHT = 0.2;
 export const NPC_HAPPINESS_BASE = 15;
 export const NPC_SLEEP_RESTORE_RATE = 8;       // Rest restored per second while SLEEPING
-export const NPC_SLEEP_WAKE_REST = 80;         // Rest level at which a sleeping NPC wakes
+export const NPC_SLEEP_WAKE_REST = 80;         // Rest level at which a daytime napper wakes (night sleepers stay down until dawn)
+export const NPC_SLEEP_HUNGER_DECAY_MULT = 0.25; // Hunger decays slower while asleep (a night is 40% of a day)
+export const NPC_SLEEP_SOCIAL_DECAY_MULT = 0;    // Social doesn't decay while asleep
+
+// ─── Settler Daily Schedule (time of day 0–1, 0 = midnight) ─────
+// Dawn = breakfast, then work until sunset with a lunch break; evening is
+// leisure (dinner, socializing); night (SUNSET_END → SUNRISE_START) is sleep.
+export const SCHEDULE_LUNCH_START = 0.50;
+export const SCHEDULE_LUNCH_END = 0.55;
+export const SCHEDULE_PERSONALITY_SHIFT = 0.05; // Diligent settlers work this much longer at each end, lazy ones this much shorter
+export const NPC_MEAL_HUNGER = 70;             // Off-shift, settlers eat if hunger is below this (on shift: only below NPC_HUNGER_CRITICAL)
+export const NPC_LEISURE_SOCIAL = 70;          // In the evening, settlers seek company if social is below this
 export const NPC_DEFAULT_EATING_RESTORE = 10;  // Hunger restored by a meal with no recorded food value
 export const NPC_SOCIALIZE_SEARCH_RADIUS = 20; // World units to look for someone to talk to
 export const NPC_WANDER_TIMEOUT = 15;          // Seconds before a wandering NPC gives up and idles

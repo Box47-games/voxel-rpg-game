@@ -21,6 +21,7 @@ import {
   IMMIGRATION_SPAWN_MAX_DIST,
   IMMIGRATION_MAX_NPCS,
   HOUSING_FREE_SETTLERS,
+  DAY_LENGTH_SECONDS,
   HOUSING_HOMELESS_HAPPINESS_PENALTY,
   NPC_NEEDS_TICK_INTERVAL,
   NPC_HUNGER_DECAY_RATE,
@@ -51,6 +52,8 @@ function emptyChunk(x) {
  * A headless game: the module, a fake world, and a stand-in for the bridge
  * that feeds the module the current state and applies its results.
  */
+const MORNING_SHIFT = 0.4 * DAY_LENGTH_SECONDS;
+
 function makeGame({ chunks = [campfireChunk()], settlement = {}, zones = [], constructionSites = [], materials = {}, rifts = [] } = {}) {
   const chunkManager = makeFakeChunkManager(chunks);
   const host = makeFakeHost({ zones, constructionSites, materials });
@@ -65,7 +68,8 @@ function makeGame({ chunks = [campfireChunk()], settlement = {}, zones = [], con
     constructionSites: host.getConstructionSites(),
     inventory: { materials: host.state.materials },
     rifts,
-    worldTime: { elapsed: 0 },
+    // Morning shift, so settlers work by default (see schedule.js)
+    worldTime: { elapsed: MORNING_SHIFT },
   };
   const notifications = [];
 

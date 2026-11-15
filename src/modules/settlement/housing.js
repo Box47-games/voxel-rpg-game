@@ -105,11 +105,27 @@ export function resolveHomeId(npc, context) {
   return npc.homeId ?? null;
 }
 
+/** Which of its home's beds an NPC has (order of assignment), 0 if unknown. */
+function getBedIndex(npcId, homeId, homeAssignments) {
+  if (!homeAssignments) return 0;
+  let index = 0;
+  for (const [id, home] of homeAssignments) {
+    if (id === npcId) return index;
+    if (home === homeId) index++;
+  }
+  return 0;
+}
+
 /** Where a tired NPC goes to sleep: its home's doorstep, else near the campfire. */
 export function getSleepTarget(npc, context) {
   const homeId = resolveHomeId(npc, context);
   const home = homeId ? context.homes?.get(homeId) : null;
-  if (home) return [...home.sleepPosition];
+  if (home) {
+    // Housemates lie side by side along the front wall, one block apart
+    const bed = getBedIndex(npc.id, homeId, context.homeAssignments);
+    const [x, y, z] = home.sleepPosition;
+    return [x + (bed - (home.beds - 1) / 2) * VOXEL_SIZE, y, z];
+  }
   const center = context.center;
   if (!center) return null;
   const angle = Math.random() * Math.PI * 2;

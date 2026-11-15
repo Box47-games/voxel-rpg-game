@@ -93,10 +93,13 @@ describe('sleep target', () => {
   const homes = getHomes([site('house', 'stone_house')]);
   const ctx = { center: [0, 2, 0], homes: new Map(homes.map((h) => [h.id, h])) };
 
-  test('a housed settler goes to its doorstep', () => {
-    const target = getSleepTarget(npc('a'), { ...ctx, homeAssignments: new Map([['a', 'house']]) });
-    expect(target).toEqual(homes[0].sleepPosition);
-    expect(target).not.toBe(homes[0].sleepPosition); // a copy
+  test('housemates sleep side by side on their doorstep', () => {
+    const homeAssignments = new Map([['a', 'house'], ['x', null], ['b', 'house']]);
+    const [dx, dy, dz] = homes[0].sleepPosition;
+    const a = getSleepTarget(npc('a'), { ...ctx, homeAssignments });
+    const b = getSleepTarget(npc('b'), { ...ctx, homeAssignments });
+    expect(a).toEqual([dx - VOXEL_SIZE / 2, dy, dz]);
+    expect(b).toEqual([dx + VOXEL_SIZE / 2, dy, dz]);
   });
 
   test('a homeless settler sleeps near the campfire', () => {
@@ -107,7 +110,8 @@ describe('sleep target', () => {
 
   test('without tick assignments the NPC keeps its stored home', () => {
     expect(resolveHomeId(npc('a', 'IDLE', 'house'), ctx)).toBe('house');
-    expect(getSleepTarget(npc('a', 'IDLE', 'house'), ctx)).toEqual(homes[0].sleepPosition);
+    const [dx, dy, dz] = homes[0].sleepPosition;
+    expect(getSleepTarget(npc('a', 'IDLE', 'house'), ctx)).toEqual([dx - VOXEL_SIZE / 2, dy, dz]);
     expect(getSleepTarget(npc('a'), { homes: new Map() })).toBeNull();
   });
 });

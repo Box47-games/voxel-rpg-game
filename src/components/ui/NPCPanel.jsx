@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
 import { getBuildingById } from '../../data/buildings';
 import { isSettled } from '../../modules/settlement/housing';
+import { getScheduleBlock, getTimeOfDay } from '../../modules/settlement/schedule';
 import {
   NPC_HUNGER_CRITICAL,
   NPC_REST_CRITICAL,
@@ -76,6 +77,7 @@ const selectPanelData = (s) => {
     preferredJob: npc.preferredJob || null,
     activity: describeActivity(npc.state, carrying),
     home: describeHome(npc, s.constructionSites),
+    schedule: isSettled(npc) ? getScheduleBlock(getTimeOfDay(s.worldTime), npc.personality).label : null,
     hunger: Math.round(npc.hunger ?? 0),
     rest: Math.round(npc.rest ?? 0),
     social: Math.round(npc.social ?? 0),
@@ -197,7 +199,10 @@ export default function NPCPanel() {
           </button>
         </div>
 
-        <div style={{ marginTop: 10, fontSize: 14 }}>{data.activity}</div>
+        <div style={{ marginTop: 10, fontSize: 14 }}>
+          {data.activity}
+          {data.schedule && <span style={{ color: '#888', fontSize: 12 }}> · {data.schedule}</span>}
+        </div>
         {data.home && (
           <div style={{ marginTop: 4, fontSize: 12, color: data.home.startsWith('Homeless') ? '#ffaa44' : '#aaa' }}>
             {data.home}

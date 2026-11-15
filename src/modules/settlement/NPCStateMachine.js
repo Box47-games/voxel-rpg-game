@@ -44,6 +44,10 @@ import {
   NPC_WANDER_TIMEOUT,
   NPC_LEAVE_EXTRA_DISTANCE,
   HOUSING_HOMELESS_HAPPINESS_PENALTY,
+  NPC_SLEEP_HUNGER_DECAY_MULT,
+  NPC_SLEEP_SOCIAL_DECAY_MULT,
+  NPC_MEAL_HUNGER,
+  NPC_LEISURE_SOCIAL,
 } from '../../data/tuning';
 import {
   takeFood,
@@ -52,8 +56,10 @@ import {
   abandonTask,
   isWorkState,
   tickWorkState,
+  goToSleep,
 } from './NPCWorkBehavior';
-import { resolveHomeId, getSleepTarget, isSettled } from './housing';
+import { resolveHomeId, isSettled } from './housing';
+import { getScheduleBlock, Activity } from './schedule';
 
 // ── Personality helpers ─────────────────────────────────────
 
@@ -85,6 +91,67 @@ export function getPersonalityHappinessBonus(personality) {
     case 'grumpy': return -10;
     default: return 0;
   }
+}
+
+/** After idling long enough (personality-dependent), wander near the center. */
+function maybeWander(npc, timer, personality, center, updates) {
+  const [idleMin, idleMax] = getIdleTimerRange(personality);
+  if (timer <= idleMin + Math.random() * (idleMax - idleMin)) return;
+  updates.state = 'WANDERING';
+  updates.stateTimer = 0;
+  const wanderAngle = Math.random() * Math.PI * 2;
+  const wanderDist = Math.random() * NPC_WANDER_RADIUS * getWanderRadiusMult(personality);
+  updates.targetPosition = [
+    center[0] + Math.cos(wanderAngle) * wanderDist,
+    center[1],
+    center[2] + Math.sin(wanderAngle) * wanderDist,
+  ];
+}
+
+/**
+ * Off-shift meal: one per mealtime (dawn, lunch, evening), only if peckish.
+ * Hunger emergencies are handled separately at any time.
+ */
+function tryMeal(npc, block, hunger, worldTimeElapsed, updates, context) {
+  if (!block || block.activity === Activity.WORK || block.activity === Activity.SLEEP) return false;
+  if (hunger >= NPC_MEAL_HUNGER) return false;
+  const mealKey = `${Math.floor(worldTimeElapsed / DAY_LENGTH_SECONDS)}:${block.label}`;
+  if (npc.lastMeal === mealKey) return false;
+  const food = takeFood(context);
+  if (!food) return false;
+  updates.state = 'EATING';
+  updates.stateTimer = 0;
+  updates.eatingRestore = food.restore;
+  updates.lastMeal = mealKey;
+  return true;
+}
+
+/** Lonely at any time, or just sociable in the evening. */
+function wantsCompany(block, social) {
+  if (social < NPC_SOCIAL_CRITICAL) return true;
+  return block?.activity === Activity.LEISURE && social < NPC_LEISURE_SOCIAL;
+}
+
+/** Walk over to the nearest other settled NPC. @returns {boolean} found someone */
+function trySocialize(npc, npcs, updates) {
+  let nearestDist = NPC_SOCIALIZE_SEARCH_RADIUS;
+  let nearestNPC = null;
+  for (const other of npcs) {
+    if (other.id === npc.id || other.state === 'APPROACHING' || other.state === 'LEAVING') continue;
+    const dx = (other.position[0] || 0) - (npc.position[0] || 0);
+    const dz = (other.position[2] || 0) - (npc.position[2] || 0);
+    const d = Math.sqrt(dx * dx + dz * dz);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearestNPC = other;
+    }
+  }
+  if (!nearestNPC) return false;
+  updates.state = 'SOCIALIZING';
+  updates.stateTimer = 0;
+  updates.targetPosition = [...nearestNPC.position];
+  updates.thoughtBubble = { type: 'socializing', timer: NPC_THOUGHT_DURATION };
+  return true;
 }
 
 /** A point on the ring departing NPCs walk to before they are removed. */
@@ -155,10 +222,16 @@ export function tickNPC(npc, tickDelta, context) {
   const updates = {};
   const personality = npc.personality || 'stoic';
 
-  let newHunger = npc.hunger - NPC_HUNGER_DECAY_RATE * tickDelta;
+  // No schedule when the caller passes no time of day (pure unit tests)
+  const block = context.timeOfDay != null ? getScheduleBlock(context.timeOfDay, personality) : null;
+  const asleep = npc.state === 'SLEEPING';
+
+  let newHunger = npc.hunger
+    - NPC_HUNGER_DECAY_RATE * (asleep ? NPC_SLEEP_HUNGER_DECAY_MULT : 1) * tickDelta;
   let newRest = npc.rest - NPC_REST_DECAY_RATE * tickDelta;
   let newSocial = (npc.social ?? NPC_INITIAL_SOCIAL)
-    - NPC_SOCIAL_DECAY_RATE * getSocialDecayMult(personality) * tickDelta;
+    - NPC_SOCIAL_DECAY_RATE * getSocialDecayMult(personality)
+      * (asleep ? NPC_SLEEP_SOCIAL_DECAY_MULT : 1) * tickDelta;
   newHunger = Math.max(0, Math.min(100, newHunger));
   newRest = Math.max(0, Math.min(100, newRest));
   newSocial = Math.max(0, Math.min(100, newSocial));
@@ -282,46 +355,19 @@ export function tickNPC(npc, tickDelta, context) {
             message: `${npc.fullName} is hungry but there's no food!`,
           });
         }
-      } else if (newRest < NPC_REST_CRITICAL) {
-        updates.state = 'SLEEPING';
-        updates.stateTimer = 0;
-        updates.targetPosition = getSleepTarget(npc, context);
-        updates.thoughtBubble = { type: 'sleeping', timer: NPC_THOUGHT_DURATION };
-      } else if (newSocial < NPC_SOCIAL_CRITICAL && npcs.length > 1) {
-        // Find the nearest other settled NPC to socialize with
-        let nearestDist = NPC_SOCIALIZE_SEARCH_RADIUS;
-        let nearestNPC = null;
-        for (const other of npcs) {
-          if (other.id === npc.id || other.state === 'APPROACHING' || other.state === 'LEAVING') continue;
-          const dx = (other.position[0] || 0) - (npc.position[0] || 0);
-          const dz = (other.position[2] || 0) - (npc.position[2] || 0);
-          const d = Math.sqrt(dx * dx + dz * dz);
-          if (d < nearestDist) {
-            nearestDist = d;
-            nearestNPC = other;
-          }
-        }
-        if (nearestNPC) {
-          updates.state = 'SOCIALIZING';
-          updates.stateTimer = 0;
-          updates.targetPosition = [...nearestNPC.position];
-          updates.thoughtBubble = { type: 'socializing', timer: NPC_THOUGHT_DURATION };
-        }
+      } else if (block?.activity === Activity.SLEEP || newRest < NPC_REST_CRITICAL) {
+        // Bedtime, or exhausted mid-day (a nap)
+        goToSleep(npc, updates, context);
+      } else if (tryMeal(npc, block, newHunger, worldTimeElapsed, updates, context)) {
+        // Breakfast, lunch or dinner
+      } else if (wantsCompany(block, newSocial) && npcs.length > 1 && trySocialize(npc, npcs, updates)) {
+        // Off to chat
+      } else if (block && block.activity !== Activity.WORK) {
+        // Off shift: no new work, just potter about
+        maybeWander(npc, timer, personality, center, updates);
       } else if (!tryStartWork(npc, updates)) {
         // 2) No work found — maybe wander
-        const [idleMin, idleMax] = getIdleTimerRange(personality);
-        if (timer > idleMin + Math.random() * (idleMax - idleMin)) {
-          updates.state = 'WANDERING';
-          updates.stateTimer = 0;
-          const wanderAngle = Math.random() * Math.PI * 2;
-          const wanderMult = getWanderRadiusMult(personality);
-          const wanderDist = Math.random() * NPC_WANDER_RADIUS * wanderMult;
-          updates.targetPosition = [
-            center[0] + Math.cos(wanderAngle) * wanderDist,
-            center[1],
-            center[2] + Math.sin(wanderAngle) * wanderDist,
-          ];
-        }
+        maybeWander(npc, timer, personality, center, updates);
       }
       break;
     }
@@ -334,20 +380,35 @@ export function tickNPC(npc, tickDelta, context) {
         updates.state = 'IDLE';
         updates.stateTimer = 0;
         updates.eatingRestore = 0;
-        tryResumeTask(npc, updates);
+        // A midnight snack doesn't send anyone back to work; the parked task waits for morning
+        if (block?.activity !== Activity.SLEEP) tryResumeTask(npc, updates);
       }
       break;
     }
 
-    case 'SLEEPING':
+    case 'SLEEPING': {
       updates.rest = Math.min(100, newRest + NPC_SLEEP_RESTORE_RATE * tickDelta);
-      if (updates.rest >= NPC_SLEEP_WAKE_REST) {
+      const night = block?.activity === Activity.SLEEP;
+      if (night) {
+        // Sleep through the night; only real hunger gets anyone up
+        if (newHunger < NPC_HUNGER_CRITICAL) {
+          const food = takeFood(context);
+          if (food) {
+            updates.state = 'EATING';
+            updates.stateTimer = 0;
+            updates.eatingRestore = food.restore;
+            updates.targetPosition = null;
+            updates.thoughtBubble = { type: 'hungry', timer: NPC_THOUGHT_DURATION };
+          }
+        }
+      } else if (updates.rest >= NPC_SLEEP_WAKE_REST) {
         updates.state = 'IDLE';
         updates.stateTimer = 0;
         updates.targetPosition = null;
         tryResumeTask(npc, updates);
       }
       break;
+    }
 
     case 'SOCIALIZING':
       updates.social = Math.min(100, newSocial + (NPC_SOCIAL_RESTORE / NPC_SOCIAL_DURATION) * tickDelta);
@@ -369,7 +430,12 @@ export function tickNPC(npc, tickDelta, context) {
 
     default:
       if (isWorkState(npc.state)) {
-        taskCompleted = tickWorkState(npc, tickDelta, newHunger, newRest, updates, context);
+        if (block?.activity === Activity.SLEEP) {
+          // Nightfall: park the task (resumed after waking) and go to bed
+          goToSleep(npc, updates, context);
+        } else {
+          taskCompleted = tickWorkState(npc, tickDelta, newHunger, newRest, updates, context);
+        }
       }
       break;
   }
