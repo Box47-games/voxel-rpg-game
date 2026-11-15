@@ -1,0 +1,258 @@
+/* StartScreen.css — title screen over the live world */
+
+.start-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  color: var(--vx-text);
+  font-family: var(--vx-font-body);
+  overflow-y: auto;
+  animation: start-screen-in 0.6s ease-out both;
+}
+
+@keyframes start-screen-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Darken the left side so the menu reads; the world stays visible on the right */
+.start-screen__shade {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(10, 13, 20, 0.92) 0%, rgba(10, 13, 20, 0.78) 34%, rgba(10, 13, 20, 0.15) 70%, rgba(10, 13, 20, 0.05) 100%),
+    linear-gradient(0deg, rgba(10, 13, 20, 0.55) 0%, transparent 30%);
+}
+
+.start-screen__menu {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(420px, calc(100% - 32px));
+  margin: auto auto auto clamp(16px, 8vw, 120px);
+  padding: 32px 0;
+  animation: start-screen-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+}
+
+@keyframes start-screen-rise {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ── Brand ── */
+
+.start-screen__brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.start-screen__mark {
+  flex: none;
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.35));
+  animation: start-screen-bob 3.2s ease-in-out infinite;
+}
+
+@keyframes start-screen-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.start-screen__title {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-family: var(--vx-font-display);
+  font-weight: 700;
+  line-height: 0.88;
+  text-transform: uppercase;
+}
+
+.start-screen__title-top {
+  font-size: 3.4rem;
+  letter-spacing: 0.06em;
+  color: var(--vx-text);
+  text-shadow:
+    0 3px 0 #9d9784,
+    0 6px 0 #5e5a4d,
+    0 10px 16px rgba(0, 0, 0, 0.5);
+}
+
+.start-screen__title-bottom {
+  font-size: 4.6rem;
+  letter-spacing: 0.1em;
+  color: var(--vx-gold);
+  text-shadow:
+    0 4px 0 var(--vx-gold-dark),
+    0 8px 0 #6b4511,
+    0 12px 20px rgba(0, 0, 0, 0.5);
+}
+
+.start-screen__tagline {
+  margin: 0;
+  color: var(--vx-text-dim);
+  font-size: 1rem;
+  line-height: 1.5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Buttons ── */
+
+.start-screen__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.start-screen__continue {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.start-screen__save-info {
+  font-family: var(--vx-font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.75;
+}
+
+.start-screen__error {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  color: #ffd2cf;
+  background: rgba(217, 71, 63, 0.2);
+  border: 1px solid var(--vx-danger);
+  border-radius: 2px;
+}
+
+/* ── Controls card ── */
+
+.start-screen__controls {
+  padding: 14px 16px 12px;
+}
+
+.start-screen__section-title {
+  margin: 0 0 10px;
+  font-family: var(--vx-font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vx-gold);
+}
+
+.start-screen__controls ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.start-screen__controls li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.start-screen__keys {
+  display: inline-flex;
+  gap: 2px;
+  flex: none;
+}
+
+.start-screen__action {
+  color: var(--vx-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Tip and footer ── */
+
+.start-screen__tip {
+  font-size: 0.82rem;
+  color: var(--vx-text-faint);
+}
+
+.start-screen__tip summary {
+  cursor: pointer;
+  width: fit-content;
+  color: var(--vx-text-dim);
+}
+
+.start-screen__tip summary:hover {
+  color: var(--vx-text);
+}
+
+.start-screen__tip p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+  color: var(--vx-text-dim);
+}
+
+.start-screen__footer {
+  position: fixed;
+  right: 24px;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--vx-font-ui);
+  font-size: 0.9rem;
+  color: var(--vx-text);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  animation: start-screen-blink 2.4s ease-in-out infinite;
+}
+
+@keyframes start-screen-blink {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.45; }
+}
+
+/* ── Phones ── */
+
+.start-screen--compact {
+  align-items: flex-end;
+}
+
+.start-screen--compact .start-screen__shade {
+  background: linear-gradient(0deg, rgba(10, 13, 20, 0.95) 0%, rgba(10, 13, 20, 0.85) 55%, rgba(10, 13, 20, 0.2) 100%);
+}
+
+.start-screen--compact .start-screen__menu {
+  margin: auto;
+  gap: 14px;
+  padding: 24px 0 max(24px, env(safe-area-inset-bottom, 0px));
+}
+
+.start-screen--compact .start-screen__title-top {
+  font-size: 2.4rem;
+}
+
+.start-screen--compact .start-screen__title-bottom {
+  font-size: 3.2rem;
+}
+
+.start-screen--compact .start-screen__tagline {
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start-screen,
+  .start-screen__menu,
+  .start-screen__mark,
+  .start-screen__footer {
+    animation: none;
+  }
+}

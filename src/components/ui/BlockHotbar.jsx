@@ -88,40 +88,32 @@ export function BlockHotbar() {
           justifyContent: 'center',
         }}>
           <button
-            style={{
-              ...styles.modeButton,
-              backgroundColor: blockPlacementMode ? '#4a7c4a' : '#7c4a4a',
-              minHeight: '44px',
-              minWidth: '100px',
-              fontSize: '15px',
-            }}
+            type="button"
+            className={`vx-btn${blockPlacementMode ? ' vx-btn--primary' : ''}`}
+            style={{ minWidth: '100px' }}
             onClick={toggleBlockPlacementMode}
           >
-            {blockPlacementMode ? 'PLACE' : 'MINE'}
+            {blockPlacementMode ? 'Place' : 'Mine'}
           </button>
           <button
-            style={{
-              ...styles.modeButton,
-              backgroundColor: '#cc3333',
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '8px 14px',
-              fontSize: '18px',
-              lineHeight: 1,
-            }}
+            type="button"
+            className="vx-btn vx-btn--danger"
             onClick={exitBuildMode}
             aria-label="Exit build mode"
           >
-            ✕ EXIT
+            ✕ Exit
           </button>
         </div>
       )}
 
       {/* Block slots */}
-      <div style={{
-        ...styles.slots,
-        ...(isMobile.current ? { overflowX: 'auto', maxWidth: '90vw' } : {}),
-      }}>
+      <div
+        className="vx-panel"
+        style={{
+          ...styles.slots,
+          ...(isMobile.current ? { overflowX: 'auto', maxWidth: '90vw' } : {}),
+        }}
+      >
         {HOTBAR_BLOCKS.map((blockType, index) => {
           const props = BlockProperties[blockType];
           const isSelected = selectedBlockType === blockType;
@@ -133,15 +125,18 @@ export function BlockHotbar() {
           return (
             <button
               key={blockType}
+              type="button"
+              aria-pressed={isSelected}
               style={{
                 ...styles.slot,
                 width: slotSize,
                 height: slotSize,
                 minWidth: slotSize,
                 backgroundColor: rgbToCSS(props.color),
-                border: isSelected ? '3px solid #fff' : '2px solid #555',
-                transform: isSelected ? 'scale(1.1)' : 'scale(1)',
-                opacity: placeable > 0 ? 1 : 0.45,
+                outline: isSelected ? '2px solid var(--vx-gold-light)' : 'none',
+                outlineOffset: '2px',
+                transform: isSelected ? 'translateY(-4px)' : 'none',
+                opacity: placeable > 0 ? 1 : 0.4,
                 position: 'relative',
               }}
               onClick={() => setSelectedBlockType(blockType)}
@@ -185,54 +180,46 @@ const styles = {
     zIndex: 100,
     pointerEvents: 'auto',
   },
-  modeButton: {
-    padding: '8px 20px',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#fff',
-    border: '2px solid #333',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    textTransform: 'uppercase',
-    letterSpacing: '1px',
-  },
   slots: {
     display: 'flex',
-    gap: '4px',
+    gap: '6px',
     padding: '8px',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: '8px',
   },
   slot: {
     width: '48px',
     height: '48px',
-    borderRadius: '6px',
+    border: '2px solid var(--vx-edge)',
+    borderRadius: '2px',
+    // Beveled like a block: lit top, shaded bottom
+    boxShadow: 'inset 0 4px 0 rgba(255,255,255,0.3), inset 0 -5px 0 rgba(0,0,0,0.3), inset 4px 0 0 rgba(255,255,255,0.08)',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
     padding: '4px',
-    transition: 'transform 0.1s, border 0.1s',
+    transition: 'transform 0.1s',
   },
   countBadge: {
     position: 'absolute',
-    top: '2px',
+    top: '3px',
     left: '4px',
-    fontSize: '10px',
+    fontFamily: 'var(--vx-font-ui)',
+    fontSize: '11px',
     color: '#fff',
-    textShadow: '1px 1px 2px #000',
+    textShadow: '1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000',
     fontWeight: 'bold',
   },
   keyHint: {
+    fontFamily: 'var(--vx-font-ui)',
     fontSize: '10px',
     color: '#fff',
-    textShadow: '1px 1px 2px #000',
+    textShadow: '1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000',
     fontWeight: 'bold',
   },
   instructions: {
     fontSize: '12px',
-    color: '#ccc',
-    textShadow: '1px 1px 2px #000',
+    color: 'var(--vx-text)',
+    textShadow: '0 1px 2px #000, 0 0 4px #000',
     display: 'flex',
     gap: '8px',
   },

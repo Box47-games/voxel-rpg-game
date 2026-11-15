@@ -1,0 +1,50 @@
+/* PauseMenu.css */
+
+.pause-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 10, 16, 0.6);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.pause-menu__panel {
+  width: min(320px, 100%);
+  padding: 28px 28px 20px;
+  text-align: center;
+  background: rgba(20, 24, 34, 0.94);
+}
+
+.pause-menu__title {
+  margin-bottom: 20px;
+  font-size: 2.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.pause-menu__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pause-menu__status {
+  margin: 14px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.pause-menu__hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 16px 0 0;
+  font-size: 0.8rem;
+  color: var(--vx-text-faint);
+}

@@ -1,0 +1,398 @@
+/* GameUI.css — the in-game HUD (see GameUI.jsx for the layout) */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  color: var(--vx-text);
+  font-family: var(--vx-font-body);
+  --hud-gap: 16px;
+}
+
+.hud--compact {
+  --hud-gap: 8px;
+}
+
+/* ── Vitals (top left) ── */
+
+.hud-vitals {
+  position: absolute;
+  top: var(--hud-gap);
+  left: var(--hud-gap);
+  width: 264px;
+  padding: 10px 12px 6px;
+  pointer-events: auto;
+}
+
+.hud--compact .hud-vitals {
+  width: 168px;
+  padding: 7px 8px 4px;
+}
+
+.hud-level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.hud-level__badge {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-family: var(--vx-font-ui);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #2a1b06;
+  background: linear-gradient(var(--vx-gold-light), var(--vx-gold));
+  border: 2px solid var(--vx-edge);
+  border-radius: 2px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  transform: rotate(-4deg);
+}
+
+.hud--compact .hud-level__badge {
+  width: 26px;
+  height: 26px;
+  font-size: 0.95rem;
+}
+
+.hud-level__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.hud-level__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 3px;
+  font-family: var(--vx-font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hud-level__xp {
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: var(--vx-text-dim);
+}
+
+.hud-shelter {
+  margin: 2px 0 6px;
+}
+
+.hud-shelter svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── Clock and purse (top right) ── */
+
+.hud-info {
+  position: absolute;
+  top: var(--hud-gap);
+  right: var(--hud-gap);
+  min-width: 180px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: top 0.2s ease;
+}
+
+.hud--compact .hud-info {
+  min-width: 0;
+  padding: 6px 8px;
+  gap: 4px;
+}
+
+/* On phones the mode badge sits top right, so move the clock below it */
+.hud--compact.hud--mode .hud-info {
+  top: 44px;
+}
+
+.hud-clock__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-clock__icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.hud-clock__day {
+  font-family: var(--vx-font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vx-text-dim);
+}
+
+.hud-clock__time {
+  margin-left: auto;
+  font-family: var(--vx-font-ui);
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.hud--compact .hud-clock__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hud--compact .hud-clock__day {
+  font-size: 0.7rem;
+}
+
+.hud--compact .hud-clock__time {
+  font-size: 0.95rem;
+}
+
+.hud-clock__strip {
+  position: relative;
+  height: 8px;
+  margin-top: 6px;
+  border: 1px solid var(--vx-edge);
+  border-radius: 1px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.15);
+}
+
+.hud-clock__marker {
+  position: absolute;
+  top: -4px;
+  width: 4px;
+  height: 14px;
+  margin-left: -2px;
+  background: #fff;
+  border: 1px solid var(--vx-edge);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+}
+
+.hud-info__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hud-info__row--combat {
+  padding-top: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hud-info__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--vx-font-ui);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-info__stat svg {
+  width: 16px;
+  height: 16px;
+  color: var(--vx-text-dim);
+}
+
+.hud-info__stat--gold svg {
+  color: var(--vx-gold);
+}
+
+.hud-info__stat--potion svg {
+  color: #e5484d;
+}
+
+.hud--compact .hud-info__row {
+  gap: 10px;
+}
+
+.hud--compact .hud-info__stat {
+  font-size: 0.8rem;
+}
+
+.hud--compact .hud-info__stat svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── Mode badge (top center; top right on phones) ── */
+
+.hud-mode-badge {
+  position: absolute;
+  top: var(--hud-gap);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-family: var(--vx-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #2a1b06;
+  background: var(--chip);
+  border: 2px solid var(--vx-edge);
+  border-radius: 2px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 3px 0 rgba(0, 0, 0, 0.3);
+  z-index: 110;
+}
+
+.hud-mode-badge svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hud--compact .hud-mode-badge {
+  left: auto;
+  right: var(--hud-gap);
+  transform: none;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+}
+
+.hud--compact .hud-mode-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── Action bar (bottom left) ── */
+
+.hud-actions {
+  position: absolute;
+  left: var(--hud-gap);
+  bottom: var(--hud-gap);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(10, 13, 20, 0.55);
+  border: 2px solid var(--vx-edge);
+  border-radius: 3px;
+  pointer-events: auto;
+  transition: bottom 0.2s ease;
+}
+
+/* Lift the bar above the block / zone hotbar */
+.hud--mode .hud-actions {
+  bottom: 124px;
+}
+
+/* Touch screens: the joystick owns the bottom-left corner, so sit above it */
+.hud--touch .hud-actions {
+  bottom: calc(196px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Short landscape phones: no room above the joystick, so use the top center */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hud--touch .hud-actions {
+    top: var(--hud-gap);
+    bottom: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.hud-slot {
+  --slot: #ffffff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 74px;
+  height: 58px;
+  padding: 0;
+  color: var(--vx-text);
+  background: linear-gradient(#323b4f, #222939);
+  border: 2px solid var(--vx-edge);
+  border-radius: 2px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14), inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 80ms ease, filter 120ms ease;
+}
+
+.hud-slot:hover {
+  filter: brightness(1.2);
+}
+
+.hud-slot:active {
+  transform: translateY(2px);
+}
+
+.hud-slot:focus-visible {
+  outline: 2px solid var(--vx-gold-light);
+  outline-offset: 2px;
+}
+
+.hud-slot__icon {
+  width: 22px;
+  height: 22px;
+  color: var(--slot);
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.5));
+}
+
+.hud-slot__label {
+  font-family: var(--vx-font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vx-text-dim);
+}
+
+.hud-slot__key {
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  padding: 0 4px;
+  font-family: var(--vx-font-ui);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #1d2029;
+  background: #ece6d4;
+  border: 1px solid var(--vx-edge);
+  border-radius: 2px;
+  box-shadow: inset 0 -2px 0 #a9a28c;
+}
+
+.hud-slot--active {
+  background: linear-gradient(color-mix(in srgb, var(--slot) 85%, white), var(--slot));
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.25), 0 0 12px color-mix(in srgb, var(--slot) 60%, transparent);
+}
+
+.hud-slot--active .hud-slot__icon {
+  color: #2a1b06;
+  filter: none;
+}
+
+.hud-slot--active .hud-slot__label {
+  color: #2a1b06;
+}
+
+.hud--compact .hud-actions {
+  gap: 5px;
+  padding: 4px;
+}
+
+.hud--compact .hud-slot {
+  width: 44px;
+  height: 44px;
+}

@@ -1,0 +1,246 @@
+/**
+ * voxel-ui.css — The game's UI look: chunky beveled panels, block buttons,
+ * key caps and segmented stat bars that match the voxel art.
+ *
+ * Primitives (use these instead of inline colors):
+ *   .vx-panel            dark translucent panel with a bevel
+ *   .vx-btn              block button (+ --primary, --danger, --ghost, --lg)
+ *   .vx-key              key cap ("WASD", "Tab")
+ *   .vx-bar              segmented bar; set --bar (color) and --fill (0-100%)
+ *   .vx-chip             small status pill
+ *   .vx-heading          display-font heading
+ * The pixel display font is for titles and buttons; small text uses --vx-font-ui.
+ */
+
+:root {
+  --vx-font-display: 'Silkscreen', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --vx-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Small labels, numbers and key caps: the pixel font gets hard to read below ~18px */
+  --vx-font-ui: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+
+  --vx-panel: rgba(20, 24, 34, 0.84);
+  --vx-panel-solid: #171c27;
+  --vx-panel-raised: #252d3d;
+  --vx-edge: #06080d;
+  --vx-bevel-light: rgba(255, 255, 255, 0.12);
+  --vx-bevel-dark: rgba(0, 0, 0, 0.38);
+
+  --vx-text: #f4efe1;
+  --vx-text-dim: #aeaa9c;
+  --vx-text-faint: #77756c;
+
+  --vx-gold: #f2c14e;
+  --vx-gold-light: #ffd977;
+  --vx-gold-dark: #a8711f;
+  --vx-grass: #6cbf4a;
+  --vx-dirt: #8a5a35;
+
+  --vx-health: #e5484d;
+  --vx-mana: #4f8cf7;
+  --vx-stamina: #5cc36b;
+  --vx-hunger: #e0913a;
+  --vx-rage: #ff6a2b;
+  --vx-xp: #f2c14e;
+  --vx-danger: #d9473f;
+}
+
+/* ── Panel ─────────────────────────────────────────────── */
+
+.vx-panel {
+  background: var(--vx-panel);
+  color: var(--vx-text);
+  border: 2px solid var(--vx-edge);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 2px 0 var(--vx-bevel-light),
+    inset 0 -3px 0 var(--vx-bevel-dark),
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-family: var(--vx-font-body);
+}
+
+.vx-heading {
+  font-family: var(--vx-font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--vx-text);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+  margin: 0;
+}
+
+/* ── Buttons ───────────────────────────────────────────── */
+
+.vx-btn {
+  --btn-top: #3d4860;
+  --btn-bottom: #2a3244;
+  --btn-text: var(--vx-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  min-height: 44px;
+  font-family: var(--vx-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--btn-text);
+  background: linear-gradient(var(--btn-top), var(--btn-bottom));
+  border: 2px solid var(--vx-edge);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.3),
+    0 3px 0 rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  transition: transform 80ms ease, filter 120ms ease, box-shadow 80ms ease;
+}
+
+.vx-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.vx-btn:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 0 rgba(0, 0, 0, 0.25),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.vx-btn:focus-visible {
+  outline: 2px solid var(--vx-gold-light);
+  outline-offset: 2px;
+}
+
+.vx-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.vx-btn--primary {
+  --btn-top: #ffd36a;
+  --btn-bottom: #e0a73a;
+  --btn-text: #2a1b06;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.vx-btn--danger {
+  --btn-top: #e8605a;
+  --btn-bottom: #b8342e;
+}
+
+.vx-btn--ghost {
+  --btn-top: rgba(255, 255, 255, 0.08);
+  --btn-bottom: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08);
+}
+
+.vx-btn--lg {
+  font-size: 1.25rem;
+  padding: 14px 24px;
+  min-height: 56px;
+}
+
+.vx-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* ── Key caps ──────────────────────────────────────────── */
+
+.vx-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7em;
+  padding: 1px 6px 2px;
+  font-family: var(--vx-font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #1d2029;
+  background: #ece6d4;
+  border: 1px solid var(--vx-edge);
+  border-radius: 3px;
+  box-shadow: inset 0 -3px 0 #a9a28c;
+  white-space: nowrap;
+}
+
+/* ── Segmented bars ────────────────────────────────────── */
+
+.vx-bar {
+  position: relative;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid var(--vx-edge);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.vx-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fill, 100%);
+  background: var(--bar, var(--vx-health));
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  transition: width 0.25s ease-out;
+}
+
+/* Block segments every 10% */
+.vx-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(10% - 2px),
+    rgba(0, 0, 0, 0.4) calc(10% - 2px),
+    rgba(0, 0, 0, 0.4) 10%
+  );
+  pointer-events: none;
+}
+
+.vx-bar--thin {
+  height: 8px;
+  border-width: 1px;
+}
+
+.vx-bar--low .vx-bar__fill {
+  animation: vx-bar-flash 0.9s steps(2, jump-none) infinite;
+}
+
+@keyframes vx-bar-flash {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.7); }
+}
+
+/* ── Chips ─────────────────────────────────────────────── */
+
+.vx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  font-family: var(--vx-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--chip, var(--vx-text));
+  background: color-mix(in srgb, var(--chip, #ffffff) 16%, rgba(0, 0, 0, 0.5));
+  border: 1px solid color-mix(in srgb, var(--chip, #ffffff) 70%, black);
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-bar--low .vx-bar__fill { animation: none; }
+  .vx-btn { transition: none; }
+}

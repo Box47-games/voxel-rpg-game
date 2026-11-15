@@ -1,76 +1,15 @@
 /**
- * MobileTouchTutorial.jsx — One-time overlay teaching touch controls.
+ * MobileTouchTutorial.jsx — One-time card teaching touch controls.
  *
- * Shows on first mobile play, stores dismissal in localStorage.
- * Tap anywhere to dismiss.
+ * Shows the first time a touch-device player starts playing (not over the
+ * title screen) and remembers dismissal in localStorage. Tap to dismiss.
  */
 
 import React, { useState, useEffect } from 'react';
 import { isTouchDevice } from '../../utils/deviceDetection';
+import useGameStore from '../../stores/useGameStore';
 
 const STORAGE_KEY = 'mobileTutorialSeen';
-
-const overlayStyle = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  background: 'rgba(5, 3, 15, 0.92)',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 2000,
-  padding: '20px',
-  color: '#d0c8e0',
-  fontFamily: 'monospace',
-  cursor: 'pointer',
-  userSelect: 'none',
-  WebkitUserSelect: 'none',
-};
-
-const titleStyle = {
-  fontSize: 22,
-  fontWeight: 'bold',
-  color: '#bb88ff',
-  marginBottom: 24,
-  textTransform: 'uppercase',
-  letterSpacing: 2,
-};
-
-const listStyle = {
-  listStyle: 'none',
-  padding: 0,
-  margin: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-  maxWidth: 320,
-  width: '100%',
-};
-
-const itemStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 14,
-  fontSize: 15,
-  lineHeight: 1.4,
-};
-
-const iconStyle = {
-  fontSize: 24,
-  width: 36,
-  textAlign: 'center',
-  flexShrink: 0,
-};
-
-const dismissStyle = {
-  marginTop: 32,
-  fontSize: 13,
-  color: '#888',
-  animation: 'pulse 2s ease-in-out infinite',
-};
 
 const TIPS = [
   { icon: '🕹️', text: 'Use the joystick (bottom-left) to move' },
@@ -82,40 +21,109 @@ const TIPS = [
   { icon: '⛏️', text: 'Long-press blocks to mine' },
 ];
 
+function alreadySeen() {
+  try {
+    return !!localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return false;
+  }
+}
+
+const styles = {
+  overlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 2000,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    background: 'rgba(8, 10, 16, 0.7)',
+    cursor: 'pointer',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+  },
+  card: {
+    width: 'min(340px, 100%)',
+    padding: '20px 20px 16px',
+  },
+  title: {
+    marginBottom: 16,
+    fontSize: '1.15rem',
+    textTransform: 'uppercase',
+    color: 'var(--vx-gold)',
+    textAlign: 'center',
+  },
+  list: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  },
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    fontSize: 15,
+    lineHeight: 1.35,
+  },
+  icon: {
+    fontSize: 20,
+    width: 28,
+    textAlign: 'center',
+    flexShrink: 0,
+  },
+  dismiss: {
+    marginTop: 16,
+    fontSize: 13,
+    textAlign: 'center',
+    color: 'var(--vx-text-dim)',
+  },
+};
+
 const MobileTouchTutorial = () => {
+  const playing = useGameStore((s) => s.gameState === 'playing');
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (isTouchDevice() && !localStorage.getItem(STORAGE_KEY)) {
-      setVisible(true);
-    }
-  }, []);
+    if (playing && isTouchDevice() && !alreadySeen()) setVisible(true);
+  }, [playing]);
 
   const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
+    try {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } catch {
+      // Private mode: the card just comes back next time
+    }
     setVisible(false);
   };
 
-  if (!visible) return null;
+  if (!visible || !playing) return null;
 
   return (
     <div
-      style={overlayStyle}
+      style={styles.overlay}
+      role="dialog"
+      aria-labelledby="touch-tutorial-title"
       onClick={dismiss}
       onTouchStart={(e) => { e.preventDefault(); dismiss(); }}
     >
-      <div style={titleStyle}>Touch Controls</div>
-
-      <ul style={listStyle}>
-        {TIPS.map((tip, i) => (
-          <li key={i} style={itemStyle}>
-            <span style={iconStyle}>{tip.icon}</span>
-            <span>{tip.text}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div style={dismissStyle}>Tap anywhere to start playing</div>
+      <div className="vx-panel" style={styles.card}>
+        <h2 id="touch-tutorial-title" className="vx-heading" style={styles.title}>
+          Touch controls
+        </h2>
+        <ul style={styles.list}>
+          {TIPS.map((tip) => (
+            <li key={tip.text} style={styles.item}>
+              <span style={styles.icon} aria-hidden="true">{tip.icon}</span>
+              <span>{tip.text}</span>
+            </li>
+          ))}
+        </ul>
+        <div style={styles.dismiss}>Tap anywhere to start playing</div>
+      </div>
     </div>
   );
 };

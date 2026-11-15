@@ -368,26 +368,29 @@ const ContextualHints = () => {
     };
   }, [gameState]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!currentHint || gameState !== 'playing') return null;
+  if (!currentHint || gameState !== 'playing' || playerHealth <= 0) return null;
 
   return (
     <div
+      className="vx-panel"
+      role="status"
       style={{
         position: 'fixed',
-        bottom: 'max(220px, calc(220px + env(safe-area-inset-bottom, 0px)))',
+        // Portrait touch screens: clear the action bar above the joystick
+        bottom: isTouchDevice() && window.innerHeight > window.innerWidth
+          ? 'calc(264px + env(safe-area-inset-bottom, 0px))'
+          : 'calc(220px + env(safe-area-inset-bottom, 0px))',
         left: '50%',
         transform: 'translateX(-50%)',
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        color: '#fff',
-        padding: '12px 24px',
-        borderRadius: '8px',
-        fontSize: '16px',
-        fontFamily: 'sans-serif',
+        maxWidth: 'calc(100vw - 32px)',
+        padding: '10px 20px',
+        borderLeft: '4px solid var(--vx-gold)',
+        fontSize: '15px',
+        fontWeight: 600,
+        textAlign: 'center',
         zIndex: 100,
         pointerEvents: 'none',
         animation: 'fadeIn 0.3s ease-in-out',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
       }}
     >
       {currentHint.text}

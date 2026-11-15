@@ -1,6 +1,7 @@
 /* Import centralized design system (@import must come first or it is dropped) */
 @import './styles/tokens.css';
 @import './styles/z-index-layers.css';
+@import './styles/voxel-ui.css';
 
 body {
   margin: 0;

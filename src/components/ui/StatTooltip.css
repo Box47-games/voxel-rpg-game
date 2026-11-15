@@ -5,15 +5,18 @@
 
 .stat-tooltip {
   position: absolute;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border: 2px solid #4a5568;
-  border-radius: 8px;
+  background: var(--vx-panel-solid, #171c27);
+  border: 2px solid var(--vx-edge, #06080d);
+  border-radius: 3px;
   padding: 12px;
   min-width: 220px;
-  color: #e2e8f0;
+  color: var(--vx-text, #f4efe1);
   font-size: 13px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  font-family: var(--vx-font-body, system-ui, sans-serif);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.6);
   z-index: var(--z-stat-tooltip); /* 11000 - Above modals */
   pointer-events: none;
   animation: tooltipFadeIn 0.2s ease-out;
@@ -69,12 +72,14 @@
 
 .stat-tooltip-title {
   flex: 1;
-  font-weight: 600;
+  font-family: var(--vx-font-display, inherit);
+  font-weight: 700;
   text-transform: capitalize;
-  color: #fbbf24;
+  color: var(--vx-gold, #f2c14e);
 }
 
 .stat-tooltip-total {
+  font-family: var(--vx-font-ui, inherit);
   font-size: 18px;
   font-weight: bold;
   color: #fff;

@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useGameStore from '../stores/useGameStore';
 import { game3DSaveManager } from '../persistence/Game3DSaveManager';
+import './PauseMenu.css';
 
 const PauseMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,29 +40,29 @@ const PauseMenu = () => {
   }, []);
 
   const handleSave = useCallback(async () => {
-    setStatusMsg({ text: 'Saving...', color: '#aaa' });
+    setStatusMsg({ text: 'Saving...', color: '#aeaa9c' });
     try {
       const store = useGameStore;
       const chunkManager = useGameStore.getState()._chunkManager;
       const result = await game3DSaveManager.saveGame(store, chunkManager, 'default');
       if (result.success) {
-        setStatusMsg({ text: 'Game saved!', color: '#51cf66' });
+        setStatusMsg({ text: 'Game saved!', color: '#5cc36b' });
       } else {
-        setStatusMsg({ text: result.message, color: '#ff6b6b' });
+        setStatusMsg({ text: result.message, color: '#ff7b72' });
       }
     } catch (err) {
-      setStatusMsg({ text: 'Save failed: ' + err.message, color: '#ff6b6b' });
+      setStatusMsg({ text: 'Save failed: ' + err.message, color: '#ff7b72' });
     }
   }, []);
 
   const handleLoad = useCallback(async () => {
-    setStatusMsg({ text: 'Loading...', color: '#aaa' });
+    setStatusMsg({ text: 'Loading...', color: '#aeaa9c' });
     try {
       const store = useGameStore;
       const chunkManager = useGameStore.getState()._chunkManager;
       const result = await game3DSaveManager.loadGame(store, chunkManager, 'default');
       if (result.success) {
-        setStatusMsg({ text: 'Game loaded!', color: '#51cf66' });
+        setStatusMsg({ text: 'Game loaded!', color: '#5cc36b' });
         // Close menu after brief delay so user sees success message
         setTimeout(() => {
           const state = useGameStore.getState();
@@ -73,10 +74,10 @@ const PauseMenu = () => {
           setStatusMsg(null);
         }, 600);
       } else {
-        setStatusMsg({ text: result.message, color: '#ff6b6b' });
+        setStatusMsg({ text: result.message, color: '#ff7b72' });
       }
     } catch (err) {
-      setStatusMsg({ text: 'Load failed: ' + err.message, color: '#ff6b6b' });
+      setStatusMsg({ text: 'Load failed: ' + err.message, color: '#ff7b72' });
     }
   }, []);
 
@@ -136,99 +137,36 @@ const PauseMenu = () => {
   if (!isOpen) return null;
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.panel}>
-        <h2 style={styles.title}>Paused</h2>
+    <div className="pause-menu" role="dialog" aria-modal="true" aria-labelledby="pause-menu-title">
+      <div className="pause-menu__panel vx-panel">
+        <h2 id="pause-menu-title" className="pause-menu__title vx-heading">
+          Paused
+        </h2>
 
-        <div style={styles.buttonGroup}>
-          <PauseButton label="Resume" onClick={resume} />
-          <PauseButton label="Save Game" onClick={handleSave} />
-          <PauseButton label="Load Game" onClick={handleLoad} />
+        <div className="pause-menu__buttons">
+          <button type="button" data-pause-button className="vx-btn vx-btn--primary vx-btn--block" onClick={resume}>
+            Resume
+          </button>
+          <button type="button" data-pause-button className="vx-btn vx-btn--block" onClick={handleSave}>
+            Save Game
+          </button>
+          <button type="button" data-pause-button className="vx-btn vx-btn--block" onClick={handleLoad}>
+            Load Game
+          </button>
         </div>
 
         {statusMsg && (
-          <p style={{ ...styles.status, color: statusMsg.color }}>{statusMsg.text}</p>
+          <p className="pause-menu__status" style={{ color: statusMsg.color }} role="status">
+            {statusMsg.text}
+          </p>
         )}
 
-        <p style={styles.hint}>F10 or Escape to resume</p>
+        <p className="pause-menu__hint">
+          <kbd className="vx-key">F10</kbd> or <kbd className="vx-key">Esc</kbd> to resume
+        </p>
       </div>
     </div>
   );
-};
-
-function PauseButton({ label, onClick }) {
-  return (
-    <button
-      data-pause-button
-      style={styles.button}
-      onClick={onClick}
-      onMouseEnter={(e) => Object.assign(e.target.style, styles.buttonHover)}
-      onMouseLeave={(e) => Object.assign(e.target.style, { background: 'rgba(255,255,255,0.1)' })}
-    >
-      {label}
-    </button>
-  );
-}
-
-const styles = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 10000,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  panel: {
-    backgroundColor: 'rgba(20, 20, 30, 0.95)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    borderRadius: '12px',
-    padding: '40px 60px',
-    textAlign: 'center',
-    minWidth: '280px',
-  },
-  title: {
-    color: '#fff',
-    fontFamily: 'sans-serif',
-    fontSize: '32px',
-    fontWeight: 'bold',
-    margin: '0 0 24px 0',
-  },
-  buttonGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-  },
-  button: {
-    display: 'block',
-    width: '100%',
-    padding: '12px 24px',
-    fontSize: '18px',
-    fontFamily: 'sans-serif',
-    color: '#fff',
-    background: 'rgba(255, 255, 255, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.3)',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'background 0.15s',
-  },
-  buttonHover: {
-    background: 'rgba(255, 255, 255, 0.25)',
-  },
-  status: {
-    fontFamily: 'sans-serif',
-    fontSize: '14px',
-    marginTop: '12px',
-    marginBottom: 0,
-  },
-  hint: {
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontFamily: 'sans-serif',
-    fontSize: '12px',
-    marginTop: '12px',
-    marginBottom: 0,
-  },
 };
 
 export default PauseMenu;

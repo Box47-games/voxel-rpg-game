@@ -129,6 +129,7 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
 ## Key Patterns
 
 - **drei Text/Billboard components cause WebGL shader corruption** — use mesh-based UIs instead.
+- **HTML UI look**: shared primitives in `src/styles/voxel-ui.css` (`.vx-panel`, `.vx-btn` + `--primary/--danger/--lg`, `.vx-key`, `.vx-bar` with `--bar`/`--fill`, `.vx-chip`) and `--vx-*` color tokens. The pixel font (`--vx-font-display`, Silkscreen from Google Fonts) is only for titles and buttons; small labels and numbers use `--vx-font-ui`. `GameUI.jsx` renders `ui/StartScreen.jsx` while `gameState === 'intro'` (Continue loads the `default` save slot) and the HUD (`GameUI.css`) while playing.
 - Camera pitch stored in `camera.pitch` (radians, clamped ±1.05 ≈ 60°).
 - `dealDamageToPlayer(damage, source)` — second arg tracks death cause for DeathScreen.
 - Tool tier stored in `stats.toolTier` on crafting recipes.
