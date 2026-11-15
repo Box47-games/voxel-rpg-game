@@ -409,6 +409,8 @@ const useGameStore = create((rawSet, get, api) => {
   setNetworkLayer: (layer) => set({ _networkLayer: layer }),
   _riftManager: null,
   setRiftManager: (rm) => set({ _riftManager: rm }),
+  // Loaded rift state waiting for RiftController to create its RiftManager
+  _pendingRiftState: null,
 
   // Companion state (synced from CompanionAISystem by CompanionController)
   companion: {
@@ -1696,6 +1698,7 @@ const useGameStore = create((rawSet, get, api) => {
       inventory: createInitialInventory(),
       enemies: [],
       rifts: [],
+      _pendingRiftState: null,
       wildlife: [],
       projectiles: [],
       targetMarkers: [],

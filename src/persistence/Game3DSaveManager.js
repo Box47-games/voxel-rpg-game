@@ -17,7 +17,7 @@ import useQuestStore from '../stores/useQuestStore';
 import { getStockpileCapacity } from '../data/zoneTypes';
 import { clearTasks } from '../systems/settlement/TaskAssignmentEngine';
 
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
 
 // Player fields that describe a moment in time, not progress. Not saved.
@@ -103,6 +103,11 @@ function migrateSave(saveData) {
   // V5 → V6: unlocked spells, tutorial hints, quests (store defaults apply when absent)
   if (saveData.version < 6) {
     saveData.version = 6;
+  }
+  // V6 → V7: rift state (older saves keep seed-generated rifts)
+  if (saveData.version < 7) {
+    saveData.rifts = null;
+    saveData.version = 7;
   }
   return saveData;
 }
@@ -202,6 +207,7 @@ class Game3DSaveManager {
         unlockedSpells: state.unlockedSpells || null,
         tutorialHints: state.tutorialHints || null,
         quests: { completedQuestIds: useQuestStore.getState().completedQuestIds || [] },
+        rifts: state._riftManager?.serialize ? state._riftManager.serialize() : (state._pendingRiftState || null),
       };
 
       const modifiedChunks = chunkManager?.getModifiedChunks ? chunkManager.getModifiedChunks() : [];
@@ -403,6 +409,17 @@ class Game3DSaveManager {
       if (saveData.tutorialHints?.shownHints) setState({ tutorialHints: saveData.tutorialHints });
       if (Array.isArray(saveData.quests?.completedQuestIds)) {
         useQuestStore.setState({ completedQuestIds: saveData.quests.completedQuestIds });
+      }
+
+      // ── Rifts ──
+      if (saveData.rifts) {
+        const riftManager = getState()._riftManager;
+        if (riftManager?.deserialize) {
+          riftManager.deserialize(saveData.rifts);
+          setState({ rifts: [] }); // RiftController repopulates visuals from the manager
+        } else {
+          setState({ _pendingRiftState: saveData.rifts });
+        }
       }
 
       // ── World edits ──

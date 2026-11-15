@@ -95,7 +95,7 @@ WorkerPool caps at `Math.min(navigator.hardwareConcurrency, 4)` threads.
 
 ### Persistence
 
-Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, schema v6, migrations inline in `migrateSave`). Main state + all modified chunks are written in one transaction. `TestNotesManager.js` stores QA tracker notes.
+Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, schema v7, migrations inline in `migrateSave`). Main state + all modified chunks are written in one transaction. Rift state is saved via `RiftManager.serialize()`; a load before `RiftController` mounts waits in `store._pendingRiftState`. `TestNotesManager.js` stores QA tracker notes.
 
 ### Chunk System Constants
 
