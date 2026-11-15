@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Zap, TrendingUp, Package, Activity, Flame, Hammer, Pickaxe, MapPin } from 'lucide-react';
+import { Heart, Zap, TrendingUp, Package, Activity, Flame, Hammer, Pickaxe, MapPin, Users } from 'lucide-react';
 import useGameStore, { selectPlayerStats } from '../stores/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getTotalStats } from '../utils/equipmentStats';
@@ -559,6 +559,31 @@ const GameUI = () => {
           <MapPin size={isMobile ? 24 : 24} style={{ color: zoneMode ? '#fff' : '#ff8c00' }} />
           {!isMobile && <span style={{ fontSize: '0.7rem' }}>Zones [Z]</span>}
         </div>
+        {/* Settlement dashboard - hide on mobile during build/zone mode to save space */}
+        {!(isMobile && (buildMode || zoneMode)) && (
+        <div
+          onClick={() => useGameStore.getState().toggleSettlementDashboard()}
+          aria-label="Settlement"
+          style={{
+            background: 'rgba(0, 0, 0, 0.6)',
+            padding: isMobile ? '10px' : '12px',
+            borderRadius: '10px',
+            color: 'white',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '5px',
+            border: '2px solid #4a5568',
+            minWidth: isMobile ? '48px' : 'auto',
+            minHeight: isMobile ? '48px' : 'auto',
+            cursor: 'pointer',
+            touchAction: 'manipulation',
+          }}
+        >
+          <Users size={24} style={{ color: '#44cc44' }} />
+          {!isMobile && <span style={{ fontSize: '0.7rem' }}>Settlement [N]</span>}
+        </div>
+        )}
       </div>
 
       {/* Bottom center - Controls hint (positioned above BlockHotbar) */}

@@ -109,7 +109,7 @@ Three patterns explain most gaps:
 | NPC needs (eat, rest, social) interrupting work | ✅ | EATING/SLEEPING states, needs decay, happiness, unhappy-departure warnings. |
 | **Daily schedule (work/eat/sleep by time of day)** | ✅ | Done 2026-11-15 (`modules/settlement/schedule.js`): work shifts, mealtimes, evening socializing, sleep at home at night; diligent/lazy shift work hours. No emergency override yet (nothing to respond to until Phase 3 raids). |
 | **Housing assignment, sleep at home** | ✅ | Done 2026-11-15: settlers get a bed in completed Shelters/Houses, sleep on their home's doorstep (they can't path inside), homeless ones sleep by the campfire with a happiness penalty. No manual reassignment or housing preferences yet. |
-| **Settlement dashboard** | ❌ | No dashboard UI. |
+| **Settlement dashboard** | ✅ | Done 2026-11-15: N key / HUD button. Population (sortable settler list → NPC panel), stockpile resources, buildings, alerts. No production/consumption rates yet. |
 | **NPC detail panel** (click an NPC) | ❌ | Only the developer NPC panel exists. |
 | **Building panel** (status, occupants, upgrades) | 🟡 | `ConstructionPanel.jsx` covers material delivery only. |
 | Settlement loop campfire → arrive → zones → mine → haul → build → grow | ✅ | Works end to end (minus growth from building housing). |

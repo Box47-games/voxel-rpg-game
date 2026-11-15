@@ -10,6 +10,7 @@ import ContextualHints from './components/ContextualHints';
 import StockpilePanel from './components/ui/StockpilePanel';
 import ConstructionPanel from './components/ui/ConstructionPanel';
 import NPCPanel from './components/ui/NPCPanel';
+import SettlementDashboard from './components/ui/SettlementDashboard';
 import PickupTextOverlay from './components/ui/PickupTextOverlay';
 import PauseMenu from './components/PauseMenu';
 import MobileActionButtons from './components/ui/MobileActionButtons';
@@ -90,6 +91,9 @@ function App3D() {
 
       {/* Settler details (E next to an NPC) */}
       <NPCPanel />
+
+      {/* Settlement overview (N) */}
+      <SettlementDashboard />
 
       {/* Crosshair for first-person mode */}
       <Crosshair />

@@ -254,6 +254,7 @@ const useGameStore = create((rawSet, get, api) => {
   placingBuildingId: null,        // Building ID being placed (preview mode)
   activeConstructionSiteId: null, // Site ID of open construction panel
   activeNPCId: null,            // Settler shown in the NPC detail panel (or null)
+  settlementDashboardOpen: false, // Settlement dashboard (N key)
 
   // Actions
   setGameState: (state) => set({ gameState: state }),
@@ -1606,6 +1607,8 @@ const useGameStore = create((rawSet, get, api) => {
 
   setActiveNPC: (npcId) => set({ activeNPCId: npcId }),
   closeNPCPanel: () => set({ activeNPCId: null }),
+  toggleSettlementDashboard: () => set((s) => ({ settlementDashboardOpen: !s.settlementDashboardOpen })),
+  closeSettlementDashboard: () => set({ settlementDashboardOpen: false }),
 
   deliverToConstruction: (siteId, material, amount) => set((state) => {
     const site = state.constructionSites.find(s => s.id === siteId);
@@ -1723,7 +1726,7 @@ const useGameStore = create((rawSet, get, api) => {
       buildMode: false,
       blockPlacementMode: false,
       zones: [], zoneMode: false, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
-      constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null,
+      constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null, settlementDashboardOpen: false,
     }),
 
   // Character system actions

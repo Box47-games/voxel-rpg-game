@@ -137,6 +137,7 @@ export const TEST_PHASES = [
           { id: 'p2-npc-departure-leave', label: 'NPC leaves', description: 'NPC unhappy for 3+ in-game days enters LEAVING state (red indicator), walks to edge, and is removed' },
           { id: 'p2-npc-personality', label: 'Personality effects', description: 'Personality traits affect behavior: diligent/lazy change idle timers, brave/cautious change wander radius, cheerful/grumpy adjust happiness' },
           { id: 'p2-npc-housing-cap', label: 'Housing-based pop cap', description: 'Max NPC count = beds from completed Shelters (1) and Houses (2), minimum 1 (the pioneer), max IMMIGRATION_MAX_NPCS' },
+          { id: 'p2-dashboard', label: 'Settlement dashboard', description: 'N (or the Settlement HUD button) opens the dashboard: population with a sortable settler list (click a settler for details), stockpile resources, buildings with construction progress, and alerts (leaving, starving, homeless, stalled buildings). Escape / N / clicking outside closes it; readable on a phone' },
           { id: 'p2-npc-schedule', label: 'Daily routine', description: 'Settlers work during the morning/afternoon shifts, eat at dawn/lunch/evening, socialize in the evening, and go home to sleep at night (workers park their task and resume it at dawn). Use the dev overlay time controls to check each block; the NPC panel shows the current block' },
           { id: 'p2-npc-housing-assign', label: 'Settlers get homes', description: 'When a Shelter/House completes, a homeless settler is assigned a bed (NPC panel shows "Lives in…"); tired settlers walk to their home\'s doorstep to sleep, homeless ones sleep by the campfire with a happiness penalty' },
         ],
@@ -294,6 +295,7 @@ export const TOTAL_CRITERIA_COUNT = ALL_CRITERIA.length;
  * Used to auto-promote 'untested' → 'pass'; never overrides manual status.
  */
 export const AUTO_CHECKS = {
+  'p2-dashboard': (s) => s.settlementDashboardOpen === true,
   'p2-zone-farm': (s) => s.zones.some((z) => z.type === 'FARMING' && z.farmTiles?.some((t) => t.plantedAt != null)),
   // Phase 1 — Survival & Gathering
   'p1-func-hunger': (s) => s.hunger.current < s.hunger.max,

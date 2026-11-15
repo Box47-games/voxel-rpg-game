@@ -54,6 +54,7 @@ const shortcuts = {
       { key: 'Z', description: 'Toggle zone mode' },
       { key: '1 \u2013 0', description: 'Select block type (build mode)' },
       { key: 'B', description: 'Toggle build menu / Go to base' },
+      { key: 'N', description: 'Settlement dashboard' },
       { key: 'Delete', description: 'Delete selected building' },
       { key: 'Escape', description: 'Cancel placement' },
     ],
