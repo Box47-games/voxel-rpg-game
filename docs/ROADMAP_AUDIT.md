@@ -1,6 +1,6 @@
 # Roadmap & Vision Audit
 
-**Date:** November 11, 2026
+**Date:** November 11, 2026 (Phase 2 and Phase 3 sections updated November 15, 2026)
 **Compared:** the live game code (everything reachable from `src/index.jsx`) against
 - `docs/3D_IMPLEMENTATION_PLAN.md` (phases 0–7)
 - `docs/phases/PHASE_0/1/2_DETAILED_PLAN.md` (exit criteria)
@@ -110,20 +110,22 @@ Three patterns explain most gaps:
 | **Daily schedule (work/eat/sleep by time of day)** | ✅ | Done 2026-11-15 (`modules/settlement/schedule.js`): work shifts, mealtimes, evening socializing, sleep at home at night; diligent/lazy shift work hours. No emergency override yet (nothing to respond to until Phase 3 raids). |
 | **Housing assignment, sleep at home** | ✅ | Done 2026-11-15: settlers get a bed in completed Shelters/Houses, sleep on their home's doorstep (they can't path inside), homeless ones sleep by the campfire with a happiness penalty. No manual reassignment or housing preferences yet. |
 | **Settlement dashboard** | ✅ | Done 2026-11-15: N key / HUD button. Population (sortable settler list → NPC panel), stockpile resources, buildings, alerts. No production/consumption rates yet. |
-| **NPC detail panel** (click an NPC) | ❌ | Only the developer NPC panel exists. |
+| **NPC detail panel** (click an NPC) | ✅ | Done 2026-11-14: E next to a settler opens `NPCPanel.jsx` (needs, job, home, personality); also opened from the dashboard and building panel. |
 | **Building panel** (status, occupants, upgrades) | ✅ | Done 2026-11-15: E on a completed building shows its effects, residents (click → NPC panel), farms a plot powers, its upgrade (cost, settlers, benefits, what blocks it), and Demolish (confirm, 50% refund); construction sites show builder and ETA. No health/repair (no damage yet), no worker assignment (no production buildings). |
-| Settlement loop campfire → arrive → zones → mine → haul → build → grow | ✅ | Works end to end (minus growth from building housing). |
+| Settlement loop campfire → arrive → zones → mine → haul → build → grow | ✅ | Works end to end, including growth from building housing. |
 | Save/load settlement state | ✅ | NPCs, zones, stockpiles, construction sites. |
 
-**Architecture note:** Phase 2 §2.0 says to register a `SettlementModule` with `ModuleOrchestrator`/`GameManager`. The 3D app never used those (they were removed as dead code). `.claude/plans/phase2-settlement-unification.md` supersedes §2.0 by storing the module on `useGameStore._settlementModule` and driving it through `SettlementBridge` — that wiring isn't done yet, so the live settlement still runs inline in `SettlementTick.jsx` (~1000 lines) and `src/modules/settlement/` is unused.
+**Architecture note:** Phase 2 §2.0 says to register a `SettlementModule` with `ModuleOrchestrator`/`GameManager`. The 3D app never used those (they were removed as dead code). `.claude/plans/phase2-settlement-unification.md` superseded §2.0, and that wiring is done (2026-11-15): `SettlementTick.jsx` is a thin loop that drives `src/modules/settlement/SettlementModule` through `SettlementBridge`, with the module published as `useGameStore._settlementModule`.
 
-### Phase 3 — Combat & Portals (no detailed plan yet)
+**Phase 2 is done** (2026-11-15). Remaining gaps above (BUILDING zone, storage/production building effects, production rates on the dashboard) are optional polish, not Phase 3 blockers.
+
+### Phase 3 — Combat & Portals ([detailed plan](phases/PHASE_3_DETAILED_PLAN.md), decisions resolved 2026-11-15)
 
 | Goal | State | Evidence / gap |
 |---|---|---|
 | Melee, ranged, dodge, block | ✅ | `meleeAttack.js`, `Projectile.jsx`, dodge/block in `Player.jsx`. |
 | Monster variety | 🟡 | 4 rift monster types + elites; behavior is identical "chase and hit" (`Enemy.jsx`). |
-| Portal spawn / close / reopen | 🟡 | Spawn + close + corruption fade + escalating reinforcements work. **No reopening/resurgence** of closed rifts (vision: "Victory is never permanent"). Rifts only go dormant briefly. |
+| Portal spawn / close / reopen | 🟡 | Spawn + close + corruption fade + escalating reinforcements work; reinforcements attack the anchor and rift state survives save/load (2026-11-14). **No reopening/resurgence** of closed rifts (vision: "Victory is never permanent"). Rifts only go dormant briefly. |
 | Territory & corruption | 🟡 | Corruption spreads from rifts (`CorruptionManager.js`); no territory ownership. |
 | Defensive structures, NPC guards, raids | ❌ | None. NPCs only flee/work; no raids on the settlement. |
 
@@ -182,10 +184,10 @@ Still in the codebase but unused: `src/modules/settlement/` (kept for the unific
 ## Recommended next steps (in priority order)
 
 1. **Make the companion playable** — it's the vision's emotional core and the biggest gap. Restore `CompanionStoryManager` + dialogue from `c34db28`, trigger discovery near a rift, call `setCompanionState({ active: true })`, `openDialogue(...)`, and `unlockSpell(...)` at bond milestones.
-2. **Finish Phase 2's player-facing half**: daily schedule driven by `isNight`, housing from completed buildings (and bed assignment), farming zone, settlement dashboard and NPC detail panel. Decide whether to do this inline or as part of the `SettlementBridge` unification first — doing the unification first avoids writing it twice.
+2. ~~**Finish Phase 2's player-facing half**~~ — done 2026-11-15 (schedule, housing, farming, dashboard, NPC panel, building panel and upgrades, on the unified settlement engine).
 3. **Turn constants into behavior**: tool durability, shelter health/stamina regen and monster exclusion, a wooden tool tier.
 4. **Give progression a UI**: a skill-tree / character sheet so earned skill points can be spent.
 5. **Connect weather** (set `store.weather` from a simple weather timer) and **quests** (call `initializeAllQuests`, add a small tracker).
 6. **Phase 3 completion**: rift resurgence after closing, raids on the settlement, NPC guards, a couple of distinct monster behaviors.
 7. **Measure Phase 0 performance targets** with the dev overlay and decide whether object pooling is still needed.
-8. **Refresh the docs**: rewrite `README.md` for the 3D game, update the 3D plan's "Current State", tick the Phase 1/2 exit criteria that are met.
+8. **Refresh the docs**: rewrite `README.md` for the 3D game (only its name and intro were updated), update the 3D plan's "Current State". The Phase 2 and 3 plans were brought up to date on 2026-11-15.

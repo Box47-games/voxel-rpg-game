@@ -2,8 +2,8 @@
 
 **Created:** November 11, 2026
 **Estimated Duration:** 10-14 weeks
-**Status:** Draft — needs review (see [Decisions Needed](#decisions-needed))
-**Prerequisite:** Phase 2 core settlement loop (campfire → immigration → zones → mine → haul → build) — ✅ working. Phase 2 items Phase 3 depends on are listed in [3.0](#30-foundations-week-1-2).
+**Status:** Ready to start — decisions resolved November 15, 2026 (see [Decisions](#decisions)); pre-start checks in [Before Starting](#before-starting)
+**Prerequisite:** Phase 2 — ✅ done: the core loop (campfire → immigration → zones → mine → haul → build) plus housing, the day/night schedule, farming, the NPC panel, the settlement dashboard and building upgrades, all running on the unified settlement engine (`SettlementBridge`).
 
 ---
 
@@ -63,14 +63,17 @@ Only live code (reachable from `src/index.jsx`) is listed.
 | Enemy entity & AI | **Basic** | `components/3d/Enemy.jsx` | One behavior for all types: chase player within 20u, hit at 2u, 1 s cooldown. No telegraph, no pathfinding, no other targets |
 | Monster types | **Basic** | `systems/survival/RiftManager.js` `MONSTER_TYPES` | slime, goblin, skeleton (night), shadow creeper (night); elites +50% |
 | Rift spawning, day/night intensity | **Functional** | `RiftManager.update`, `RiftController.jsx` | Deterministic placement from world seed |
-| Rift closing (anchor, corruption fade, reinforcements, wounded state) | **Partial** | `RiftManager.beginClosing/tickCorruptionFade/getReinforcementSpawns`, `CorruptionManager.js`, `BlockInteraction.jsx` (E key) | Fade and reinforcement waves work, but **the anchor is effectively never attacked**: reinforcements get a `targetPosition` that `Enemy.jsx` ignores (they chase the player), and `RiftController`'s anchor-hit check uses each enemy's spawn-time `position` instead of its live position (`_enemyPositions`) |
-| Rift persistence | **Missing** | — | Rift state isn't saved; rifts are regenerated from the seed on load, so **closed rifts reopen after a reload** |
+| Rift closing (anchor, corruption fade, reinforcements, wounded state) | **Functional** | `RiftManager.beginClosing/tickCorruptionFade/getReinforcementSpawns`, `CorruptionManager.js`, `BlockInteraction.jsx` (E key) | Since Nov 14: reinforcements march on their anchor unless the player is closer, and `RiftController` checks live positions (`_enemyPositions`). Still a special-case distance check; 3.0.2 moves it onto the target registry |
+| Rift persistence | **Functional** | `RiftManager.serialize/deserialize`, `Game3DSaveManager` (schema v7) | Since Nov 14 (3.0.1) |
 | Corruption spread | **Functional** | `CorruptionManager.js` | Static radius around each rift; no creep over time |
 | Rift reopening / resurgence | **Missing** | — | `RIFT_DORMANT_DURATION` is a short spawn pause, not a reopen mechanic |
 | Territory | **Missing** | — | Settlement has a center and attractiveness, no area |
 | Defensive structures | **Missing** | — | `data/buildings.js` has no defensive blueprints; wall blocks only count toward housing cap |
 | NPC combat / health / death | **Missing** | — | NPC identity has `skills.combat`; enemies never target NPCs; NPCs can't be hurt |
 | NPC threat response | **Missing** | — | NPCs keep working with monsters nearby (wildlife has a FLEEING state that can be reused as a pattern) |
+| Housing & daily schedule | **Functional** | `modules/settlement/housing.js`, `NPCWorkBehavior` | Beds set the population cap; settlers sleep at home at night. Civilians have a house to shelter in (3.6.3) |
+| Settler models & animation | **Functional** | `components/3d/characters/humanoidModel.js`, `humanoidAnimation.js` | Voxel rig with job gear and activities; downed/sheltering/guard poses slot in here |
+| Enemy models & animation | **Functional** | `components/3d/enemies/enemyModels.js`, `enemyAnimation.js` | Hop/biped/crawl gaits, `triggerAttack`/`triggerHurt`/death. Wind-up poses (3.1.1) extend `enemyAnimation.js` |
 | Raids | **Missing** | — | |
 | Enemy health bars / threat UI | **Missing** | — | Damage numbers exist (`DamageNumber.jsx`) |
 | Combat audio | **Basic** | `utils/AudioManager.js` | A few SFX (hit, enemy death, fireball) |
@@ -109,7 +112,7 @@ Infrastructure every other Phase 3 task depends on. No new player-facing content
 - [ ] Anchor damage: register anchors as targets so hits go through `takeDamage`, replacing `RiftController`'s distance check (which reads spawn-time `enemy.position`, so it almost never fires)
 
 **Acceptance criteria:**
-- [ ] Reinforcement waves walk to and attack the anchor (anchor HP visibly drops) unless the player is closer and attacking them
+- [x] Reinforcement waves walk to and attack the anchor (anchor HP visibly drops) unless the player is closer and attacking them — done Nov 14 with a direct check in `Enemy.jsx`/`RiftController`; keep it passing when anchors move onto the target registry
 - [ ] No code path damages enemies except `enemyHits.js`
 
 **Tests:** `targeting.test.js` (distance/preference/threat scoring), `Enemy.test.jsx` (targets anchor when given `targetPosition`)
@@ -122,15 +125,13 @@ Infrastructure every other Phase 3 task depends on. No new player-facing content
 - [ ] For walls: if blocked for > `ENEMY_BLOCKED_ATTACK_DELAY` and the blocking block is breakable (3.5.3), attack the block instead
 - [ ] Budget: steering for ≤ 40 enemies in < 2 ms/frame (measure with dev overlay)
 
-**Decision needed:** full A* on the voxel grid (accurate, costly, needs a worker) vs. steering + "attack the wall" (cheap, good enough for open terrain). This plan assumes steering; A* stays a conditional task like Phase 2's pathfinding worker.
+**Decided:** steering + "attack the wall". Full A* on the voxel grid (accurate, costly, needs a worker) stays a conditional task, done only if playtests show raids getting stuck.
 
 **Tests:** `steering.test.js` with a stub chunk manager (wall ahead → sidestep; 1-block ledge → jump; enclosed → attack wall)
 
 #### 3.0.4 Phase 2 carry-overs Phase 3 needs
-- [ ] **Housing from completed buildings** (Phase 2 exit criterion): civilians need a house to shelter in during raids (3.6.3)
-- [ ] **NPC day/night schedule**: guards' shifts and civilians' "go home at night" both hang off it
-
-If these slip, 3.6.3 falls back to "shelter near the campfire".
+- [x] **Housing from completed buildings** (Phase 2 exit criterion): civilians need a house to shelter in during raids (3.6.3)
+- [x] **NPC day/night schedule**: guards' shifts and civilians' "go home at night" both hang off it
 
 ---
 
@@ -310,7 +311,7 @@ WATCHTOWER_WARNING_BONUS = 20         (s)
 #### 3.6.1 NPC health, injury and death
 - [ ] NPCs get `health`/`maxHealth` (from identity, scaled by `skills.combat`) and register as combat targets (3.0.2)
 - [ ] At 0 HP an NPC becomes **downed** (not dead): crawls/is carried to the campfire/house, recovers over `NPC_DOWNED_RECOVERY` with a happiness penalty
-- [ ] **Decision needed:** permanent NPC death (vision says "can leave if unhappy", silent on death). Default proposal: no permadeath in Phase 3; downed NPCs that are hit again while downed leave the settlement ("too dangerous here")
+- [ ] No permadeath (decided): a downed NPC that is hit again while downed leaves the settlement ("too dangerous here")
 
 #### 3.6.2 Guard role
 - [ ] New job `GUARD` (player sets guard count/assigns from the NPC panel — depends on Phase 2 NPC detail panel; fallback: guard slots on watchtowers)
@@ -389,7 +390,7 @@ RAID_STOCKPILE_STEAL_FRACTION = 0.1
 - [ ] Mesh-based (plane + scaled fill, no drei Text/Billboard) health bars above damaged enemies, guardians always; NPC health shown when injured
 
 #### 3.8.3 Map of the world's state
-- [ ] Simple top-down minimap or full-screen map (rifts by state, territory, settlement) — **Decision needed** on scope; minimal version is a rift list in the pause menu
+- [ ] Rift list in the pause menu (rifts by state and distance, with stability) — decided; a real top-down map waits for Phase 5
 
 #### 3.8.4 Dev overlay: Combat section
 - [ ] World tab: start raid now (with strength), set rift stability, toggle enemy AI debug (current target + behavior state drawn as lines/labels via meshes)
@@ -468,7 +469,7 @@ Phase 3 is **complete** when ALL of the following are true:
 
 | Week | Focus | Deliverables |
 |------|-------|--------------|
-| 1-2 | Foundations | Rift persistence, combat targets, steering, legacy combat removal, Phase 2 carry-overs |
+| 1-2 | Foundations | Combat targets, steering, legacy combat removal (rift persistence and Phase 2 carry-overs already done) |
 | 2-3 | Combat feel | Telegraphs, block/parry/stagger, weapon archetypes, hit-stop |
 | 3-5 | Monster behaviors | 4 profiles + guardian, enemy projectiles, elites |
 | 4 | **Playtest checkpoint** | Scenarios 1-2 — is combat fun? |
@@ -538,7 +539,8 @@ src/data/testCriteria.js                   — Phase 3 QA checklist
 | Raids feel punishing and make players quit | High | Medium | Grace days, first-raid tuning, no building deletion, clear summaries |
 | Resurgence feels like busywork | Medium | Medium | Ward stones make it a one-time investment per rift; generous warnings |
 | Block HP storage grows saves | Low | Low | Sparse map, only damaged blocks, cleared on repair |
-| Settlement unification lands mid-phase and conflicts with guard/threat code | Medium | Medium | Decide order first (see Decisions); keep guard/threat logic in `systems/settlement/*` pure modules callable from either tick |
+| ~~Settlement unification lands mid-phase~~ | — | — | Resolved: unification landed before Phase 3 |
+| Many skinned characters (art pass) cost more per frame than the old box models | High | Medium | Measure in Before Starting; if needed, share skeleton updates or drop to cheaper rigs for distant enemies |
 | NPC deaths (if chosen) make players reload-scum | Medium | Medium | Default to downed/leave instead of death |
 
 ---
@@ -555,17 +557,29 @@ src/data/testCriteria.js                   — Phase 3 QA checklist
 
 ---
 
-## Decisions Needed
+## Decisions
 
-These change scope; defaults are proposed so work can start, but please confirm or override:
+Resolved November 15, 2026 (the proposed defaults were accepted):
 
-1. **Order vs. Phase 2 leftovers.** Phase 2's daily schedule, housing, farming zone, dashboard and NPC panel aren't done, and the settlement-unification plan isn't wired. Proposed: do 3.0.4 (housing + schedule) and the NPC panel first; leave dashboard/farming for later. Alternative: finish Phase 2 fully before starting Phase 3.
-2. **Settlement unification first?** Guards and threat response are NPC logic. Doing the `SettlementBridge` unification before 3.6 avoids writing them twice. Proposed: yes, if it fits in weeks 1-3.
-3. **NPC permadeath.** Proposed: no; downed + recover, or leave if hit while downed.
-4. **Pathfinding.** Proposed: steering + wall-breaking; A* only if playtests show stuck raids.
-5. **Can monsters break blocks?** Proposed: only defensive/player-placed wood/stone blocks, never terrain — keeps the world intact and raids predictable.
-6. **Map scope (3.8.3).** Proposed: rift list in the pause menu now; real map in Phase 5.
-7. **Companion's role in combat.** Phase 4 owns the companion, but it's the vision's core and currently unplayable. Proposed: keep it out of Phase 3; consider pulling the companion rescue arc forward as its own mini-phase.
+1. **Order vs. Phase 2 leftovers** — moot: Phase 2's housing, schedule, farming, dashboard and NPC panel all landed before Phase 3 started.
+2. **Settlement unification first** — done: the live game runs on the settlement engine through `SettlementBridge`, so guard and threat-response logic goes into `modules/settlement` / `systems/settlement` once.
+3. **NPC permadeath** — no. NPCs are downed and recover; one hit again while downed leaves the settlement.
+4. **Pathfinding** — steering + wall-breaking (3.0.3). A* only if playtests show stuck raids.
+5. **What monsters can break** — only player-placed wood and stone (defensive and building blocks), never natural terrain.
+6. **Map scope (3.8.3)** — a rift list in the pause menu now; a real map in Phase 5.
+7. **Companion in combat** — out of Phase 3. Consider pulling the companion rescue arc forward as its own mini-phase afterwards.
+
+---
+
+## Before Starting
+
+Checks to finish before 3.0.2 (tracked in the Phase 3 prep work):
+
+- [x] Resolve the decisions above
+- [x] Bring this plan, the Phase 2 plan and the roadmap audit up to date
+- [ ] Land the major dependency upgrades (Vitest 5, ESLint 10, lucide-react 1.x) so they don't land mid-phase
+- [ ] Play the full Phase 2 loop in a browser in one session (campfire → settlers → zones → mine → haul → build → housing → night routine), plus the 3.0.1 rift save/load check
+- [ ] Record a performance baseline with many enemies and settlers after the art pass (every character is now a skinned mesh), and add a dev-overlay stress test so it can be re-measured on real hardware
 
 ---
 
@@ -579,4 +593,4 @@ These change scope; defaults are proposed so work can start, but please confirm 
 
 ---
 
-**Ready to start? Resolve the [Decisions Needed](#decisions-needed), then begin with 3.0.1 (rift persistence) — it's small, fixes a real bug, and everything about the portal lifecycle depends on it.**
+**Next:** finish [Before Starting](#before-starting), then begin with 3.0.2 (combat targets & one damage path) — every later task routes damage through it.

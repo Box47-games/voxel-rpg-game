@@ -2,8 +2,14 @@
 
 **Created:** February 9, 2026
 **Estimated Duration:** 12-16 weeks
-**Status:** Planning
+**Status:** ✅ Done (November 2026), built differently from this plan — see below
 **Prerequisite:** Phase 1 (Survival & Gathering) complete
+
+> **How Phase 2 was actually built.** This plan wires the settlement through `GameManager`/`ModuleOrchestrator` and a separate `useSettlementStore`. The 3D game never used those (they were removed), so Phase 2 was built on the live pattern instead: a headless settlement engine in `src/modules/settlement/` driven by `SettlementTick.jsx` through `SettlementBridge.js`, writing to `useGameStore` (see `.claude/plans/phase2-settlement-unification.md` and CLAUDE.md "Settlement System"). The checkboxes below were never ticked and describe that original design, so read them as the feature list, not as status.
+>
+> **Shipped:** campfire-anchored settlement, attractiveness and immigration, settler identities, personalities and needs; mining, stockpile and farming zones; hauling with real stockpile capacity; NPC-built construction with a building catalog, building panel, demolish and upgrades; housing (beds set the population cap) and a day/night routine (work by day, sleep at home); NPC detail panel (E) and settlement dashboard (N); all of it saved and loaded.
+>
+> **Not shipped (moved on or deferred):** a separate settlement store, pathfinding worker (not needed so far), recruitment (deferred to trade caravans, Phase 5), relationships between settlers.
 
 ---
 
