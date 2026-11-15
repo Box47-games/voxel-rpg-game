@@ -68,6 +68,27 @@ describe('devActions', () => {
     expect(handler.takeDamage).toHaveBeenCalled();
   });
 
+  test('spawnStressTest adds raid load around the player and clearStressTest removes only it', () => {
+    const keep = dev.spawnEnemy('slime');
+    expect(dev.spawnStressTest({ enemies: 25, settlers: 8 })).toEqual({ enemies: 25, settlers: 8 });
+    const s = useGameStore.getState();
+    expect(s.enemies).toHaveLength(26);
+    expect(new Set(s.enemies.map((e) => e.type))).toEqual(new Set(Object.keys(dev.MONSTER_TYPES)));
+    const p = s.player.position;
+    for (const e of s.enemies.filter((x) => x.id !== keep)) {
+      const d = Math.hypot(e.position[0] - p[0], e.position[2] - p[2]);
+      expect(d).toBeGreaterThanOrEqual(14.9);
+      expect(d).toBeLessThanOrEqual(25.1);
+    }
+    const npcs = s.settlement.npcs;
+    expect(npcs).toHaveLength(8);
+    expect(npcs.every((n) => n.arrivedAtSettlement && n.firstName && n.targetPosition)).toBe(true);
+
+    expect(dev.clearStressTest()).toBe(33);
+    expect(useGameStore.getState().enemies.map((e) => e.id)).toEqual([keep]);
+    expect(useGameStore.getState().settlement.npcs).toHaveLength(0);
+  });
+
   test('jumpToHour sets elapsed time on the current day', () => {
     useGameStore.getState().updateWorldTime({ dayNumber: 3 });
     dev.jumpToHour(12);

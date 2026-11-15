@@ -1,7 +1,7 @@
 # Performance Baseline & Targets
 
 **Created:** February 3, 2026
-**Status:** Research Complete
+**Status:** Research Complete; measured baseline added November 2026 (below)
 **Purpose:** Establish current performance metrics and optimization targets
 
 ---
@@ -9,6 +9,48 @@
 ## Overview
 
 Before building the chunk system, we need to understand our current performance baseline and set targets. This document profiles the existing `VoxelTerrain` component and establishes benchmarks for the new system.
+
+---
+
+## November 2026 Baseline (before Phase 3)
+
+Measured on `main` after Phase 2, to compare Phase 3 work against. The
+"Stress test" button (dev overlay → World → Enemies) adds the same load in a
+normal session: 25 rift enemies (all four types) in a ring 15–25 units around
+the player and 8 settlers walking across it. "Clear stress test" removes them.
+
+**Setup:** headless Chromium with SwiftShader (software WebGL) on a 4-core
+cloud container, 1280×800, noon with time frozen, god mode, view from spawn.
+Each row is an 8-second sample after 3 s to settle. Two runs.
+
+| Scenario | JS ms/frame (run 1 / run 2) | Worst frame callback, p95 ms | Draw calls | Triangles |
+|---|---|---|---|---|
+| Baseline (player + wildlife) | 9.6 / 8.9 | 17 / 23 | 240–249 | 378k–384k |
+| + 8 settlers | 21.9 / 15.4 | 41 / 37 | 297 | 395k–400k |
+| + 25 enemies | 30.4 / 36.6 | 58 / 74 | 297 | 395k–400k |
+| + 25 enemies + 8 settlers (raid) | 36.6 / 32.2 | 56 / 57 | 323–329 | 390k–400k |
+| After clearing | 20.9 / 14.8 | 40 / 44 | 294–331 | 383k–393k |
+
+"JS ms/frame" is the main-thread time inside `requestAnimationFrame` per
+frame: R3F's `useFrame` logic, skinning and animation setup, and WebGL command
+submission. It does not include GPU time, which SwiftShader can't stand in
+for (frames took 400–780 ms there). "After clearing" stays above the baseline
+because wildlife kept spawning (5 → 15–16 animals) and more chunks loaded.
+
+**What it says**
+
+- **Enemies are the cost to watch.** 25 enemies add roughly 20–27 ms of
+  main-thread time, about 1 ms each on this CPU; 8 settlers add 6–12 ms. A
+  Phase 3 raid at 60 fps (16.7 ms) needs the per-enemy cost to come down or
+  stay well under that on target hardware. Profile `Enemy.jsx` (per-enemy
+  `useFrame`, physics body, rig animation) first when Phase 3 starts.
+- **Draw calls are fine.** Each enemy or settler is a handful of draw calls
+  (240 → ~330 for the full raid), far below a level that would matter.
+- **Triangles are dominated by terrain** (~380k); characters add little.
+
+**Still to measure on real hardware:** the same four scenarios on a mid-range
+laptop GPU and one phone, using the button and the Perf tab's frame-time p95.
+These numbers stand in only for relative cost until then.
 
 ---
 

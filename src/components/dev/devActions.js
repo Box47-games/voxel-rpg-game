@@ -4,7 +4,14 @@
  */
 
 import useGameStore from '../../stores/useGameStore';
-import { DAY_LENGTH_SECONDS } from '../../data/tuning';
+import {
+  DAY_LENGTH_SECONDS,
+  NPC_INITIAL_HUNGER,
+  NPC_INITIAL_REST,
+  NPC_INITIAL_SOCIAL,
+  NPC_INITIAL_HAPPINESS,
+} from '../../data/tuning';
+import { generateNPCIdentity } from '../../data/npcIdentity';
 import { MONSTER_TYPES } from '../../systems/survival/RiftManager';
 import { game3DSaveManager } from '../../persistence/Game3DSaveManager';
 
@@ -87,27 +94,78 @@ export function killAllEnemies() {
   return killed;
 }
 
+/** A rift monster record of `type` at `position`, as RiftManager makes them. */
+function makeEnemy(type, id, position) {
+  const t = MONSTER_TYPES[type];
+  return {
+    id, type, name: t.name, health: t.health, maxHealth: t.health,
+    damage: t.damage, speed: t.speed, color: t.color, xp: t.xp, position,
+  };
+}
+
 /** Spawn a rift monster of `type` a few units in front of the player. */
 export function spawnEnemy(type = 'slime') {
-  const template = MONSTER_TYPES[type];
-  if (!template) return null;
+  if (!MONSTER_TYPES[type]) return null;
   const s = store();
   const p = s.player.position;
   const yaw = s.player.facingAngle || 0;
   const id = `dev_${type}_${Date.now()}_${++_devEnemyCounter}`;
-  s.addRiftEnemy({
-    id,
-    type,
-    name: template.name,
-    health: template.health,
-    maxHealth: template.health,
-    damage: template.damage,
-    speed: template.speed,
-    color: template.color,
-    xp: template.xp,
-    position: [p[0] + Math.sin(yaw) * 6, p[1] + 3, p[2] + Math.cos(yaw) * 6],
-  });
+  s.addRiftEnemy(makeEnemy(type, id, [p[0] + Math.sin(yaw) * 6, p[1] + 3, p[2] + Math.cos(yaw) * 6]));
   return id;
+}
+
+const STRESS_PREFIX = 'stress_';
+
+/**
+ * Phase 3 raid load for performance checks: `enemies` rift monsters in a ring
+ * 15–25 units around the player (all four types), and `settlers` walking
+ * across the ring. Remove them with clearStressTest().
+ * @returns {{ enemies: number, settlers: number }} How many were added
+ */
+export function spawnStressTest({ enemies = 25, settlers = 8 } = {}) {
+  const s = store();
+  const [px, py, pz] = s.player.position;
+  const types = Object.keys(MONSTER_TYPES);
+  const stamp = Date.now();
+  for (let i = 0; i < enemies; i++) {
+    const a = (i / Math.max(1, enemies)) * Math.PI * 2;
+    const r = 15 + (i % 3) * 5;
+    const type = types[i % types.length];
+    s.addRiftEnemy(makeEnemy(type, `${STRESS_PREFIX}${type}_${stamp}_${i}`,
+      [px + Math.cos(a) * r, py + 3, pz + Math.sin(a) * r]));
+  }
+  for (let i = 0; i < settlers; i++) {
+    const a = (i / Math.max(1, settlers)) * Math.PI * 2;
+    const from = [px + Math.cos(a) * 10, py + 2, pz + Math.sin(a) * 10];
+    s.addSettlementNPC({
+      id: `${STRESS_PREFIX}npc_${stamp}_${i}`,
+      ...generateNPCIdentity(stamp + i * 7919),
+      position: from,
+      targetPosition: [px - Math.cos(a) * 10, py, pz - Math.sin(a) * 10],
+      facingAngle: 0,
+      state: 'WANDERING',
+      stateTimer: 0,
+      hunger: NPC_INITIAL_HUNGER,
+      rest: NPC_INITIAL_REST,
+      social: NPC_INITIAL_SOCIAL,
+      happiness: NPC_INITIAL_HAPPINESS,
+      unhappyDays: 0,
+      dayCheckpoint: s.worldTime.elapsed,
+      currentJob: null,
+      arrivedAtSettlement: true,
+    });
+  }
+  return { enemies, settlers };
+}
+
+/** Remove everything spawnStressTest() added. @returns {number} How many */
+export function clearStressTest() {
+  const s = store();
+  const enemyIds = s.enemies.filter((e) => e.id.startsWith(STRESS_PREFIX)).map((e) => e.id);
+  const npcIds = s.settlement.npcs.filter((n) => n.id.startsWith(STRESS_PREFIX)).map((n) => n.id);
+  enemyIds.forEach((id) => s.removeRiftEnemy(id));
+  npcIds.forEach((id) => s.removeSettlementNPC(id));
+  return enemyIds.length + npcIds.length;
 }
 
 /** Remove transient effects (projectiles, particles, numbers, loot). */

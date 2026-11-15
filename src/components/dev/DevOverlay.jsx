@@ -375,6 +375,18 @@ function WorldTab({ state, onStatus }) {
           <Btn danger onClick={() => onStatus(`Killed ${dev.killAllEnemies()} enemies`)}>Kill all</Btn>
           <Btn onClick={dev.clearEffects}>Clear effects &amp; loot</Btn>
         </div>
+        <div style={s.btnRow}>
+          <Btn
+            onClick={() => {
+              const n = dev.spawnStressTest();
+              onStatus(`Raid load: +${n.enemies} enemies, +${n.settlers} settlers`);
+            }}
+            title="Phase 3 raid load: 25 enemies around you and 8 settlers, to watch the Perf tab"
+          >
+            Stress test
+          </Btn>
+          <Btn onClick={() => onStatus(`Removed ${dev.clearStressTest()} stress-test entities`)}>Clear stress test</Btn>
+        </div>
       </Section>
 
       <Section title="Rifts" right={`${state.rifts.length} total`}>
