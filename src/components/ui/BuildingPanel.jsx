@@ -1,10 +1,19 @@
 /**
- * ConstructionPanel — E key panel for delivering materials to a construction site.
+ * BuildingPanel — E key panel for a building: deliver materials to a
+ * construction site (with builder and ETA once building), or, for a completed
+ * building, see what it does and who lives there, and demolish it.
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
 import { getBuildingById } from '../../data/buildings';
+import { getTask } from '../../systems/settlement/TaskAssignmentEngine';
+import {
+  getConstructionEta,
+  getDemolishRefund,
+  getFarmsPoweredBy,
+} from '../../modules/settlement/buildingInfo';
 
 const MATERIAL_COLORS = {
   wood: '#8B4513', stone: '#808080', iron: '#C0C0C0', coal: '#333333',
@@ -59,7 +68,114 @@ function MaterialDeliveryRow({ material, required, delivered, playerQty, siteId 
   );
 }
 
-export default function ConstructionPanel() {
+/** "Aldric Vane" if a settler is building this site, else null (primitive for cheap selection). */
+const selectBuilder = (siteId) => (s) => {
+  if (!siteId) return null;
+  const npc = s.settlement?.npcs?.find((n) => n.state === 'WORKING_BUILD' && getTask(n.currentTaskId)?.siteId === siteId);
+  return npc ? `${npc.fullName}|${npc.skills?.building || 0.5}` : null;
+};
+
+/** ["id|name", ...] of settlers living here (useShallow compares the strings). */
+const selectResidents = (siteId) => (s) =>
+  (s.settlement?.npcs || []).filter((n) => n.homeId && n.homeId === siteId).map((n) => `${n.id}|${n.fullName}`);
+
+function formatEta(seconds) {
+  if (seconds == null) return null;
+  if (seconds < 60) return `~${Math.max(1, Math.round(seconds))}s`;
+  return `~${Math.round(seconds / 60)} min`;
+}
+
+const formatMaterials = (obj) =>
+  Object.entries(obj).map(([m, n]) => `${n} ${m.replace(/_/g, ' ')}`).join(', ');
+
+function CompletedBuilding({ site, building, onDemolished }) {
+  const residents = useGameStore(useShallow(selectResidents(site.id)));
+  const zones = useGameStore((s) => s.zones);
+  const [confirming, setConfirming] = useState(false);
+  const effects = building.effects || {};
+  const refund = getDemolishRefund(building);
+  const farms = effects.enablesFarming ? getFarmsPoweredBy(site, zones) : [];
+
+  const openResident = (id) => {
+    const store = useGameStore.getState();
+    store.closeConstructionPanel();
+    store.setActiveNPC(id);
+  };
+
+  const row = { fontSize: 13, padding: '4px 0', borderBottom: '1px solid #333' };
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>{building.description}</div>
+
+      {effects.housing > 0 && (
+        <div style={row}>
+          Beds: {residents.length} / {effects.housing}
+          {residents.length === 0 ? <span style={{ color: '#888' }}> (empty)</span> : (
+            <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {residents.map((r) => {
+                const [id, name] = r.split('|');
+                return (
+                  <button
+                    key={id}
+                    onClick={() => openResident(id)}
+                    style={{ background: '#223', color: '#9cf', border: '1px solid #345', borderRadius: 3, padding: '2px 8px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12 }}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {effects.enablesFarming && (
+        <div style={row}>
+          {farms.length === 0
+            ? 'No farm yet: create a Farm zone (Z) next to this plot'
+            : `Powers ${farms.length} farm${farms.length === 1 ? '' : 's'}`}
+        </div>
+      )}
+
+      {effects.attractiveness > 0 && (
+        <div style={row}>Attractiveness +{effects.attractiveness}</div>
+      )}
+
+      {!confirming ? (
+        <button
+          onClick={() => setConfirming(true)}
+          style={{ marginTop: 12, width: '100%', padding: '6px 0', background: '#4a2a2a', color: '#ff8888', border: '1px solid #6a4a4a', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace', fontSize: 13, touchAction: 'manipulation' }}
+        >
+          Demolish
+        </button>
+      ) : (
+        <div style={{ marginTop: 12, padding: 8, border: '1px solid #6a4a4a', borderRadius: 4, fontSize: 13 }}>
+          <div style={{ marginBottom: 8 }}>
+            Demolish the {building.name}?
+            {Object.keys(refund).length > 0 && ` You get back ${formatMaterials(refund)}.`}
+            {residents.length > 0 && ` ${residents.length} settler${residents.length === 1 ? ' loses their' : 's lose their'} bed.`}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => onDemolished(useGameStore.getState().demolishBuilding(site.id))}
+              style={{ flex: 1, padding: '6px 0', background: '#7a2a2a', color: '#fff', border: '1px solid #a44', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace' }}
+            >
+              Demolish
+            </button>
+            <button
+              onClick={() => setConfirming(false)}
+              style={{ flex: 1, padding: '6px 0', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace' }}
+            >
+              Keep it
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function BuildingPanel() {
   const activeSiteId = useGameStore((s) => s.activeConstructionSiteId);
   const constructionSites = useGameStore((s) => s.constructionSites);
   const materials = useGameStore((s) => s.inventory?.materials);
@@ -70,6 +186,7 @@ export default function ConstructionPanel() {
 
   const site = activeSiteId ? constructionSites.find(s => s.id === activeSiteId) : null;
   const building = site ? getBuildingById(site.buildingId) : null;
+  const builder = useGameStore(selectBuilder(activeSiteId));
 
   // Close on Escape key
   useEffect(() => {
@@ -84,13 +201,23 @@ export default function ConstructionPanel() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [activeSiteId, closePanel]);
 
-  // Auto-close and notify when status transitions to BUILDING
+  // Auto-close and notify when the last material arrives (PLACED → BUILDING),
+  // not when the panel is opened on a site that is already being built
+  const prevStatus = useRef(null);
   useEffect(() => {
-    if (site?.status === 'BUILDING' && activeSiteId) {
+    const prev = prevStatus.current;
+    prevStatus.current = site ? `${activeSiteId}:${site.status}` : null;
+    if (site?.status === 'BUILDING' && prev === `${activeSiteId}:PLACED`) {
       addPickupText('Construction started!', '#44aaff');
       closePanel();
     }
-  }, [site?.status, activeSiteId, addPickupText, closePanel]);
+  }, [site, site?.status, activeSiteId, addPickupText, closePanel]);
+
+  const handleDemolished = useCallback((refund) => {
+    if (!refund) return;
+    const back = formatMaterials(refund);
+    addPickupText(back ? `Demolished: got back ${back}` : 'Demolished', '#ffaa00');
+  }, [addPickupText]);
 
   // Deliver all materials at once
   const handleDeliverAll = useCallback(() => {
@@ -134,16 +261,22 @@ export default function ConstructionPanel() {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 1000,
         pointerEvents: 'none',
+        padding: 16,
+        boxSizing: 'border-box',
       }}
     >
       <div
+        role="dialog"
+        aria-label={building.name}
         style={{
           background: 'rgba(10, 10, 20, 0.92)',
           border: '2px solid #4488ff',
           borderRadius: 8,
           padding: 16,
-          minWidth: 380,
+          width: '100%',
           maxWidth: 480,
+          boxSizing: 'border-box',
+          overflowY: 'auto',
           maxHeight: '80vh',
           color: '#eee',
           fontFamily: 'monospace',
@@ -229,16 +362,21 @@ export default function ConstructionPanel() {
           </>
         )}
 
-        {site.status === 'BUILDING' && (
-          <div style={{ textAlign: 'center', padding: 10, color: '#44aaff', fontSize: 13 }}>
-            Construction in progress... ({site.blocksPlaced}/{site.totalBlocks} blocks)
-          </div>
-        )}
+        {site.status === 'BUILDING' && (() => {
+          const [builderName, skill] = builder ? builder.split('|') : [null, null];
+          const eta = formatEta(getConstructionEta(site, builder ? Number(skill) : null));
+          return (
+            <div style={{ padding: 10, color: '#44aaff', fontSize: 13, textAlign: 'center' }}>
+              <div>Construction in progress ({site.blocksPlaced}/{site.totalBlocks} blocks){eta ? `, ${eta} left` : ''}</div>
+              <div style={{ color: '#aaa', fontSize: 12, marginTop: 4 }}>
+                {builderName ? `Builder: ${builderName}` : 'No settler building it: it builds itself slowly'}
+              </div>
+            </div>
+          );
+        })()}
 
         {site.status === 'COMPLETE' && (
-          <div style={{ textAlign: 'center', padding: 10, color: '#44ff44', fontSize: 13 }}>
-            Building complete!
-          </div>
+          <CompletedBuilding site={site} building={building} onDemolished={handleDemolished} />
         )}
 
         {/* Cancel button (only for non-complete sites) */}

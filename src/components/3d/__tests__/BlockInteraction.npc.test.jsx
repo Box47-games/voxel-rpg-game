@@ -60,6 +60,21 @@ describe('BlockInteraction E key with settlers', () => {
     expect(useGameStore.getState().activeStockpileZoneId).toBeNull();
   });
 
+  // Wooden Shelter is 3x3 voxels: its centre is position + 3 on x and z
+  const shelterCenteredAt = (x) => ({ id: 'home', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [x - 3, 0, -3] });
+
+  test('a completed building close by opens its panel', () => {
+    useGameStore.setState({ constructionSites: [shelterCenteredAt(4)] });
+    setup()();
+    expect(useGameStore.getState().activeConstructionSiteId).toBe('home');
+  });
+
+  test('a completed building farther away does not take the E press', () => {
+    useGameStore.setState({ constructionSites: [shelterCenteredAt(7)] }); // within site range, beyond building range
+    setup()();
+    expect(useGameStore.getState().activeConstructionSiteId).toBeNull();
+  });
+
   test('E closes an open NPC panel', () => {
     const pressE = setup({ npcs: [npc('near', 1, 0)] });
     useGameStore.getState().setActiveNPC('near');

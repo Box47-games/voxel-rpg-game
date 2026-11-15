@@ -28,6 +28,8 @@ import {
   POTION_COOLDOWN,
 } from '../data/tuning';
 import { ActionHistory, createActionMiddleware } from '../systems/state/ActionSystem';
+import { getBuildingById } from '../data/buildings';
+import { getPlacedBlocks, getDemolishRefund } from '../modules/settlement/buildingInfo';
 
 // Action history for replay/rollback/debugging
 export const actionHistory = new ActionHistory(1000);
@@ -1679,6 +1681,38 @@ const useGameStore = create((rawSet, get, api) => {
       } : s),
     };
   }),
+
+  /**
+   * Tear down a completed building: clear its blocks (only ones still matching
+   * the blueprint), refund part of its cost, and remove the site. Residents
+   * lose their bed and farms their plot on the next settlement tick.
+   * @returns {Object|null} The refund, or null if nothing was demolished
+   */
+  demolishBuilding: (siteId) => {
+    const state = get();
+    const site = state.constructionSites.find((s) => s.id === siteId);
+    const building = site && getBuildingById(site.buildingId);
+    if (!site || !building || site.status !== 'COMPLETE') return null;
+
+    const chunkManager = state._chunkManager;
+    if (chunkManager) {
+      for (const b of getPlacedBlocks(site, building)) {
+        if (chunkManager.getBlock(b.x, b.y, b.z) === b.blockType) {
+          chunkManager.setBlock(b.x, b.y, b.z, 0); // AIR
+        }
+      }
+    }
+
+    const refund = getDemolishRefund(building);
+    const materials = { ...state.inventory.materials };
+    for (const [mat, qty] of Object.entries(refund)) materials[mat] = (materials[mat] || 0) + qty;
+    set({
+      constructionSites: state.constructionSites.filter((s) => s.id !== siteId),
+      inventory: { ...state.inventory, materials },
+      activeConstructionSiteId: state.activeConstructionSiteId === siteId ? null : state.activeConstructionSiteId,
+    });
+    return refund;
+  },
 
   removeConstructionSite: (siteId) => set((state) => {
     const site = state.constructionSites.find(s => s.id === siteId);

@@ -13,7 +13,7 @@ import { BlockTypes, isSolid, getBlockHardness } from '../../systems/chunks/bloc
 import useGameStore from '../../stores/useGameStore';
 import { calculateDrops, getPlacementCost, canAffordPlacement } from '../../data/blockDrops';
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
-import { HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN, STOCKPILE_INTERACT_RANGE, CONSTRUCTION_INTERACT_RANGE, NPC_INTERACT_RANGE } from '../../data/tuning';
+import { HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN, STOCKPILE_INTERACT_RANGE, CONSTRUCTION_INTERACT_RANGE, BUILDING_INTERACT_RANGE, NPC_INTERACT_RANGE } from '../../data/tuning';
 import { findNearestNPC } from '../../utils/npcQueries';
 import { getBuildingById } from '../../data/buildings';
 import { getSpellById, executeSpell } from '../../data/spells';
@@ -741,16 +741,17 @@ export function BlockInteraction({ chunkManager }) {
       ? Math.hypot(nearbyNPC.position[0] - px, nearbyNPC.position[2] - pz)
       : Infinity;
 
-    // Check if player is near a construction site — open delivery panel
+    // Near a construction site (delivery panel) or a completed building (info
+    // panel; shorter range so buildings don't swallow every E press)
     for (const site of store.constructionSites) {
-      if (site.status === 'COMPLETE') continue;
+      const range = site.status === 'COMPLETE' ? BUILDING_INTERACT_RANGE : CONSTRUCTION_INTERACT_RANGE;
       const building = getBuildingById(site.buildingId);
       if (!building) continue;
       const centerX = site.position[0] + (building.size.width * VOXEL_SIZE) / 2;
       const centerZ = site.position[2] + (building.size.depth * VOXEL_SIZE) / 2;
       const dx = px - centerX, dz = pz - centerZ;
       const siteDist = Math.sqrt(dx * dx + dz * dz);
-      if (siteDist <= CONSTRUCTION_INTERACT_RANGE && siteDist <= npcDist) {
+      if (siteDist <= range && siteDist <= npcDist) {
         store.setActiveConstructionSite(site.id);
         useBlockCooldown.current = now;
         return true;

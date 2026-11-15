@@ -8,7 +8,7 @@ import ZoneHotbar from './components/ui/ZoneHotbar';
 import Crosshair from './components/ui/Crosshair';
 import ContextualHints from './components/ContextualHints';
 import StockpilePanel from './components/ui/StockpilePanel';
-import ConstructionPanel from './components/ui/ConstructionPanel';
+import BuildingPanel from './components/ui/BuildingPanel';
 import NPCPanel from './components/ui/NPCPanel';
 import SettlementDashboard from './components/ui/SettlementDashboard';
 import PickupTextOverlay from './components/ui/PickupTextOverlay';
@@ -86,8 +86,8 @@ function App3D() {
       {/* Stockpile deposit/withdraw panel */}
       <StockpilePanel />
 
-      {/* Construction material delivery panel (E key) */}
-      <ConstructionPanel />
+      {/* Building panel: construction deliveries, building info, demolish (E key) */}
+      <BuildingPanel />
 
       {/* Settler details (E next to an NPC) */}
       <NPCPanel />

@@ -111,7 +111,7 @@ Three patterns explain most gaps:
 | **Housing assignment, sleep at home** | ✅ | Done 2026-11-15: settlers get a bed in completed Shelters/Houses, sleep on their home's doorstep (they can't path inside), homeless ones sleep by the campfire with a happiness penalty. No manual reassignment or housing preferences yet. |
 | **Settlement dashboard** | ✅ | Done 2026-11-15: N key / HUD button. Population (sortable settler list → NPC panel), stockpile resources, buildings, alerts. No production/consumption rates yet. |
 | **NPC detail panel** (click an NPC) | ❌ | Only the developer NPC panel exists. |
-| **Building panel** (status, occupants, upgrades) | 🟡 | `ConstructionPanel.jsx` covers material delivery only. |
+| **Building panel** (status, occupants, upgrades) | 🟡 | Done 2026-11-15 except upgrades: E on a completed building shows its effects, residents (click → NPC panel), farms a plot powers, and Demolish (confirm, 50% refund); construction sites show builder and ETA. No health/repair (no damage yet), no worker assignment (no production buildings), upgrades pending design. |
 | Settlement loop campfire → arrive → zones → mine → haul → build → grow | ✅ | Works end to end (minus growth from building housing). |
 | Save/load settlement state | ✅ | NPCs, zones, stockpiles, construction sites. |
 
