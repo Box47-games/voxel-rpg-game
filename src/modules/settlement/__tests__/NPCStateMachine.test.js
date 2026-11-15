@@ -11,7 +11,16 @@ import {
   getPersonalityHappinessBonus,
 } from '../NPCStateMachine';
 import { clearTasks } from '../../../systems/settlement/TaskAssignmentEngine';
-import { NPC_THOUGHT_DURATION } from '../../../data/tuning';
+import {
+  NPC_THOUGHT_DURATION,
+  NPC_HUNGER_DECAY_RATE,
+  NPC_REST_DECAY_RATE,
+  NPC_EATING_DURATION,
+  NPC_FOOD_SOURCES,
+  NPC_SLEEP_HUNGER_DECAY_MULT,
+  NPC_REST_CRITICAL,
+  DAY_LENGTH_SECONDS,
+} from '../../../data/tuning';
 import { makeNPC, makeContext, makeStockpile } from './helpers/fakeWorld';
 
 beforeEach(() => {
@@ -53,15 +62,25 @@ describe('Needs decay', () => {
   test('hunger decays at NPC_HUNGER_DECAY_RATE per second', () => {
     const npc = makeNPC({ hunger: 80 });
     const { updates } = tickNPC(npc, 2, makeContext());
-    // 80 - 0.5 * 2 = 79
-    expect(updates.hunger).toBeCloseTo(79, 1);
+    expect(updates.hunger).toBeCloseTo(80 - NPC_HUNGER_DECAY_RATE * 2, 5);
   });
 
   test('rest decays at NPC_REST_DECAY_RATE per second', () => {
     const npc = makeNPC({ rest: 80 });
     const { updates } = tickNPC(npc, 2, makeContext());
-    // 80 - 0.35 * 2 = 79.3
-    expect(updates.rest).toBeCloseTo(79.3, 1);
+    expect(updates.rest).toBeCloseTo(80 - NPC_REST_DECAY_RATE * 2, 5);
+  });
+
+  test('balance: about three meals a day, and no daytime naps', () => {
+    // Night is 40% of the day (dusk to dawn), with hunger decaying slower asleep
+    const awake = DAY_LENGTH_SECONDS * 0.6;
+    const asleep = DAY_LENGTH_SECONDS * 0.4;
+    const hungerPerDay = NPC_HUNGER_DECAY_RATE * (awake + asleep * NPC_SLEEP_HUNGER_DECAY_MULT);
+    const restores = NPC_FOOD_SOURCES.map((f) => f.restore);
+    const meals = (r) => hungerPerDay / r;
+    expect(meals(Math.max(...restores))).toBeGreaterThanOrEqual(2);
+    expect(meals(Math.min(...restores))).toBeLessThanOrEqual(4);
+    expect(100 - NPC_REST_DECAY_RATE * awake).toBeGreaterThan(NPC_REST_CRITICAL + 20);
   });
 
   test('social decays at NPC_SOCIAL_DECAY_RATE * socialDecayMult per second', () => {
@@ -361,8 +380,8 @@ describe('EATING → IDLE', () => {
   test('hunger increases by (restore/duration)*tickDelta', () => {
     const npc = makeNPC({ state: 'EATING', stateTimer: 0, eatingRestore: 15, hunger: 10 });
     const { updates } = tickNPC(npc, 1, makeContext());
-    // hunger decayed first: 10 - 0.5*1 = 9.5, then restored: 9.5 + (15/3)*1 = 14.5
-    expect(updates.hunger).toBeCloseTo(14.5, 1);
+    // Hunger decays first, then the meal restores restore/duration per second
+    expect(updates.hunger).toBeCloseTo(10 - NPC_HUNGER_DECAY_RATE + 15 / NPC_EATING_DURATION, 5);
   });
 });
 

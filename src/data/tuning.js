@@ -237,8 +237,11 @@ export const NPC_FIRST_SETTLER_FREE = true;                // First NPC joins wi
 export const NPC_MAX_POPULATION_PHASE_2 = 20;              // Hard population cap for Phase 2. Range: 10–30.
 
 // ─── NPC Needs ──────────────────────────────────────────────
-export const NPC_HUNGER_DECAY_RATE = 0.5;            // Per second (~2 min to critical)
-export const NPC_REST_DECAY_RATE = 0.35;             // Per second (~3 min to critical)
+// A day is 720 s awake + 480 s asleep (hunger at NPC_SLEEP_HUNGER_DECAY_MULT),
+// so a settler loses ~34 hunger a day: about three meals of 10–15 (dawn, lunch,
+// evening). Was 0.5, which had settlers eating every ~20 s.
+export const NPC_HUNGER_DECAY_RATE = 0.04;           // Per second
+export const NPC_REST_DECAY_RATE = 0.07;             // Per second: ~50 rest left by nightfall, so no daytime naps (was 0.35)
 export const NPC_HUNGER_CRITICAL = 15;              // Below: NPC eats
 export const NPC_REST_CRITICAL = 15;                // Below: NPC sleeps
 export const NPC_WALK_SPEED = 2.0;                  // World units/sec (wandering)
