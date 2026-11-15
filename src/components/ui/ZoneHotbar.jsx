@@ -37,7 +37,7 @@ export default function ZoneHotbar() {
     <div
       style={{
         position: 'fixed',
-        bottom: isMobile ? '10px' : '20px',
+        bottom: `calc(${isMobile ? 10 : 20}px + env(safe-area-inset-bottom, 0px))`,
         left: '50%',
         transform: 'translateX(-50%)',
         background: 'rgba(0, 0, 0, 0.75)',

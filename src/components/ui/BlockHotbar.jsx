@@ -76,7 +76,7 @@ export function BlockHotbar() {
   return (
     <div style={{
       ...styles.container,
-      ...(isMobile.current ? { bottom: '10px', maxWidth: '95vw' } : {}),
+      ...(isMobile.current ? { bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))', maxWidth: '95vw' } : {}),
     }}>
       {/* Mobile: action row with mode toggle + exit */}
       {isMobile.current && (
@@ -170,7 +170,7 @@ export function BlockHotbar() {
 const styles = {
   container: {
     position: 'fixed',
-    bottom: '20px',
+    bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
     left: '50%',
     transform: 'translateX(-50%)',
     display: 'flex',

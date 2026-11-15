@@ -25,14 +25,14 @@ describe('App3D Component', () => {
       expect(canvas).toBeInTheDocument();
     });
 
-    test('renders with correct container styles', () => {
+    test('the game is pinned to the screen edges', () => {
+      // Not 100vw/100vh: on the iOS Home Screen those overflow the page and
+      // shift it under the status bar.
       const { container } = render(<App3D />);
       const mainDiv = container.firstChild;
 
-      expect(mainDiv).toHaveStyle({
-        width: '100vw',
-        height: '100vh',
-      });
+      expect(mainDiv).toHaveStyle({ position: 'fixed', overflow: 'hidden' });
+      expect(mainDiv.style.inset).toBe('0px');
     });
 
     test('renders GameUI overlay', () => {

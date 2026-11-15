@@ -50,7 +50,7 @@ function App3D() {
   const isDead = gameState === 'playing' && playerHealth <= 0;
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#87ceeb', WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}>
+    <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#87ceeb', WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none' }}>
       {/* Three.js Canvas */}
       <Canvas
         shadows

@@ -8,6 +8,11 @@
   color: var(--vx-text);
   font-family: var(--vx-font-body);
   --hud-gap: 16px;
+  /* Notch, status bar and home indicator (the page runs edge to edge) */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
 }
 
 .hud--compact {
@@ -18,8 +23,8 @@
 
 .hud-vitals {
   position: absolute;
-  top: var(--hud-gap);
-  left: var(--hud-gap);
+  top: calc(var(--hud-gap) + var(--safe-t));
+  left: calc(var(--hud-gap) + var(--safe-l));
   width: 264px;
   padding: 10px 12px 6px;
   pointer-events: auto;
@@ -97,8 +102,8 @@
 
 .hud-info {
   position: absolute;
-  top: var(--hud-gap);
-  right: var(--hud-gap);
+  top: calc(var(--hud-gap) + var(--safe-t));
+  right: calc(var(--hud-gap) + var(--safe-r));
   min-width: 180px;
   padding: 10px 12px;
   display: flex;
@@ -115,7 +120,7 @@
 
 /* On phones the mode badge sits top right, so move the clock below it */
 .hud--compact.hud--mode .hud-info {
-  top: 44px;
+  top: calc(44px + var(--safe-t));
 }
 
 .hud-clock__row {
@@ -233,7 +238,7 @@
 
 .hud-mode-badge {
   position: absolute;
-  top: var(--hud-gap);
+  top: calc(var(--hud-gap) + var(--safe-t));
   left: 50%;
   transform: translateX(-50%);
   display: inline-flex;
@@ -260,7 +265,7 @@
 
 .hud--compact .hud-mode-badge {
   left: auto;
-  right: var(--hud-gap);
+  right: calc(var(--hud-gap) + var(--safe-r));
   transform: none;
   padding: 4px 10px;
   font-size: 0.72rem;
@@ -275,8 +280,8 @@
 
 .hud-actions {
   position: absolute;
-  left: var(--hud-gap);
-  bottom: var(--hud-gap);
+  left: calc(var(--hud-gap) + var(--safe-l));
+  bottom: calc(var(--hud-gap) + var(--safe-b));
   display: flex;
   gap: 6px;
   padding: 6px;
@@ -289,7 +294,7 @@
 
 /* Lift the bar above the block / zone hotbar */
 .hud--mode .hud-actions {
-  bottom: 124px;
+  bottom: calc(124px + var(--safe-b));
 }
 
 /* Touch screens: the joystick owns the bottom-left corner, so sit above it */
@@ -300,7 +305,7 @@
 /* Short landscape phones: no room above the joystick, so use the top center */
 @media (orientation: landscape) and (max-height: 500px) {
   .hud--touch .hud-actions {
-    top: var(--hud-gap);
+    top: calc(var(--hud-gap) + var(--safe-t));
     bottom: auto;
     left: 50%;
     transform: translateX(-50%);

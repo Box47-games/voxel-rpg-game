@@ -53,13 +53,11 @@
       bottom: 0;
     }
 
-    /* Safe area padding for notched devices */
-    body {
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
-      padding-left: env(safe-area-inset-left);
-      padding-right: env(safe-area-inset-right);
-    }
+    /* The page runs edge to edge (viewport-fit=cover, and under the status
+       bar when installed on the iOS Home Screen). The game fills the whole
+       screen; HUD panels add the safe-area insets themselves. Padding the
+       body instead made the game overflow it, which shifted the page up
+       under the status bar and left a band at the bottom. */
 
     /* Loading screen */
     .loading-screen {
