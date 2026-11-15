@@ -121,6 +121,8 @@ describe('Game3DSaveManager', () => {
     const task = findBestTask({ id: 'npc_b', position: [0, 0, 0], skills: {} });
     expect(task).not.toBeNull();
     expect(task.claimedBy).toBeNull();
+  });
+
   describe('rift state', () => {
     function closeFirstRift(rm) {
       const rift = rm.rifts[0];
