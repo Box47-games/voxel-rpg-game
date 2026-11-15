@@ -1,6 +1,6 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody } from '@react-three/rapier';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { WILDLIFE_TYPES } from '../../data/wildlifeTypes';
@@ -11,6 +11,13 @@ import {
 } from '../../data/tuning';
 import { VOXEL_SIZE, CHUNK_SIZE_Y } from '../../systems/chunks/coordinates';
 import { isSolid } from '../../systems/chunks/blockTypes';
+import {
+  ANIMAL_MODELS,
+  createAnimalInstance,
+  getAnimalTraits,
+  getColliderBox,
+} from './wildlife/animalModels';
+import { createAnimState, stepAnimation } from './wildlife/animalAnimation';
 
 function getTerrainHeight(chunkManager, wx, wz) {
   if (!chunkManager) return null;
@@ -28,141 +35,29 @@ const _playerVec = new THREE.Vector3();
 const _animalVec = new THREE.Vector3();
 const _moveDir = new THREE.Vector3();
 
-/**
- * Merge all animal body parts into a single BufferGeometry with vertex colors.
- * Reduces draw calls from ~10 per animal to 1.
- */
-function buildAnimalGeometry(typeDef) {
-  const [w, h, d] = typeDef.size;
-  const baseColor = new THREE.Color(typeDef.color[0], typeDef.color[1], typeDef.color[2]);
-  const headColor = baseColor.clone().offsetHSL(0, 0, 0.1);
-  const eyeColor = new THREE.Color(0.07, 0.07, 0.07);
+const TURN_RATE = 8; // how quickly an animal turns to face where it's going
 
-  const parts = [];
-
-  // Helper: create a positioned box with a color
-  function addBox(sx, sy, sz, px, py, pz, color) {
-    const geo = new THREE.BoxGeometry(sx, sy, sz);
-    geo.translate(px, py, pz);
-    // Apply vertex colors
-    const count = geo.attributes.position.count;
-    const colors = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
-    }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    parts.push(geo);
-  }
-
-  // Helper: create a positioned sphere with a color
-  function addSphere(radius, px, py, pz, color) {
-    const geo = new THREE.SphereGeometry(radius, 6, 6);
-    geo.translate(px, py, pz);
-    const count = geo.attributes.position.count;
-    const colors = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
-    }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    parts.push(geo);
-  }
-
-  // Body
-  addBox(w, h * 0.6, d, 0, h * 0.5, 0, baseColor);
-  // Head
-  addBox(w * 0.55, h * 0.4, w * 0.45, 0, h * 0.7, d * 0.5 + w * 0.15, headColor);
-  // Eyes
-  addSphere(w * 0.06, -w * 0.15, h * 0.75, d * 0.5 + w * 0.38, eyeColor);
-  addSphere(w * 0.06, w * 0.15, h * 0.75, d * 0.5 + w * 0.38, eyeColor);
-  // Tail
-  addBox(w * 0.15, w * 0.15, w * 0.3, 0, h * 0.45, -d * 0.5 - w * 0.1, baseColor);
-
-  const legOffset = w * 0.35;
-  const legHeight = h * 0.25;
-
-  if (typeDef.ground) {
-    // 4 legs
-    addBox(w * 0.15, legHeight, w * 0.15, -legOffset, legHeight * 0.5, d * 0.25, baseColor);
-    addBox(w * 0.15, legHeight, w * 0.15, legOffset, legHeight * 0.5, d * 0.25, baseColor);
-    addBox(w * 0.15, legHeight, w * 0.15, -legOffset, legHeight * 0.5, -d * 0.25, baseColor);
-    addBox(w * 0.15, legHeight, w * 0.15, legOffset, legHeight * 0.5, -d * 0.25, baseColor);
-  } else {
-    // 2 wings
-    addBox(w * 0.7, 0.05, d * 0.8, -w * 0.6, h * 0.6, 0, baseColor);
-    addBox(w * 0.7, 0.05, d * 0.8, w * 0.6, h * 0.6, 0, baseColor);
-  }
-
-  // Merge all parts into one geometry
-  const merged = mergeGeometries(parts);
-  // Dispose temporary parts
-  parts.forEach(g => g.dispose());
-  return merged;
+/** Shortest signed angle from a to b. */
+function angleDelta(a, b) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
 }
 
-/**
- * Minimal mergeGeometries — combines an array of indexed BufferGeometries
- * into a single BufferGeometry. All must share the same attributes.
- */
-function mergeGeometries(geometries) {
-  let totalVerts = 0;
-  let totalIndices = 0;
-  for (const g of geometries) {
-    totalVerts += g.attributes.position.count;
-    totalIndices += g.index ? g.index.count : g.attributes.position.count;
-  }
-
-  const positions = new Float32Array(totalVerts * 3);
-  const normals = new Float32Array(totalVerts * 3);
-  const colors = new Float32Array(totalVerts * 3);
-  const indices = new Uint16Array(totalIndices);
-
-  let vertOffset = 0;
-  let idxOffset = 0;
-
-  for (const g of geometries) {
-    const pos = g.attributes.position.array;
-    const nor = g.attributes.normal.array;
-    const col = g.attributes.color.array;
-    const vCount = g.attributes.position.count;
-
-    positions.set(pos, vertOffset * 3);
-    normals.set(nor, vertOffset * 3);
-    colors.set(col, vertOffset * 3);
-
-    if (g.index) {
-      const idx = g.index.array;
-      for (let i = 0; i < idx.length; i++) {
-        indices[idxOffset + i] = idx[i] + vertOffset;
-      }
-      idxOffset += idx.length;
-    } else {
-      for (let i = 0; i < vCount; i++) {
-        indices[idxOffset + i] = vertOffset + i;
-      }
-      idxOffset += vCount;
-    }
-    vertOffset += vCount;
-  }
-
-  const merged = new THREE.BufferGeometry();
-  merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  merged.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  merged.setIndex(new THREE.BufferAttribute(indices, 1));
-  return merged;
-}
-
-// Cache merged geometry per animal type
-const _geoCache = {};
-function getAnimalGeometry(typeDef, typeKey) {
-  if (_geoCache[typeKey]) return _geoCache[typeKey];
-  const geo = buildAnimalGeometry(typeDef);
-  _geoCache[typeKey] = geo;
-  return geo;
+/** Apply a pose from stepAnimation() to an animal's bones. */
+function applyPose(rig, pose) {
+  const { bones, rest } = rig;
+  bones.body.position.y = rest.body.y + pose.bodyLift;
+  bones.body.rotation.set(pose.bodyPitch, 0, pose.bodyRoll);
+  bones.head.rotation.set(pose.headPitch, pose.headYaw, 0);
+  bones.tail.rotation.set(pose.tailPitch, pose.tailYaw, 0);
+  bones.legFL.rotation.x = pose.legs.FL;
+  bones.legFR.rotation.x = pose.legs.FR;
+  bones.legBL.rotation.x = pose.legs.BL;
+  bones.legBR.rotation.x = pose.legs.BR;
+  bones.wingL.rotation.z = pose.wingLift; // +X wing: positive Z lifts the tip
+  bones.wingR.rotation.z = -pose.wingLift;
 }
 
 const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
@@ -171,24 +66,32 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
   const wanderTimerRef = useRef(Math.random() * WILDLIFE_WANDER_INTERVAL_MAX);
   const targetRef = useRef(null);
   const rotationRef = useRef(0);
-  const groupRef = useRef();
+  const yawRef = useRef(0);
   const flyPhase = useRef(Math.random() * Math.PI * 2);
 
   const typeDef = WILDLIFE_TYPES[animalData.type];
-  const mergedGeo = useMemo(
-    () => typeDef ? getAnimalGeometry(typeDef, animalData.type) : null,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [animalData.type]
-  );
+  const model = ANIMAL_MODELS[animalData.type];
 
-  const [, h] = typeDef ? typeDef.size : [0.5, 0.5, 0.5];
+  // Each animal gets its own skeleton (shared geometry) and a little variety
+  const traits = useMemo(() => getAnimalTraits(animalData.id, animalData.type), [animalData.id, animalData.type]);
+  const rig = useMemo(
+    () => (typeDef && model ? createAnimalInstance(animalData.type, traits) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [animalData.type, traits]
+  );
+  useEffect(() => () => rig?.dispose(), [rig]);
+  const animRef = useRef(null);
+  if (!animRef.current) animRef.current = createAnimState(traits.seed);
+
+  const collider = useMemo(() => (model ? getColliderBox(model) : null), [model]);
 
   useFrame((state, delta) => {
-    if (!bodyRef.current || !typeDef) return;
+    if (!bodyRef.current || !rig) return;
+    const store = useGameStore.getState();
+    if (store.gameState === 'paused') return;
     const body = bodyRef.current;
     const pos = body.translation();
 
-    const store = useGameStore.getState();
     const playerPos = store.player.position;
     if (!playerPos) return;
 
@@ -255,7 +158,7 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
     if (typeDef.ground && chunkManager) {
       const terrainY = getTerrainHeight(chunkManager, pos.x, pos.z);
       if (terrainY != null) {
-        const targetY = terrainY + h * 0.5;
+        const targetY = terrainY; // the body's origin is at the animal's feet
         if (pos.y < targetY - 1 || pos.y > targetY + 2) {
           body.setTranslation({ x: pos.x, y: targetY, z: pos.z }, true);
           body.setLinvel({ x: body.linvel().x, y: 0, z: body.linvel().z }, true);
@@ -279,33 +182,44 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
     animalData.position[1] = pos.y;
     animalData.position[2] = pos.z;
 
-    // Apply rotation
-    if (groupRef.current) {
-      groupRef.current.rotation.y = rotationRef.current;
-    }
+    // Turn smoothly toward the heading
+    yawRef.current += angleDelta(yawRef.current, rotationRef.current) * Math.min(1, delta * TURN_RATE);
+    rig.mesh.rotation.y = yawRef.current;
+
+    // Animate legs, head, tail and wings from how fast the body is moving
+    const vel = body.linvel();
+    const pose = stepAnimation(animRef.current, model.anim, {
+      speed: Math.sqrt(vel.x * vel.x + vel.z * vel.z) / traits.scale,
+      verticalSpeed: vel.y,
+      fleeing: stateRef.current === 'FLEEING',
+    }, delta);
+    applyPose(rig, pose);
   });
 
-  if (!typeDef || !mergedGeo) return null;
+  if (!typeDef || !rig) return null;
 
+  const s = traits.scale;
   return (
     <RigidBody
       ref={bodyRef}
       position={animalData.position}
       enabledRotations={[false, false, false]}
       type="dynamic"
-      colliders="cuboid"
+      colliders={false}
       mass={0.3}
       linearDamping={0.5}
       gravityScale={typeDef.ground ? 1 : 0}
     >
-      <group ref={groupRef}>
-        {/* Single merged mesh for the entire animal body (1 draw call) */}
-        <mesh geometry={mergedGeo}>
-          <meshStandardMaterial vertexColors />
-        </mesh>
-      </group>
+      <CuboidCollider
+        args={collider.halfExtents.map((v) => v * s)}
+        position={collider.center.map((v) => v * s)}
+      />
+      {/* One skinned mesh per animal: a single draw call, posed by its bones */}
+      <primitive object={rig.mesh} scale={s} />
     </RigidBody>
   );
 });
+
+WildlifeAnimal.displayName = 'WildlifeAnimal';
 
 export default WildlifeAnimal;

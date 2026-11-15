@@ -139,6 +139,7 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
 - Move the player with `teleportPlayer(pos)` / `pendingTeleport` (Player.jsx moves the physics body); writing `player.position` alone is overwritten by physics next frame.
 - Rift enemies are plain data; their health lives in `Enemy.jsx`. Damage them through `store._enemyHandlers` (see `src/systems/combat/enemyHits.js`), with live positions from `store._enemyPositions`.
 - Gameplay must stop while `gameState === 'paused'` (Physics is paused; `useFrame` loops should early-return).
+- Wildlife looks live in `src/components/3d/wildlife/`: `animalModels.js` (per-species voxel boxes on a small skeleton, merged into one cached skinned geometry per species: 1 draw call per animal) and `animalAnimation.js` (pure gait/idle/tail/wing poses). `wildlifeTypes.js` holds only behavior and spawning.
 - Block placement goes through `tryPlaceBlock` in BlockInteraction.jsx, which charges `BLOCK_PLACEMENT_COSTS` (`src/data/blockDrops.js`).
 - World edits survive chunk unloads via `ChunkManager.modifiedChunkCache`; saves use `getModifiedChunks()` / `applyModifiedChunks()`.
 - Debug tools load only in dev builds or with `?debug=1` (remembered; `?debug=0` turns it off) — see `src/utils/debugFlags.js`:
