@@ -10,6 +10,12 @@ updates:
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # eslint-plugin-react 7.x supports ESLint up to 9; revisit when it allows 10
+      - dependency-name: eslint
+        versions: ['>=10']
+      - dependency-name: '@eslint/js'
+        versions: ['>=10']
 
   - package-ecosystem: github-actions
     directory: /

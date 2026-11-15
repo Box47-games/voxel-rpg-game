@@ -25,31 +25,33 @@
     "@react-three/fiber": "^8.18.0",
     "@react-three/rapier": "^1.5.0",
     "howler": "^2.2.4",
-    "immer": "^11.1.4",
-    "lucide-react": "^0.548.0",
+    "immer": "^11.2.10",
+    "lucide-react": "^1.73.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "three": "^0.160.1",
-    "yaml": "^2.8.1",
+    "three": "^0.187.0",
+    "yaml": "^2.9.1",
     "zustand": "^4.5.7"
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.1",
+    "@eslint/js": "^9.39.5",
+    "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^14.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "cross-env": "^7.0.3",
-    "eslint": "^8.56.0",
+    "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.3",
-    "eslint-plugin-react-hooks": "^5.1.0",
-    "fake-indexeddb": "^6.2.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.2.8",
     "gh-pages": "^6.1.1",
+    "globals": "^17.14.0",
     "jsdom": "^25.0.1",
-    "playwright": "1.63.0",
+    "playwright": "1.65.0",
     "pngjs": "^7.0.0",
-    "prettier": "^3.1.0",
+    "prettier": "^3.10.1",
     "vite": "^6.0.7",
-    "vitest": "^3.0.4"
+    "vitest": "^5.1.0"
   },
   "scripts": {
     "start": "vite",
@@ -61,76 +63,9 @@
     "test:smoke": "node scripts/smoke-test.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "lint": "eslint --ext .js,.jsx src/ --max-warnings 34",
-    "lint:fix": "eslint --ext .js,.jsx src/ --fix",
+    "lint": "eslint src/ --max-warnings 34",
+    "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.{js,jsx}\""
-  },
-  "eslintConfig": {
-    "extends": [
-      "eslint:recommended",
-      "plugin:react/recommended",
-      "plugin:react-hooks/recommended"
-    ],
-    "plugins": [
-      "react",
-      "react-hooks"
-    ],
-    "rules": {
-      "no-unused-vars": "warn",
-      "no-console": [
-        "warn",
-        {
-          "allow": [
-            "warn",
-            "error"
-          ]
-        }
-      ],
-      "react/react-in-jsx-scope": "off",
-      "react/prop-types": "off",
-      "react/display-name": "off",
-      "react/no-unknown-property": "off"
-    },
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module",
-      "ecmaFeatures": {
-        "jsx": true
-      }
-    },
-    "env": {
-      "browser": true,
-      "es2021": true,
-      "node": true
-    },
-    "settings": {
-      "react": {
-        "version": "detect"
-      }
-    },
-    "overrides": [
-      {
-        "files": [
-          "src/**/__tests__/**",
-          "src/**/*.test.{js,jsx}",
-          "src/__mocks__/**",
-          "src/setupTests.js",
-          "src/test-utils.js",
-          "src/components/3d/testSetup.js"
-        ],
-        "globals": {
-          "vi": "readonly",
-          "describe": "readonly",
-          "it": "readonly",
-          "test": "readonly",
-          "expect": "readonly",
-          "beforeEach": "readonly",
-          "afterEach": "readonly",
-          "beforeAll": "readonly",
-          "afterAll": "readonly"
-        }
-      }
-    ]
   },
   "prettier": {
     "singleQuote": true,

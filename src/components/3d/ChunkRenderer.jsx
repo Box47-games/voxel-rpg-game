@@ -39,7 +39,7 @@ const _daylightUniform = { value: 0.5 };
  * light to `outgoingLight` BEFORE tone mapping, so campfire blocks stay
  * bright at night. Strength scales inversely with daylightFactor.
  *
- * Three.js v0.160 MeshLambertMaterial fragment order:
+ * Three.js MeshLambertMaterial fragment order (r160–r187):
  *   ... lights → outgoingLight = direct+indirect+emissive → envmap →
  *   opaque_fragment → tonemapping → colorspace → fog → premultiplied_alpha → dithering
  *
@@ -83,10 +83,11 @@ uniform float uDaylightFactor;`
     // Inject per-vertex emissive into outgoingLight before opaque_fragment
     // writes gl_FragColor. This keeps it in linear HDR space for proper
     // tone mapping. nightBoost ramps from 0.15 (day) to 1.0 (full night).
+    // vColor is a vec4 in newer three.js (vec3 before), so take .rgb.
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <opaque_fragment>',
       `float nightBoost = max(0.15, 1.0 - uDaylightFactor);
-outgoingLight += vColor * vEmissive * nightBoost * 2.0;
+outgoingLight += vColor.rgb * vEmissive * nightBoost * 2.0;
 #include <opaque_fragment>`
     );
   };

@@ -23,9 +23,11 @@ function fail(message) {
 const server = await preview({ preview: { port: 4173, strictPort: true, open: false }, logLevel: 'warn' });
 const url = server.resolvedUrls.local[0];
 
-// Software WebGL: CI runners have no GPU
+// Software WebGL: CI runners have no GPU. SMOKE_CHROMIUM_PATH points at a
+// preinstalled Chromium when Playwright's own browser isn't installed.
 const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+  executablePath: process.env.SMOKE_CHROMIUM_PATH || undefined,
 });
 
 const errors = [];
