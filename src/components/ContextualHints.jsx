@@ -4,7 +4,8 @@ import { VOXEL_SIZE } from '../systems/chunks/coordinates';
 import { isUsableBlock } from '../data/blockUseActions';
 import { isTouchDevice } from '../utils/deviceDetection';
 import { findNearestNPC } from '../utils/npcQueries';
-import { NPC_INTERACT_RANGE } from '../data/tuning';
+import { NPC_INTERACT_RANGE, IMMIGRATION_MAX_NPCS } from '../data/tuning';
+import { getHomes, getPopulationCap } from '../modules/settlement/housing';
 
 /**
  * ContextualHints - Shows context-sensitive control hints
@@ -187,15 +188,13 @@ const ContextualHints = () => {
     },
     {
       id: 'housing-needed',
-      text: 'NPCs need housing! Build a HOUSE to provide shelter.',
+      text: 'Out of beds! Build a Wooden Shelter (B) so more settlers can move in.',
       condition: () => {
         if (gameState !== 'playing') return false;
         const s = useGameStore.getState();
-        const mod = s._settlementModule;
-        // Housing assignment is not live yet; the engine flips housingEnabled when it is.
-        if (!mod || !mod.housingEnabled || !mod.housingManager) return false;
-        return s.settlement.npcs.length > 1 &&
-          mod.housingManager.getTotalCapacity() < s.settlement.npcs.length;
+        if (!s.settlement.settlementCenter) return false;
+        const cap = getPopulationCap(getHomes(s.constructionSites));
+        return cap < IMMIGRATION_MAX_NPCS && s.settlement.npcs.length >= cap;
       },
       priority: 13,
       duration: 5000,

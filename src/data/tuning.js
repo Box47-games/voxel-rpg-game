@@ -271,9 +271,10 @@ export const BUILDER_SKILL_BASE = 0.5;                // Minimum skill factor in
 export const MAX_BUILDERS_PER_SITE = 3;               // Max concurrent builders per site
 
 // ─── Housing ───────────────────────────────────────────────
+// Beds per building come from `effects.housing` in src/data/buildings.js.
 export const HOUSING_HOMELESS_HAPPINESS_PENALTY = -20; // Happiness penalty for homeless NPCs
-export const HOUSING_SHELTER_CAPACITY = 1;             // Beds per shelter
-export const HOUSING_HOUSE_CAPACITY = 2;               // Beds per house
+export const HOUSING_FREE_SETTLERS = 1;                // Settlers who may join without a bed (the pioneer). Cap = max(this, beds)
+export const HOUSING_CAMPFIRE_SLEEP_RADIUS = 4;        // World units from the campfire where homeless settlers sleep
 
 // ─── Mining Zone ────────────────────────────────────────────
 export const MINING_TASK_REGEN_INTERVAL = 10;        // Seconds between task regeneration scans
@@ -371,9 +372,7 @@ export const RESPAWN_HEIGHT = 70;              // Drop-in height (falls to terra
 export const POTION_HEAL_AMOUNT = 50;
 export const POTION_COOLDOWN = 5;              // Seconds
 
-// ─── Settlement Housing & NPC Timeouts ───────────────────────
-export const HOUSING_WALLS_PER_SLOT = 25;      // Structural blocks per housing slot
-export const HOUSING_MIN_NPC_CAP = 3;          // Population cap before any walls
+// ─── NPC Timeouts ────────────────────────────────────────────
 export const NPC_APPROACH_TIMEOUT = 60;        // Seconds before a stuck immigrant gives up
 export const NPC_LEAVING_TIMEOUT = 30;         // Seconds before a leaving NPC is force-removed
 

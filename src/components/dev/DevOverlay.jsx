@@ -22,7 +22,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useGameStore from '../../stores/useGameStore';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import { worldToChunk } from '../../systems/chunks/coordinates';
-import { DEBUG_TIME_SCALES, IMMIGRATION_MAX_NPCS } from '../../data/tuning';
+import { DEBUG_TIME_SCALES } from '../../data/tuning';
+import { getHomes, getTotalBeds, getPopulationCap } from '../../modules/settlement/housing';
 import { subscribeFrameSampler, getFrameTimes, getFrameStats } from './frameSampler';
 import * as dev from './devActions';
 
@@ -404,6 +405,10 @@ function SettlementTab({ state }) {
   const npcs = settlement.npcs;
   const center = settlement.settlementCenter;
   const [expanded, setExpanded] = useState(null);
+  const homes = getHomes(constructionSites);
+  const beds = getTotalBeds(homes);
+  const popCap = getPopulationCap(homes);
+  const housed = npcs.filter((n) => n.homeId).length;
 
   const checks = [
     ['Settlement center set', center !== null],
@@ -417,7 +422,8 @@ function SettlementTab({ state }) {
     ['Stockpile zone placed', zones.some((z) => z.type === 'STOCKPILE')],
     ['Construction site placed', constructionSites.length > 0],
     ['Building completed', constructionSites.some((c) => c.status === 'COMPLETE')],
-    [`Pop cap respected (≤ ${IMMIGRATION_MAX_NPCS})`, npcs.length <= IMMIGRATION_MAX_NPCS],
+    [`Pop cap respected (≤ ${popCap})`, npcs.length <= popCap],
+    ['NPC housed', housed > 0],
   ];
   const passCount = checks.filter(([, pass]) => pass).length;
 
@@ -427,7 +433,8 @@ function SettlementTab({ state }) {
         <Row label="Center" value={center ? `${fmt(center[0])}, ${fmt(center[1])}, ${fmt(center[2])}` : 'none — place a campfire'} color={center ? C.ok : C.dim} />
         <Row label="Attractiveness" value={fmt(settlement.attractiveness)} color={level(settlement.attractiveness, 20, 10, true)} />
         <Row label="Wall blocks" value={fmtInt(settlement.wallCount)} />
-        <Row label="NPCs" value={`${npcs.length} / ${IMMIGRATION_MAX_NPCS}`} />
+        <Row label="Beds (housed)" value={`${beds} (${housed})`} />
+        <Row label="NPCs / cap" value={`${npcs.length} / ${popCap}`} />
         <Row label="Zones / sites" value={`${zones.length} / ${constructionSites.length}`} />
       </Section>
 

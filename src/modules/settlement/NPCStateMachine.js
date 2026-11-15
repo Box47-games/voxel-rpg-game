@@ -43,6 +43,7 @@ import {
   NPC_SOCIALIZE_SEARCH_RADIUS,
   NPC_WANDER_TIMEOUT,
   NPC_LEAVE_EXTRA_DISTANCE,
+  HOUSING_HOMELESS_HAPPINESS_PENALTY,
 } from '../../data/tuning';
 import {
   takeFood,
@@ -52,6 +53,7 @@ import {
   isWorkState,
   tickWorkState,
 } from './NPCWorkBehavior';
+import { resolveHomeId, getSleepTarget, isSettled } from './housing';
 
 // ── Personality helpers ─────────────────────────────────────
 
@@ -164,13 +166,22 @@ export function tickNPC(npc, tickDelta, context) {
   updates.rest = newRest;
   updates.social = newSocial;
 
+  // ── Home (re)assignment ──
+  const homeId = resolveHomeId(npc, context);
+  if (homeId !== (npc.homeId ?? null)) updates.homeId = homeId;
+  // Only penalize when housing is actually being tracked this tick
+  const homelessPenalty = context.homeAssignments && !homeId && isSettled(npc)
+    ? HOUSING_HOMELESS_HAPPINESS_PENALTY
+    : 0;
+
   // ── Compute happiness ──
   updates.happiness = Math.max(0, Math.min(100,
     newHunger * NPC_HAPPINESS_HUNGER_WEIGHT +
     newRest * NPC_HAPPINESS_REST_WEIGHT +
     newSocial * NPC_HAPPINESS_SOCIAL_WEIGHT +
     NPC_HAPPINESS_BASE +
-    getPersonalityHappinessBonus(personality)
+    getPersonalityHappinessBonus(personality) +
+    homelessPenalty
   ));
 
   // ── Tick thought bubble timer ──
@@ -274,6 +285,7 @@ export function tickNPC(npc, tickDelta, context) {
       } else if (newRest < NPC_REST_CRITICAL) {
         updates.state = 'SLEEPING';
         updates.stateTimer = 0;
+        updates.targetPosition = getSleepTarget(npc, context);
         updates.thoughtBubble = { type: 'sleeping', timer: NPC_THOUGHT_DURATION };
       } else if (newSocial < NPC_SOCIAL_CRITICAL && npcs.length > 1) {
         // Find the nearest other settled NPC to socialize with
@@ -332,6 +344,7 @@ export function tickNPC(npc, tickDelta, context) {
       if (updates.rest >= NPC_SLEEP_WAKE_REST) {
         updates.state = 'IDLE';
         updates.stateTimer = 0;
+        updates.targetPosition = null;
         tryResumeTask(npc, updates);
       }
       break;

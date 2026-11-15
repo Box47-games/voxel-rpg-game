@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import useGameStore from '../../../stores/useGameStore';
-import NPCPanel, { describeActivity, describeMood } from '../NPCPanel';
+import NPCPanel, { describeActivity, describeMood, describeHome } from '../NPCPanel';
 import {
   NPC_LEAVE_WARNING_DAYS,
   NPC_LEAVE_DEPARTURE_DAYS,
@@ -113,5 +113,22 @@ describe('describeMood', () => {
     const daysLeft = NPC_LEAVE_DEPARTURE_DAYS - NPC_LEAVE_WARNING_DAYS;
     expect(describeMood(10, NPC_LEAVE_WARNING_DAYS)).toMatch(`may leave in ${daysLeft} day`);
     expect(describeMood(10, NPC_LEAVE_DEPARTURE_DAYS)).toBe('Unhappy — about to leave');
+  });
+});
+
+describe('describeHome', () => {
+  const sites = [{ id: 'cs_1', buildingId: 'stone_house', status: 'COMPLETE', position: [0, 0, 0] }];
+
+  test('names the building a settler lives in', () => {
+    expect(describeHome({ state: 'IDLE', homeId: 'cs_1' }, sites)).toBe('Lives in a Stone House');
+  });
+
+  test('flags homeless settlers, including ones whose home is gone', () => {
+    expect(describeHome({ state: 'IDLE' }, sites)).toBe('Homeless — sleeps by the campfire');
+    expect(describeHome({ state: 'IDLE', homeId: 'cs_gone' }, sites)).toBe('Homeless — sleeps by the campfire');
+  });
+
+  test('says nothing for settlers who have not joined', () => {
+    expect(describeHome({ state: 'APPROACHING' }, sites)).toBeNull();
   });
 });

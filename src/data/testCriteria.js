@@ -5,6 +5,8 @@
  * status/notes/screenshots. Do NOT rename IDs after first use.
  */
 
+import { getBuildingById } from './buildings';
+
 export const TEST_PHASES = [
   {
     id: 'phase-0',
@@ -134,7 +136,8 @@ export const TEST_PHASES = [
           { id: 'p2-npc-departure-warn', label: 'Departure warning', description: 'NPC unhappy for 2+ in-game days shows a warning notification' },
           { id: 'p2-npc-departure-leave', label: 'NPC leaves', description: 'NPC unhappy for 3+ in-game days enters LEAVING state (red indicator), walks to edge, and is removed' },
           { id: 'p2-npc-personality', label: 'Personality effects', description: 'Personality traits affect behavior: diligent/lazy change idle timers, brave/cautious change wander radius, cheerful/grumpy adjust happiness' },
-          { id: 'p2-npc-housing-cap', label: 'Housing-based pop cap', description: 'Max NPC count is limited by housing slots (wall blocks / 25), minimum 3, max IMMIGRATION_MAX_NPCS' },
+          { id: 'p2-npc-housing-cap', label: 'Housing-based pop cap', description: 'Max NPC count = beds from completed Shelters (1) and Houses (2), minimum 1 (the pioneer), max IMMIGRATION_MAX_NPCS' },
+          { id: 'p2-npc-housing-assign', label: 'Settlers get homes', description: 'When a Shelter/House completes, a homeless settler is assigned a bed (NPC panel shows "Lives in…"); tired settlers walk to their home\'s doorstep to sleep, homeless ones sleep by the campfire with a happiness penalty' },
         ],
       },
       {
@@ -313,7 +316,8 @@ export const AUTO_CHECKS = {
   'p2-npc-social-need': (s) => s.settlement.npcs.some((n) => n.state === 'SOCIALIZING'),
   'p2-npc-happiness': (s) => s.settlement.npcs.some((n) => typeof n.happiness === 'number'),
   'p2-npc-departure-leave': (s) => s.settlement.npcs.some((n) => n.state === 'LEAVING'),
-  'p2-npc-housing-cap': (s) => s.settlement.wallCount > 0,
+  'p2-npc-housing-cap': (s) => s.constructionSites.some((c) => c.status === 'COMPLETE' && (getBuildingById(c.buildingId)?.effects?.housing || 0) > 0),
+  'p2-npc-housing-assign': (s) => s.settlement.npcs.some((n) => n.homeId),
 
   // Phase 2 — Zone Designation (2.2)
   'p2-zone-create-mining': (s) => s.zones.some((z) => z.type === 'MINING'),

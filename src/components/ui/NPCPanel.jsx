@@ -5,6 +5,8 @@
 import React, { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
+import { getBuildingById } from '../../data/buildings';
+import { isSettled } from '../../modules/settlement/housing';
 import {
   NPC_HUNGER_CRITICAL,
   NPC_REST_CRITICAL,
@@ -49,6 +51,17 @@ export function describeMood(happiness, unhappyDays) {
   return null;
 }
 
+/** "Lives in a Wooden Shelter", "Homeless — sleeps by the campfire", or null before joining. */
+export function describeHome(npc, constructionSites) {
+  if (!isSettled(npc)) return null;
+  if (npc.homeId) {
+    const site = constructionSites?.find((c) => c.id === npc.homeId);
+    const building = site ? getBuildingById(site.buildingId) : null;
+    if (building) return `Lives in a ${building.name}`;
+  }
+  return 'Homeless — sleeps by the campfire';
+}
+
 // Rounded, position-free slice so the panel doesn't re-render every frame
 const selectPanelData = (s) => {
   const id = s.activeNPCId;
@@ -62,6 +75,7 @@ const selectPanelData = (s) => {
     personality: npc.personality || null,
     preferredJob: npc.preferredJob || null,
     activity: describeActivity(npc.state, carrying),
+    home: describeHome(npc, s.constructionSites),
     hunger: Math.round(npc.hunger ?? 0),
     rest: Math.round(npc.rest ?? 0),
     social: Math.round(npc.social ?? 0),
@@ -184,6 +198,11 @@ export default function NPCPanel() {
         </div>
 
         <div style={{ marginTop: 10, fontSize: 14 }}>{data.activity}</div>
+        {data.home && (
+          <div style={{ marginTop: 4, fontSize: 12, color: data.home.startsWith('Homeless') ? '#ffaa44' : '#aaa' }}>
+            {data.home}
+          </div>
+        )}
         {mood && <div style={{ marginTop: 4, fontSize: 13, color: '#ff7777' }}>{mood}</div>}
 
         <div style={sectionTitle}>Needs</div>

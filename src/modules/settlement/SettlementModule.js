@@ -23,11 +23,8 @@ import {
   IMMIGRATION_THRESHOLD_PER_NPC,
   IMMIGRATION_SPAWN_MIN_DIST,
   IMMIGRATION_SPAWN_MAX_DIST,
-  IMMIGRATION_MAX_NPCS,
   NPC_NEEDS_TICK_INTERVAL,
   WORK_SCAN_INTERVAL,
-  HOUSING_WALLS_PER_SLOT,
-  HOUSING_MIN_NPC_CAP,
   SETTLEMENT_CAMPFIRE_SCAN_INTERVAL,
   NPC_INITIAL_HUNGER,
   NPC_INITIAL_REST,
@@ -48,6 +45,7 @@ import HousingManager from './HousingManager.js';
 import ChunkAttractivenessAdapter from './ChunkAttractivenessAdapter.js';
 import { scanChunkForCampfire, getTerrainYAt } from './CampfireDetector.js';
 import { tickNPC } from './NPCStateMachine.js';
+import { getHomes, getPopulationCap, assignHomes } from './housing.js';
 import { generateNPCIdentity } from '../../data/npcIdentity.js';
 import { scanForTasks } from '../../systems/settlement/TaskAssignmentEngine.js';
 
@@ -76,10 +74,7 @@ class SettlementModule {
     // Sub-managers (created in initialize, Batches 5-8):
     this.haulingManager = null;
     this.constructionManager = null;
-    this.housingManager = null;
-    // Seam: housing assignment is not a live feature yet. UI that would nag the
-    // player about housing (ContextualHints) stays quiet while this is false.
-    this.housingEnabled = false;
+    this.housingManager = null; // Not on the live path; live housing is ./housing.js
 
     // Timing
     this.tickCount = 0;
@@ -374,7 +369,9 @@ class SettlementModule {
     this._immigrationAccum += deltaSeconds;
     if (this._immigrationAccum >= IMMIGRATION_CHECK_INTERVAL) {
       this._immigrationAccum = 0;
-      results.newNPC = this._tryImmigration(settlement, center, state.worldTime.elapsed);
+      results.newNPC = this._tryImmigration(
+        settlement, center, state.worldTime.elapsed, getHomes(state.constructionSites)
+      );
     }
 
     // ── 3b. Work task scan ──
@@ -405,15 +402,12 @@ class SettlementModule {
   }
 
   /** @returns {Object|null} A new APPROACHING NPC if one is attracted this check */
-  _tryImmigration(settlement, center, worldTimeElapsed) {
+  _tryImmigration(settlement, center, worldTimeElapsed, homes) {
     const npcCount = settlement.npcs.length;
     const threshold = IMMIGRATION_THRESHOLD + npcCount * IMMIGRATION_THRESHOLD_PER_NPC;
 
-    // Housing-based population cap
-    const housingSlots = Math.floor((settlement.wallCount || 0) / HOUSING_WALLS_PER_SLOT);
-    const maxNPCs = Math.min(IMMIGRATION_MAX_NPCS, Math.max(HOUSING_MIN_NPC_CAP, housingSlots));
-
-    if (!(settlement.attractiveness >= threshold && npcCount < maxNPCs)) return null;
+    // Population cap: one bed per settler, beyond the free pioneer(s)
+    if (!(settlement.attractiveness >= threshold && npcCount < getPopulationCap(homes))) return null;
 
     const angle = Math.random() * Math.PI * 2;
     const dist = IMMIGRATION_SPAWN_MIN_DIST +
@@ -450,8 +444,11 @@ class SettlementModule {
     const notifications = [];
     let anyTaskCompleted = false;
 
+    const homes = getHomes(state.constructionSites);
     const context = {
       center,
+      homes: new Map(homes.map((h) => [h.id, h])),
+      homeAssignments: assignHomes(settlement.npcs, homes),
       attractiveness: settlement.attractiveness,
       npcs: settlement.npcs,
       zones: state.zones,

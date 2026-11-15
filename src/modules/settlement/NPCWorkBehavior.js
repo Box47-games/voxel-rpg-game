@@ -17,6 +17,7 @@
 import { BlockTypes } from '../../systems/chunks/blockTypes';
 import { calculateDrops } from '../../data/blockDrops';
 import { scanMiningZone } from '../../systems/settlement/MiningZoneScanner';
+import { getSleepTarget } from './housing';
 import {
   findBestTask,
   claimTask,
@@ -132,6 +133,7 @@ export function checkNeedsInterrupt(npc, newHunger, newRest, updates, ctx) {
   if (newRest < NPC_REST_CRITICAL) {
     suspendTask(npc, updates);
     updates.state = 'SLEEPING';
+    updates.targetPosition = getSleepTarget(npc, ctx);
     updates.thoughtBubble = { type: 'sleeping', timer: NPC_THOUGHT_DURATION };
     return true;
   }

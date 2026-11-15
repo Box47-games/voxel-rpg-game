@@ -21,6 +21,7 @@ import {
   NPC_BUILD_DURATION,
   NPC_SKILL_GROWTH,
   NPC_THOUGHT_DURATION,
+  HOUSING_CAMPFIRE_SLEEP_RADIUS,
   DAY_LENGTH_SECONDS,
   NPC_LEAVE_DEPARTURE_DAYS,
 } from '../../../data/tuning';
@@ -560,9 +561,11 @@ describe('Needs interrupts', () => {
       savedTaskId: npc.currentTaskId,
       savedWorkTimer: 3,
       workTimer: 0,
-      targetPosition: null,
       thoughtBubble: { type: 'sleeping', timer: NPC_THOUGHT_DURATION },
     });
+    // No home in this context: heads for a spot by the campfire
+    const [x, , z] = updates.targetPosition;
+    expect(Math.hypot(x - ctx.center[0], z - ctx.center[2])).toBeLessThanOrEqual(HOUSING_CAMPFIRE_SLEEP_RADIUS);
     expect(getTask(npc.currentTaskId).claimedBy).toBeNull();
   });
 

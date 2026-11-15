@@ -286,8 +286,8 @@ const SettlerNPC = React.memo(({ npcData }) => {
       workPhase.current = 0;
     }
 
-    // Sleeping visual — lay NPC on side
-    if (npc.state === 'SLEEPING' && groupRef.current) {
+    // Sleeping visual — lay NPC on side once it has reached its bed
+    if (npc.state === 'SLEEPING' && !moving && groupRef.current) {
       groupRef.current.rotation.z = Math.PI / 2;
     } else if (groupRef.current && npc.state !== 'EVALUATING') {
       groupRef.current.rotation.z = 0;

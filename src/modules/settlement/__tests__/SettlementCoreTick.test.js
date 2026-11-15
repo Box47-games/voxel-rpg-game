@@ -4,6 +4,7 @@
  */
 
 import SettlementModule from '../SettlementModule';
+import { getHomes } from '../housing';
 import { clearTasks, findBestTask, getTask } from '../../../systems/settlement/TaskAssignmentEngine';
 import { scanMiningZone } from '../../../systems/settlement/MiningZoneScanner';
 import { BlockTypes } from '../../../systems/chunks/blockTypes';
@@ -19,8 +20,8 @@ import {
   IMMIGRATION_SPAWN_MIN_DIST,
   IMMIGRATION_SPAWN_MAX_DIST,
   IMMIGRATION_MAX_NPCS,
-  HOUSING_WALLS_PER_SLOT,
-  HOUSING_MIN_NPC_CAP,
+  HOUSING_FREE_SETTLERS,
+  HOUSING_HOMELESS_HAPPINESS_PENALTY,
   NPC_NEEDS_TICK_INTERVAL,
   NPC_HUNGER_DECAY_RATE,
   NPC_LEAVING_TIMEOUT,
@@ -220,6 +221,13 @@ describe('attractiveness', () => {
   });
 });
 
+/** Completed Wooden Shelters: one bed each. */
+function shelters(n) {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `home${i}`, buildingId: 'wooden_shelter', position: [i * 20, 2, 40], status: 'COMPLETE',
+  }));
+}
+
 describe('immigration', () => {
   const ATTRACTIVE = { settlementCenter: CENTER, attractiveness: IMMIGRATION_THRESHOLD, wallCount: 0 };
 
@@ -265,10 +273,11 @@ describe('immigration', () => {
     const one = makeNPC({ state: 'APPROACHING', targetPosition: CENTER });
     const needed = IMMIGRATION_THRESHOLD + IMMIGRATION_THRESHOLD_PER_NPC;
 
-    const tooLow = makeGame({ settlement: { ...ATTRACTIVE, npcs: [one], attractiveness: needed - 1 } });
+    const constructionSites = shelters(2);
+    const tooLow = makeGame({ settlement: { ...ATTRACTIVE, npcs: [one], attractiveness: needed - 1 }, constructionSites });
     expect(tooLow.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).toBeNull();
 
-    const enough = makeGame({ settlement: { ...ATTRACTIVE, npcs: [one], attractiveness: needed } });
+    const enough = makeGame({ settlement: { ...ATTRACTIVE, npcs: [one], attractiveness: needed }, constructionSites: shelters(2) });
     expect(enough.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).not.toBeNull();
   });
 
@@ -284,31 +293,28 @@ describe('immigration', () => {
     expect(results.newNPC).toBeNull();
   });
 
-  test('population is capped by housing (walls), with a floor and a ceiling', () => {
+  test('population is capped by beds, with a free pioneer and a ceiling', () => {
     const crowd = (n) => Array.from({ length: n }, (_, i) =>
       makeNPC({ id: `n${i}`, state: 'APPROACHING', targetPosition: CENTER }));
     const veryAttractive = { ...ATTRACTIVE, attractiveness: 10000 };
+    const spawns = (npcCount, constructionSites) =>
+      makeGame({ settlement: { ...veryAttractive, npcs: crowd(npcCount) }, constructionSites })
+        .tick(IMMIGRATION_CHECK_INTERVAL).newNPC !== null;
 
-    const atFloor = makeGame({ settlement: { ...veryAttractive, npcs: crowd(HOUSING_MIN_NPC_CAP) } });
-    expect(atFloor.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).toBeNull();
-
-    const housed = makeGame({
-      settlement: {
-        ...veryAttractive,
-        npcs: crowd(HOUSING_MIN_NPC_CAP),
-        wallCount: (HOUSING_MIN_NPC_CAP + 1) * HOUSING_WALLS_PER_SLOT,
-      },
-    });
-    expect(housed.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).not.toBeNull();
-
-    const atCeiling = makeGame({
-      settlement: { ...veryAttractive, npcs: crowd(IMMIGRATION_MAX_NPCS), wallCount: 100000 },
-    });
-    expect(atCeiling.tick(IMMIGRATION_CHECK_INTERVAL).newNPC).toBeNull();
+    // The pioneer joins without a bed; nobody else does
+    expect(spawns(0, [])).toBe(true);
+    expect(spawns(HOUSING_FREE_SETTLERS, [])).toBe(false);
+    // One bed per settler: two shelters take the second settler, not a third
+    expect(spawns(1, shelters(2))).toBe(true);
+    expect(spawns(2, shelters(2))).toBe(false);
+    // Unfinished buildings and buildings without beds don't count
+    expect(spawns(1, [{ ...shelters(1)[0], status: 'BUILDING' }, { ...shelters(1)[0], id: 'tower', buildingId: 'watchtower' }])).toBe(false);
+    // Hard ceiling
+    expect(spawns(IMMIGRATION_MAX_NPCS, shelters(IMMIGRATION_MAX_NPCS + 5))).toBe(false);
   });
 
   test('each immigrant gets a distinct id', () => {
-    const { tick, state } = makeGame({ settlement: ATTRACTIVE });
+    const { tick, state } = makeGame({ settlement: ATTRACTIVE, constructionSites: shelters(2) });
     const first = tick(IMMIGRATION_CHECK_INTERVAL).newNPC;
     state.settlement = { ...state.settlement, attractiveness: 10000 };
     const second = tick(IMMIGRATION_CHECK_INTERVAL).newNPC;
@@ -473,5 +479,37 @@ describe('work loop', () => {
 
     expect(getTask(taskId)).toMatchObject({ claimedBy: 'npc_1' });
     expect(npcOf(game).currentTaskId).toBe(taskId);
+  });
+});
+
+describe('housing', () => {
+  const SETTLED = { settlementCenter: CENTER, attractiveness: 50 };
+  const tickNeeds = (npcs, constructionSites) =>
+    makeGame({ settlement: { ...SETTLED, npcs }, constructionSites }).tick(NPC_NEEDS_TICK_INTERVAL).batchUpdates;
+
+  test('a completed shelter houses one settler; the next one stays homeless', () => {
+    const updates = tickNeeds(
+      [makeNPC({ id: 'a', state: 'SOCIALIZING' }), makeNPC({ id: 'b', state: 'SOCIALIZING' })],
+      shelters(1)
+    );
+    expect(updates.a.homeId).toBe('home0');
+    expect(updates.b.homeId).toBeUndefined(); // unchanged: still homeless
+  });
+
+  test('homeless settlers are less happy', () => {
+    const same = { state: 'SOCIALIZING', hunger: 60, rest: 60, social: 60, personality: 'stoic' };
+    const updates = tickNeeds([makeNPC({ ...same, id: 'a' }), makeNPC({ ...same, id: 'b' })], shelters(1));
+    expect(updates.b.happiness - updates.a.happiness).toBeCloseTo(HOUSING_HOMELESS_HAPPINESS_PENALTY);
+  });
+
+  test('a tired settler walks to its home to sleep', () => {
+    const updates = tickNeeds([makeNPC({ id: 'a', state: 'IDLE', hunger: 90, rest: 1 })], shelters(1));
+    expect(updates.a.state).toBe('SLEEPING');
+    expect(updates.a.targetPosition).toEqual(getHomes(shelters(1))[0].sleepPosition);
+  });
+
+  test('settlers lose their home when the building is gone', () => {
+    const updates = tickNeeds([makeNPC({ id: 'a', state: 'SOCIALIZING', homeId: 'home0' })], []);
+    expect(updates.a.homeId).toBeNull();
   });
 });

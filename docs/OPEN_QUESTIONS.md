@@ -15,7 +15,7 @@ From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#de
 
 | # | Question | Proposed default |
 |---|----------|------------------|
-| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | **Decided: default.** Only housing + schedule + NPC panel; dashboard and farming later. NPC panel done; housing and schedule next |
+| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | **Decided: finish all Phase 2 leftovers first** (changed from the default on 2026-11-15). Order: housing → day/night schedule → farming zone → settlement dashboard → building panel → building upgrades (needs a short design pass first). NPC panel done |
 | 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | **Decided: yes — done.** `SettlementTick` now drives `SettlementModule` through `SettlementBridge` |
 | 3 | Permanent NPC death? | No — NPCs are knocked down and recover (or leave if hit again while down) |
 | 4 | Enemy navigation: full pathfinding or simple steering? | Steering + breaking through walls; A* only if playtests show stuck raids |

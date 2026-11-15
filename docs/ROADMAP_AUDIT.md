@@ -104,11 +104,11 @@ Three patterns explain most gaps:
 | Hauling mine → stockpile → construction | ✅ | `WORKING_HAUL` / `haulPhase` in `SettlementTick.jsx`. |
 | Stockpiles | ✅ | `zone.storage` with capacity; `StockpilePanel.jsx`. (Map-based, not slot-based as the plan specified.) |
 | Blueprint placement + NPC construction | ✅ | `BuildingCatalog`, `BuildingPlacement`, `ConstructionTick`, `ConstructionVisual`. |
-| **Building effects** (housing, storage, production, happiness) | 🟡 | Completed buildings only add attractiveness. `effects.housing` doesn't raise the population cap — the cap comes from counting wall blocks (`wallCount / HOUSING_WALLS_PER_SLOT`). No storage/production effects. |
+| **Building effects** (housing, storage, production, happiness) | 🟡 | Housing done (2026-11-15): `effects.housing` beds set the population cap (`modules/settlement/housing.js`). No storage/production effects. |
 | **Building upgrades** | ❌ | Not implemented. |
 | NPC needs (eat, rest, social) interrupting work | ✅ | EATING/SLEEPING states, needs decay, happiness, unhappy-departure warnings. |
 | **Daily schedule (work/eat/sleep by time of day)** | ❌ | Sleep is driven by the rest stat, not night; `SettlementTick` never reads `isNight`. |
-| **Housing assignment, sleep at home** | ❌ | No beds/homes are assigned. |
+| **Housing assignment, sleep at home** | ✅ | Done 2026-11-15: settlers get a bed in completed Shelters/Houses, sleep on their home's doorstep (they can't path inside), homeless ones sleep by the campfire with a happiness penalty. No manual reassignment or housing preferences yet. |
 | **Settlement dashboard** | ❌ | No dashboard UI. |
 | **NPC detail panel** (click an NPC) | ❌ | Only the developer NPC panel exists. |
 | **Building panel** (status, occupants, upgrades) | 🟡 | `ConstructionPanel.jsx` covers material delivery only. |
