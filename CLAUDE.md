@@ -20,6 +20,7 @@ npm test                                    # Run all tests once (vitest run)
 npm run test:watch                          # Watch mode
 npx vitest run path/to/file.test.js         # Single test file
 npx vitest run -t "test name pattern"       # Run tests matching name
+npm run build && npm run test:smoke         # Start the built game in headless Chromium (scripts/smoke-test.mjs)
 ```
 
 Test setup (`src/setupTests.js`) provides: fake-indexeddb, Canvas 2D mock, rAF polyfill, TextEncoder/TextDecoder, crypto.subtle mock, and a **seeded `Math.random` reset before every test** (results are reproducible; use `vi.spyOn(Math, 'random')` for specific values). Vitest globals (`vi.fn`, `describe`, `it`) available without import.
@@ -35,7 +36,9 @@ npm run lint:fix     # ESLint auto-fix
 npm run format       # Prettier (singleQuote, trailingComma: es5, semi: true)
 ```
 
-ESLint (lints `.js` and `.jsx`; CI fails on errors): `no-unused-vars: warn`, `no-console: warn` (except warn/error), `react/no-unknown-property: off` (needed for R3F). CI (`.github/workflows/deploy.yml`) runs lint + tests before building; only `main` auto-deploys.
+ESLint (lints `.js` and `.jsx`; fails on any error or on more than 34 warnings, today's count, via `--max-warnings` in `npm run lint`: fix warnings and lower the cap, never raise it): `no-unused-vars: warn`, `no-console: warn` (except warn/error), `react/no-unknown-property: off` (needed for R3F).
+
+CI (`.github/workflows/deploy.yml`, workflow "CI") runs on every branch push and PR, on Node from `.nvmrc` (22): one `check` job does lint → unit tests → build → browser smoke test. Only `main` deploys to GitHub Pages, after `check` passes. `main` is protected: `check` must pass on a commit before it can land there, so push the branch and wait for its run before fast-forwarding main (no force pushes). Dependabot (`.github/dependabot.yml`) opens weekly npm and monthly Actions update PRs.
 
 ## Architecture Overview
 
