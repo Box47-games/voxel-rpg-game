@@ -2,7 +2,7 @@
 
 Decisions waiting on the project owner, collected so work can resume later. Each has a proposed default; anything not overridden can start with the default.
 
-_Last updated: 2026-11-11_
+_Last updated: 2026-11-15_
 
 ## Repository state
 
@@ -15,8 +15,8 @@ From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#de
 
 | # | Question | Proposed default |
 |---|----------|------------------|
-| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | Only housing + schedule + NPC panel; dashboard and farming later |
-| 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | **Decided: yes** (in progress) |
+| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | **Decided: default.** Only housing + schedule + NPC panel; dashboard and farming later. NPC panel done; housing and schedule next |
+| 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | **Decided: yes — done.** `SettlementTick` now drives `SettlementModule` through `SettlementBridge` |
 | 3 | Permanent NPC death? | No — NPCs are knocked down and recover (or leave if hit again while down) |
 | 4 | Enemy navigation: full pathfinding or simple steering? | Steering + breaking through walls; A* only if playtests show stuck raids |
 | 5 | Can monsters break blocks? | Only player-placed wood/stone defenses, never terrain |

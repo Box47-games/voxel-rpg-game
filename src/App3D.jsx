@@ -9,6 +9,7 @@ import Crosshair from './components/ui/Crosshair';
 import ContextualHints from './components/ContextualHints';
 import StockpilePanel from './components/ui/StockpilePanel';
 import ConstructionPanel from './components/ui/ConstructionPanel';
+import NPCPanel from './components/ui/NPCPanel';
 import PickupTextOverlay from './components/ui/PickupTextOverlay';
 import PauseMenu from './components/PauseMenu';
 import MobileActionButtons from './components/ui/MobileActionButtons';
@@ -86,6 +87,9 @@ function App3D() {
 
       {/* Construction material delivery panel (E key) */}
       <ConstructionPanel />
+
+      {/* Settler details (E next to an NPC) */}
+      <NPCPanel />
 
       {/* Crosshair for first-person mode */}
       <Crosshair />

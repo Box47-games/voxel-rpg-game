@@ -306,6 +306,7 @@ export const ATTRACT_STOCKPILE_FOOD_CAP = 30;       // Max food items counted fo
 // ─── Construction System ───────────────────────────────────
 export const CONSTRUCTION_BLOCK_INTERVAL = 0.5;   // Seconds between block placements
 export const CONSTRUCTION_INTERACT_RANGE = 8;      // World units — E key range to open panel
+export const NPC_INTERACT_RANGE = 4;               // World units — E key range to inspect a settler (a closer stockpile/site wins)
 export const ATTRACT_BUILDING_SCORE = 5;            // Per completed building attractiveness
 export const ATTRACT_HOUSING_BONUS = 10;            // Per housing slot attractiveness
 

@@ -3,6 +3,8 @@ import useGameStore from '../stores/useGameStore';
 import { VOXEL_SIZE } from '../systems/chunks/coordinates';
 import { isUsableBlock } from '../data/blockUseActions';
 import { isTouchDevice } from '../utils/deviceDetection';
+import { findNearestNPC } from '../utils/npcQueries';
+import { NPC_INTERACT_RANGE } from '../data/tuning';
 
 /**
  * ContextualHints - Shows context-sensitive control hints
@@ -219,6 +221,19 @@ const ContextualHints = () => {
       condition: () => {
         if (gameState !== 'playing') return false;
         return useGameStore.getState().settlement.npcs.length >= 3;
+      },
+      priority: 15,
+      duration: 5000,
+      showOnce: true,
+    },
+    {
+      id: 'npc-inspect',
+      text: 'Press E next to a settler to see what they need.',
+      condition: () => {
+        if (gameState !== 'playing') return false;
+        const s = useGameStore.getState();
+        const settled = s.settlement.npcs.filter(n => n.state !== 'APPROACHING' && n.state !== 'LEAVING');
+        return findNearestNPC(settled, s.player.position, NPC_INTERACT_RANGE * 2) !== null;
       },
       priority: 15,
       duration: 5000,
