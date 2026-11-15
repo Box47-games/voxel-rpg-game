@@ -7,7 +7,7 @@ _Last updated: 2026-11-15_
 ## Repository state
 
 - Branch `claude/sweet-hopper-28hqmt` (dead-code removal, roadmap audit, unified dev overlay, Phase 3 plan) was merged into `main` as PR #558.
-- After the organization transfer, update `package.json` (`homepage: https://TiberiousDoom.github.io/voxel-rpg-game`, `author`, `repository.url`) to the new owner, and re-enable GitHub Pages/Actions on the new repo so `.github/workflows/deploy.yml` deploys. `vite.config.js` `base: '/voxel-rpg-game/'` stays correct if the repo name is unchanged.
+- Done: `package.json` `homepage`, `author` and `repository.url` now point to Box47-games (site: https://box47-games.github.io/voxel-rpg-game/). GitHub Pages deploys from `.github/workflows/deploy.yml` on pushes to `main`.
 
 ## Phase 3 — decisions needed
 

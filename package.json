@@ -3,12 +3,12 @@
   "version": "2.0.0",
   "description": "Voxel RPG Game - 3D version with React Three Fiber",
   "private": true,
-  "homepage": "https://TiberiousDoom.github.io/voxel-rpg-game",
+  "homepage": "https://box47-games.github.io/voxel-rpg-game",
   "license": "MIT",
-  "author": "TiberiousDoom",
+  "author": "Box47-games",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TiberiousDoom/voxel-rpg-game.git"
+    "url": "https://github.com/Box47-games/voxel-rpg-game.git"
   },
   "keywords": [
     "voxel",
