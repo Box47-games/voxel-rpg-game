@@ -181,6 +181,7 @@ export const TEST_PHASES = [
           { id: 'p2-zone-delete', label: 'Zone deletion', description: 'Right-click on a zone removes it' },
           { id: 'p2-zone-hotbar', label: 'Zone hotbar UI', description: 'Zone hotbar shows type selector, zone count, and instructions when in zone mode' },
           { id: 'p2-zone-mode-toggle', label: 'Zone mode toggle', description: 'Z key toggles zone mode on/off; Tab exits zone mode and enters build mode' },
+          { id: 'p2-zone-farm', label: 'Farm zone', description: 'Build a Farm Plot (B), then create a Farm zone next to it (max 64 plots; refused without a plot). Settlers plant (sprouts grow over ~5 min), harvest ripe crops (orange) into a stockpile as vegetables; max 2 farmers per farm; untended ripe crops trickle in at 25%' },
           { id: 'p2-zone-mining-scan', label: 'Mining zone scan', description: 'Creating a mining zone scans solid blocks within bounds and stores miningTasks on the zone' },
           { id: 'p2-zone-mobile', label: 'Mobile zone placement', description: 'Two-tap zone placement works on mobile (tap corner1, tap corner2)' },
         ],
@@ -293,6 +294,7 @@ export const TOTAL_CRITERIA_COUNT = ALL_CRITERIA.length;
  * Used to auto-promote 'untested' → 'pass'; never overrides manual status.
  */
 export const AUTO_CHECKS = {
+  'p2-zone-farm': (s) => s.zones.some((z) => z.type === 'FARMING' && z.farmTiles?.some((t) => t.plantedAt != null)),
   // Phase 1 — Survival & Gathering
   'p1-func-hunger': (s) => s.hunger.current < s.hunger.max,
   'p1-func-day-night': (s) => s.worldTime.isNight === true,

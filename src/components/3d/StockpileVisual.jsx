@@ -12,7 +12,7 @@ import { isSolid } from '../../systems/chunks/blockTypes';
 const MATERIAL_COLORS = {
   wood: '#8B4513', stone: '#808080', iron: '#C0C0C0', coal: '#333333',
   dirt: '#654321', sand: '#F4A460', clay: '#CC7744', gold_ore: '#FFD700',
-  leather: '#8B6914', crystal: '#88CCFF', berry: '#CC2244', meat: '#E8967A',
+  leather: '#8B6914', crystal: '#88CCFF', berry: '#CC2244', vegetable: '#FF8C00', meat: '#E8967A',
   bone: '#F5F5DC', fiber: '#98FB98',
 };
 

@@ -4,7 +4,7 @@
  * No drei Text/Billboard (causes WebGL shader corruption).
  * Rendered as child of SettlerNPC group at Y=3.2 above ground.
  *
- * Icon types: mining, hauling, building, hungry, sleeping, socializing
+ * Icon types: mining, hauling, building, farming, hungry, sleeping, socializing
  */
 
 import React, { useRef, useMemo } from 'react';
@@ -29,6 +29,7 @@ const redMat = new THREE.MeshBasicMaterial({ color: '#ff4444' });
 const purpleMat = new THREE.MeshBasicMaterial({ color: '#8844cc' });
 const magentaMat = new THREE.MeshBasicMaterial({ color: '#ff88ff' });
 const brownMat = new THREE.MeshBasicMaterial({ color: '#8B4513' });
+const greenMat = new THREE.MeshBasicMaterial({ color: '#44cc44' });
 
 // Pickaxe icon: two crossed boxes (handle + head)
 function PickaxeIcon() {
@@ -86,10 +87,21 @@ function ChatIcon() {
   );
 }
 
+// Sprout icon: green cone on a brown base
+function SproutIcon() {
+  return (
+    <group>
+      <mesh geometry={cubeGeo} material={brownMat} position={[0, -0.08, 0]} scale={[1, 0.4, 1]} />
+      <mesh geometry={coneGeo} material={greenMat} position={[0, 0.05, 0]} />
+    </group>
+  );
+}
+
 const ICON_COMPONENTS = {
   mining: PickaxeIcon,
   hauling: BoxIcon,
   building: HammerIcon,
+  farming: SproutIcon,
   hungry: DrumstickIcon,
   sleeping: SleepIcon,
   socializing: ChatIcon,

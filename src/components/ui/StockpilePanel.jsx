@@ -9,7 +9,7 @@ import useGameStore from '../../stores/useGameStore';
 // Ordered list of materials to display
 const MATERIAL_ORDER = [
   'wood', 'stone', 'iron', 'coal', 'dirt', 'sand', 'clay',
-  'gold_ore', 'leather', 'crystal', 'berry', 'meat', 'bone', 'fiber',
+  'gold_ore', 'leather', 'crystal', 'berry', 'vegetable', 'meat', 'bone', 'fiber',
 ];
 
 const MATERIAL_COLORS = {

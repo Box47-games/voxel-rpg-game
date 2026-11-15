@@ -148,6 +148,7 @@ export const DEATH_TOOL_DURABILITY_LOSS = 0.25;   // 25% durability lost on deat
 
 // ─── Food (hunger restore) ───────────────────────────────────
 export const FOOD_BERRY_RESTORE = 10;
+export const FOOD_VEGETABLE_RESTORE = 12;
 export const FOOD_APPLE_RESTORE = 15;
 export const FOOD_RAW_MEAT_RESTORE = 15;
 export const FOOD_COOKED_MEAT_RESTORE = 35;
@@ -156,6 +157,7 @@ export const FOOD_MUSHROOM_STEW_RESTORE = 30;
 
 // ─── Food (health restore) ──────────────────────────────────
 export const FOOD_BERRY_HEAL = 5;
+export const FOOD_VEGETABLE_HEAL = 3;
 export const FOOD_RAW_MEAT_HEAL = 8;
 export const FOOD_COOKED_MEAT_HEAL = 20;
 
@@ -255,6 +257,7 @@ export const NPC_EATING_DURATION = 3;                // Seconds to eat (animatio
 // NPC food sources: priority order (best first), material key → hunger restored
 export const NPC_FOOD_SOURCES = [
   { material: 'meat', restore: 15 },
+  { material: 'vegetable', restore: 12 },
   { material: 'berry', restore: 10 },
 ];
 export const NPC_SOCIAL_DURATION = 15;               // Seconds to socialize
@@ -288,6 +291,9 @@ export const FARM_PLANT_TIME = 2;                    // Seconds to plant one til
 export const FARM_HARVEST_TIME = 2;                  // Seconds to harvest one tile
 export const FARM_UNATTENDED_RATE = 0.25;            // Passive auto-collection rate when no farmer assigned
 export const MAX_FARMERS_PER_ZONE = 2;               // Max NPCs farming one zone simultaneously
+export const FARM_MAX_TILES = 64;                    // Largest farm zone (ground tiles), e.g. 8x8
+export const FARM_PLOT_RANGE = 16;                   // World units from a farm zone's edge to a completed Farm Plot
+export const FARM_CROP_MATERIAL = 'vegetable';       // What harvests yield (an NPC and player food)
 
 // ─── Stockpile ──────────────────────────────────────────────
 export const STOCKPILE_STACK_LIMIT = 64;             // Max quantity per slot

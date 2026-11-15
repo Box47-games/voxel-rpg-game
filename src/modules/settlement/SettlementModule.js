@@ -30,6 +30,7 @@ import {
   NPC_INITIAL_REST,
   NPC_INITIAL_SOCIAL,
   NPC_INITIAL_HAPPINESS,
+  FARM_CROP_MATERIAL,
 } from '../../data/tuning.js';
 
 import AttractivenessCalculator from './AttractivenessCalculator.js';
@@ -48,7 +49,9 @@ import { tickNPC } from './NPCStateMachine.js';
 import { getHomes, getPopulationCap, assignHomes } from './housing.js';
 import { getTimeOfDay } from './schedule.js';
 import { generateNPCIdentity } from '../../data/npcIdentity.js';
-import { scanForTasks } from '../../systems/settlement/TaskAssignmentEngine.js';
+import { scanForTasks, isZoneBeingFarmed } from '../../systems/settlement/TaskAssignmentEngine.js';
+import { getActiveFarms, collectUnattended } from './farming.js';
+import { depositDrops } from './NPCWorkBehavior.js';
 
 class SettlementModule {
   /**
@@ -379,7 +382,7 @@ class SettlementModule {
     this._workScanAccum += deltaSeconds;
     if (this._workScanAccum >= WORK_SCAN_INTERVAL) {
       this._workScanAccum = 0;
-      scanForTasks(state.zones, state.constructionSites, this.chunkAdapter);
+      scanForTasks(state.zones, state.constructionSites, this.chunkAdapter, state.worldTime.elapsed);
     }
 
     // ── 4. NPC needs + state machines ──
@@ -388,6 +391,7 @@ class SettlementModule {
       const tickDelta = this._needsAccum;
       this._needsAccum = 0;
       this._tickNPCs(tickDelta, settlement, center, state, results);
+      this._collectUnattendedFarms(state);
     }
 
     return results;
@@ -439,6 +443,17 @@ class SettlementModule {
     };
   }
 
+  /** Ripe crops nobody is harvesting trickle into stockpiles at a reduced rate. */
+  _collectUnattendedFarms(state) {
+    const elapsed = state.worldTime.elapsed;
+    for (const zone of getActiveFarms(this.host.getZones(), state.constructionSites)) {
+      const collected = collectUnattended(zone, elapsed, isZoneBeingFarmed(zone.id));
+      if (!collected) continue;
+      this.host.updateZone(zone.id, { farmTiles: collected.farmTiles });
+      depositDrops([{ material: FARM_CROP_MATERIAL, amount: collected.amount }], { host: this.host });
+    }
+  }
+
   _tickNPCs(tickDelta, settlement, center, state, results) {
     const batchUpdates = {};
     const removeIds = [];
@@ -477,7 +492,7 @@ class SettlementModule {
     // work on the next tick instead of waiting for WORK_SCAN_INTERVAL. Uses
     // fresh zones/sites: they were changed through the host during this tick.
     if (anyTaskCompleted) {
-      scanForTasks(this.host.getZones(), this.host.getConstructionSites(), this.chunkAdapter);
+      scanForTasks(this.host.getZones(), this.host.getConstructionSites(), this.chunkAdapter, state.worldTime.elapsed);
       this._workScanAccum = 0;
     }
 

@@ -45,6 +45,17 @@ export const BUILDINGS = [
     ],
   },
   {
+    id: 'farm_plot',
+    name: 'Farm Plot',
+    description: 'A wooden marker for a farm. Farming zones must be next to one.',
+    size: { width: 3, height: 1, depth: 3 },
+    cost: { wood: 10 },
+    effects: { housing: 0, attractiveness: 5, enablesFarming: true },
+    layers: [
+      'WWW|W.W|WWW',   // Layer 0 (border)
+    ],
+  },
+  {
     id: 'watchtower',
     name: 'Watchtower',
     description: 'A tall stone lookout. Increases settlement visibility.',

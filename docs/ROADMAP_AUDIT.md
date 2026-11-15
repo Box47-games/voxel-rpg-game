@@ -99,7 +99,7 @@ Three patterns explain most gaps:
 |---|---|---|
 | Immigration with visible approach | ✅ | `SettlementTick.jsx` §3 (APPROACHING state, attractiveness threshold). |
 | NPC identity (name, personality, appearance) | ✅ | `data/npcIdentity.js`, `npcNames.js`. |
-| Zone designation: mining, stockpile, **farming, building** | 🟡 | Only **Mining** and **Stockpile** are offered (`ZoneHotbar.jsx`). Farming/building zone logic exists only in the unconnected settlement module. |
+| Zone designation: mining, stockpile, **farming, building** | 🟡 | Mining, Stockpile and Farm (2026-11-15: Farm Plot building + farm zone, settlers plant/harvest vegetables, unattended trickle) are offered. No BUILDING zone yet. |
 | Autonomous mining | ✅ | `MiningZoneScanner.js` + work loop. |
 | Hauling mine → stockpile → construction | ✅ | `WORKING_HAUL` / `haulPhase` in `SettlementTick.jsx`. |
 | Stockpiles | ✅ | `zone.storage` with capacity; `StockpilePanel.jsx`. (Map-based, not slot-based as the plan specified.) |

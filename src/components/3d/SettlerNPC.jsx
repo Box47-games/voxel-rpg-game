@@ -46,6 +46,7 @@ const STATUS_COLORS = {
   WORKING_MINE: '#ff8c00',
   WORKING_HAUL: '#ffcc00',
   WORKING_BUILD: '#4488ff',
+  WORKING_FARM: '#44cc44',
   EVALUATING: '#00ccff',
   SOCIALIZING: '#ff88ff',
   LEAVING: '#ff4444',
@@ -272,6 +273,11 @@ const SettlerNPC = React.memo(({ npcData }) => {
       // Right arm taps forward (hammer motion)
       if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(time * 4) * 0.6;
       if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
+    } else if (npc.state === 'WORKING_FARM') {
+      // Both arms swing low and slow (hoeing / picking)
+      const hoe = Math.sin(time * 3) * 0.5 - 0.4;
+      if (rightArmRef.current) rightArmRef.current.rotation.x = hoe;
+      if (leftArmRef.current) leftArmRef.current.rotation.x = hoe;
     } else if (npc.state === 'WORKING_HAUL' && npc.carryingItem) {
       // Both arms angled forward ~45deg
       if (leftArmRef.current) leftArmRef.current.rotation.x = -0.8;

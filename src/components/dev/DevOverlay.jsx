@@ -420,6 +420,8 @@ function SettlementTab({ state }) {
     ['NPC working', npcs.some((n) => n.state?.startsWith('WORKING_'))],
     ['Mining zone placed', zones.some((z) => z.type === 'MINING')],
     ['Stockpile zone placed', zones.some((z) => z.type === 'STOCKPILE')],
+    ['Farm zone placed', zones.some((z) => z.type === 'FARMING')],
+    ['Crop planted', zones.some((z) => z.farmTiles?.some((t) => t.plantedAt != null))],
     ['Construction site placed', constructionSites.length > 0],
     ['Building completed', constructionSites.some((c) => c.status === 'COMPLETE')],
     [`Pop cap respected (≤ ${popCap})`, npcs.length <= popCap],

@@ -4,7 +4,7 @@
  * Module-level singleton Map<taskId, Task> — NOT stored in Zustand.
  * Rebuilt from zone/construction state every WORK_SCAN_INTERVAL.
  *
- * Task types: MINE, HAUL, BUILD
+ * Task types: MINE, HAUL, BUILD, FARM (plant or harvest one farm tile)
  */
 
 import {
@@ -12,7 +12,9 @@ import {
   NPC_DISTANCE_WEIGHT,
   NPC_PRIORITY_WEIGHT,
   NPC_JOB_PREF_BONUS,
+  MAX_FARMERS_PER_ZONE,
 } from '../../data/tuning';
+import { getActiveFarms, getTileStage, TileStage } from '../../modules/settlement/farming';
 
 // ── Task Registry (module-level singleton) ──
 const _tasks = new Map();
@@ -27,18 +29,21 @@ const TASK_SKILL = {
   MINE: 'mining',
   HAUL: 'gathering',
   BUILD: 'building',
+  FARM: 'gathering',
 };
 
 const TASK_JOB = {
   MINE: 'miner',
   HAUL: 'gatherer',
   BUILD: 'builder',
+  FARM: 'farmer',
 };
 
 /**
  * Rebuild the task list from current zone + construction state.
+ * Farm tasks need the world time (crop growth); without it they are skipped.
  */
-export function scanForTasks(zones, constructionSites, chunkManager) {
+export function scanForTasks(zones, constructionSites, chunkManager, worldTimeElapsed) {
   // Keep track of existing claimed tasks so we don't lose assignments
   const claimedTasks = new Map();
   for (const [id, task] of _tasks) {
@@ -121,6 +126,34 @@ export function scanForTasks(zones, constructionSites, chunkManager) {
     }
   }
 
+  // ── FARM tasks: plant empty tiles, harvest ripe ones ──
+  if (worldTimeElapsed != null) {
+    for (const zone of getActiveFarms(zones, constructionSites)) {
+      zone.farmTiles.forEach((tile, i) => {
+        const stage = getTileStage(tile, worldTimeElapsed);
+        if (stage === TileStage.GROWING) return;
+        const farmAction = stage === TileStage.READY ? 'HARVEST' : 'PLANT';
+        const key = `FARM:${zone.id}:${i}:${farmAction}`;
+        const existing = claimedTasks.get(key);
+        const id = existing ? existing.id : makeTaskId();
+        _tasks.set(id, {
+          id,
+          type: 'FARM',
+          farmAction,
+          zoneId: zone.id,
+          siteId: null,
+          position: [tile.x, tile.y, tile.z],
+          blockType: null,
+          material: null,
+          amount: 0,
+          claimedBy: existing ? existing.claimedBy : null,
+          priority: farmAction === 'HARVEST' ? 2 : 1,
+          _tileIndex: i,
+        });
+      });
+    }
+  }
+
   // ── BUILD tasks: construction sites in BUILDING status ──
   for (const site of constructionSites) {
     if (site.status !== 'BUILDING') continue;
@@ -147,6 +180,7 @@ function taskKey(task) {
   if (task.type === 'MINE') return `MINE:${task.position[0]},${task.position[1]},${task.position[2]}`;
   if (task.type === 'HAUL') return `HAUL:${task.siteId}:${task.material}`;
   if (task.type === 'BUILD') return `BUILD:${task.siteId}`;
+  if (task.type === 'FARM') return `FARM:${task.zoneId}:${task._tileIndex}:${task.farmAction}`;
   return task.id;
 }
 
@@ -160,9 +194,11 @@ export function findBestTask(npc) {
   const npcPos = npc.position || [0, 0, 0];
   const npcSkills = npc.skills || {};
   const npcJob = npc.preferredJob || '';
+  const farmers = countFarmersByZone();
 
   for (const task of _tasks.values()) {
     if (task.claimedBy) continue;
+    if (task.type === 'FARM' && (farmers.get(task.zoneId) || 0) >= MAX_FARMERS_PER_ZONE) continue;
 
     const requiredSkill = TASK_SKILL[task.type] || 'gathering';
     const skillMatch = npcSkills[requiredSkill] || 0.3;
@@ -185,6 +221,21 @@ export function findBestTask(npc) {
   }
 
   return bestTask;
+}
+
+/** Settlers currently working each farm zone (claimed FARM tasks). */
+function countFarmersByZone() {
+  const counts = new Map();
+  for (const task of _tasks.values()) {
+    if (task.type !== 'FARM' || !task.claimedBy) continue;
+    counts.set(task.zoneId, (counts.get(task.zoneId) || 0) + 1);
+  }
+  return counts;
+}
+
+/** Whether any settler is farming this zone right now. */
+export function isZoneBeingFarmed(zoneId) {
+  return (countFarmersByZone().get(zoneId) || 0) > 0;
 }
 
 /**

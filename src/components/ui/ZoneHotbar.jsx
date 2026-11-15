@@ -13,6 +13,7 @@ const DELETE_TYPE = '__DELETE__';
 const ZONE_BUTTONS = [
   { type: ZoneType.MINING, label: 'Mining', icon: '\u26CF' },
   { type: ZoneType.STOCKPILE, label: 'Stockpile', icon: '\uD83D\uDCE6' },
+  { type: ZoneType.FARMING, label: 'Farm', icon: '\uD83C\uDF31' },
   { type: DELETE_TYPE, label: 'Delete', icon: '\uD83D\uDDD1' },
 ];
 

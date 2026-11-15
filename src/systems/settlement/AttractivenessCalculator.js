@@ -35,7 +35,7 @@ const STRUCTURAL_BLOCKS = new Set([
 ]);
 
 // Food materials in inventory
-const FOOD_MATERIALS = ['berry', 'meat'];
+const FOOD_MATERIALS = ['berry', 'vegetable', 'meat'];
 
 /**
  * Calculate settlement attractiveness score.

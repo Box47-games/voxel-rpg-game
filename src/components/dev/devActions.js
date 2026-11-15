@@ -12,7 +12,7 @@ export const DEV_SAVE_SLOT = 'dev-quicksave';
 
 const DEV_MATERIALS = [
   'wood', 'stone', 'dirt', 'sand', 'clay', 'coal', 'iron', 'gold_ore',
-  'snow', 'ice', 'berry', 'meat', 'fiber', 'leather', 'bone', 'crystal',
+  'snow', 'ice', 'berry', 'vegetable', 'meat', 'fiber', 'leather', 'bone', 'crystal',
 ];
 
 let _devEnemyCounter = 0;

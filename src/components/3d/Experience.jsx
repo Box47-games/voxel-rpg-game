@@ -30,6 +30,7 @@ import Companion from './Companion';
 import CompanionController from './CompanionController';
 import WeatherEffects from './WeatherEffects';
 import StockpileVisual from './StockpileVisual';
+import FarmVisual from './FarmVisual';
 import BuildingPlacement from './BuildingPlacement';
 import ConstructionVisual from './ConstructionVisual';
 import ConstructionTick from './ConstructionTick';
@@ -341,6 +342,9 @@ const Experience = () => {
 
       {/* Stockpile visual crates (Phase 2.3) */}
       <StockpileVisual chunkManager={isReady ? chunkManager : null} />
+
+      {/* Farm soil and crops */}
+      <FarmVisual />
 
       {/* Construction system (Phase 2.4) */}
       <BuildingPlacement chunkManager={isReady ? chunkManager : null} />

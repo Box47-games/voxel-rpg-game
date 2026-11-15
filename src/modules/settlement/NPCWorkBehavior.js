@@ -9,7 +9,7 @@
  *
  * Each function mutates the `updates` object for the NPC being ticked.
  *
- * Seam for new work types (guard, farm, ...): add a task type to the task
+ * Seam for new work types (guard, ...): add a task type to the task
  * registry, a WORKING_* entry in WORK_STATE_BY_TASK_TYPE, and a tick function
  * in WORK_STATE_TICKERS.
  */
@@ -37,18 +37,25 @@ import {
   NPC_SKILL_GROWTH,
   NPC_WORK_SKILL_FALLBACK,
   NPC_SKILL_GROWTH_BASE,
+  FARM_PLANT_TIME,
+  FARM_HARVEST_TIME,
+  FARM_HARVEST_YIELD,
+  FARM_CROP_MATERIAL,
 } from '../../data/tuning';
+import { getTileStage, TileStage, withTile } from './farming';
 
 const WORK_STATE_BY_TASK_TYPE = {
   MINE: 'WORKING_MINE',
   HAUL: 'WORKING_HAUL',
   BUILD: 'WORKING_BUILD',
+  FARM: 'WORKING_FARM',
 };
 
 const THOUGHT_BY_TASK_TYPE = {
   MINE: 'mining',
   HAUL: 'hauling',
   BUILD: 'building',
+  FARM: 'farming',
 };
 
 function workStateFor(task) {
@@ -218,8 +225,8 @@ function goIdleFromHaul(updates) {
   updates.haulPhase = null;
 }
 
-/** Put mined drops in the first stockpile with free space, else the player's inventory. */
-function depositDrops(drops, ctx) {
+/** Put drops in the first stockpile with free space, else the player's inventory. */
+export function depositDrops(drops, ctx) {
   const { host } = ctx;
   // Fresh zones: an earlier NPC in this same tick may have filled a stockpile.
   for (const zone of host.getZones()) {
@@ -406,10 +413,58 @@ function tickBuild(npc, tickDelta, updates, ctx) {
   return true;
 }
 
+/**
+ * Plant an empty farm tile or harvest a ripe one. The tile is re-checked
+ * against the live zone: if someone else got there first, the task just ends.
+ * @returns {boolean} True if a task was completed
+ */
+function tickFarm(npc, tickDelta, updates, ctx) {
+  const task = getTask(npc.currentTaskId);
+  if (!task) {
+    goIdle(updates);
+    return false;
+  }
+
+  if (distanceTo(npc, task.position) > NPC_WORK_RANGE) {
+    updates.targetPosition = [...task.position];
+    return false;
+  }
+
+  const harvesting = task.farmAction === 'HARVEST';
+  const skill = npc.skills?.gathering || NPC_WORK_SKILL_FALLBACK;
+  const duration = (harvesting ? FARM_HARVEST_TIME : FARM_PLANT_TIME) / skill;
+  const wt = (npc.workTimer || 0) + tickDelta;
+  updates.workTimer = wt;
+  if (wt < duration) return false;
+
+  const elapsed = ctx.worldTimeElapsed;
+  const zone = ctx.host.getZones().find((z) => z.id === task.zoneId);
+  const tile = zone?.farmTiles?.[task._tileIndex];
+  if (tile) {
+    const stage = getTileStage(tile, elapsed);
+    if (harvesting && stage === TileStage.READY) {
+      ctx.host.updateZone(zone.id, {
+        farmTiles: withTile(zone.farmTiles, task._tileIndex, { plantedAt: null, collectedAt: null }),
+      });
+      depositDrops([{ material: FARM_CROP_MATERIAL, amount: FARM_HARVEST_YIELD }], ctx);
+    } else if (!harvesting && stage === TileStage.EMPTY) {
+      ctx.host.updateZone(zone.id, {
+        farmTiles: withTile(zone.farmTiles, task._tileIndex, { plantedAt: elapsed, collectedAt: null }),
+      });
+    }
+  }
+
+  completeTask(npc.currentTaskId);
+  growSkill(npc, updates, 'gathering');
+  goIdle(updates);
+  return true;
+}
+
 const WORK_STATE_TICKERS = {
   WORKING_MINE: tickMine,
   WORKING_HAUL: tickHaul,
   WORKING_BUILD: tickBuild,
+  WORKING_FARM: tickFarm,
 };
 
 /** @returns {boolean} Whether `state` is a work state handled by tickWorkState */

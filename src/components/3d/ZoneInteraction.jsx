@@ -17,6 +17,7 @@ import { isSolid } from '../../systems/chunks/blockTypes';
 import { createZone, ZONE_COLORS } from '../../data/zoneTypes';
 import { ZONE_MAX_COUNT, ZONE_MAX_SIDE_VOXELS, ZONE_MIN_SIDE_VOXELS } from '../../data/tuning';
 import { scanMiningZone } from '../../systems/settlement/MiningZoneScanner';
+import { createFarmTiles, getFarmZoneProblem } from '../../modules/settlement/farming';
 
 function getTerrainY(chunkManager, wx, wz) {
   if (!chunkManager) return 2;
@@ -144,6 +145,16 @@ export default function ZoneInteraction({ chunkManager }) {
       return;
     }
 
+    if (store.zoneTypeToPlace === 'FARMING') {
+      const problem = getFarmZoneProblem({ minX, minZ, maxX, maxZ }, store.constructionSites);
+      if (problem) {
+        store.addPickupText(problem, '#ff4444');
+        store.clearZoneDrag();
+        setPreviewEnd(null);
+        return;
+      }
+    }
+
     // The store owns zones (it is what renders and what gets saved). The
     // settlement engine reads them from there each tick.
     const zone = createZone({
@@ -156,6 +167,10 @@ export default function ZoneInteraction({ chunkManager }) {
       const miningTasks = scanMiningZone(zone.bounds, chunkManager);
       store.updateZone(zone.id, { miningTasks });
       store.addPickupText(`Mining Zone created (${miningTasks.length} blocks)`, '#ff8c00');
+    } else if (zone.type === 'FARMING') {
+      const farmTiles = createFarmTiles(zone.bounds, (x, z) => getTerrainY(chunkManager, x, z));
+      store.updateZone(zone.id, { farmTiles });
+      store.addPickupText(`Farm created (${farmTiles.length} plots)`, '#44cc44');
     } else if (zone.type === 'STOCKPILE') {
       store.addPickupText(`Stockpile created (${zone.storage.capacity} capacity)`, '#4488ff');
     } else {

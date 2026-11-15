@@ -7,7 +7,7 @@ import {
   compareStatsWithItem,
   formatStatDifference,
 } from '../utils/EquipmentStatsIntegration';
-import { FOOD_BERRY_RESTORE, FOOD_RAW_MEAT_RESTORE, FOOD_BERRY_HEAL, FOOD_RAW_MEAT_HEAL } from '../data/tuning';
+import { FOOD_BERRY_RESTORE, FOOD_RAW_MEAT_RESTORE, FOOD_BERRY_HEAL, FOOD_RAW_MEAT_HEAL, FOOD_VEGETABLE_RESTORE, FOOD_VEGETABLE_HEAL } from '../data/tuning';
 
 /**
  * Material definitions - icons and display names for harvested materials
@@ -22,12 +22,14 @@ const MATERIAL_INFO = {
   herb: { icon: '🌿', name: 'Herbs', color: '#90EE90' },
   meat: { icon: '🍖', name: 'Meat', color: '#DC143C' },
   berry: { icon: '🫐', name: 'Berries', color: '#9370DB' },
+  vegetable: { icon: '🥕', name: 'Vegetables', color: '#FF8C00' },
   mushroom: { icon: '🍄', name: 'Mushrooms', color: '#FF6347' },
 };
 
 /** Materials the player can eat directly from inventory */
 const EDIBLE_MATERIALS = {
   berry: { restore: FOOD_BERRY_RESTORE, heal: FOOD_BERRY_HEAL, label: 'Eat' },
+  vegetable: { restore: FOOD_VEGETABLE_RESTORE, heal: FOOD_VEGETABLE_HEAL, label: 'Eat' },
   meat: { restore: FOOD_RAW_MEAT_RESTORE, heal: FOOD_RAW_MEAT_HEAL, label: 'Eat Raw' },
 };
 

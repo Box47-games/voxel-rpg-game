@@ -27,6 +27,7 @@ const ACTIVITY_LABELS = {
   SOCIALIZING: 'Chatting with neighbours',
   WORKING_MINE: 'Mining',
   WORKING_BUILD: 'Building',
+  WORKING_FARM: 'Tending the farm',
   LEAVING: 'Leaving the settlement',
 };
 
