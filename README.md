@@ -1,6 +1,6 @@
-# Voxel RPG Game
+# Riftholm
 
-A browser-based settlement management game built with React. Build your settlement, manage resources, and grow your population in this strategic simulation game.
+A browser-based voxel settlement survival RPG built with React Three Fiber. Carve the land, raise a settlement, and close the rifts.
 
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)]()
 [![Version](https://img.shields.io/badge/version-1.0-blue)]()
@@ -67,9 +67,9 @@ npm run build
 
 ## 🎯 Game Overview
 
-### What is Voxel RPG Game?
+### What is Riftholm?
 
-Voxel RPG Game is a **settlement management simulation** where you:
+Riftholm is a **settlement management simulation** where you:
 
 1. **Start with nothing** - Begin in the Survival tier with minimal resources
 2. **Build your settlement** - Place buildings strategically on a grid

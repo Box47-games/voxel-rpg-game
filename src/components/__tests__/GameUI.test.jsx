@@ -19,7 +19,7 @@ describe('Start screen', () => {
   test('Start Game begins play and unpauses the world', async () => {
     render(<GameUI />);
     expect(screen.getByTestId('start-screen')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/voxel\s*rpg/i);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/rift\s*holm/i);
     expect(screen.getByRole('region', { name: 'Controls' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /continue/i })).toBeNull();
 

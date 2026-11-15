@@ -52,45 +52,17 @@ function formatSavedAt(iso) {
     : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-/** A grass block, drawn isometrically. */
-export function GrassBlockMark({ size = 64 }) {
+/** The Riftholm mark: the app icon's rift island without its background. */
+export function RiftMark({ size = 64 }) {
   return (
-    <svg
+    <img
       className="start-screen__mark"
-      width={size}
+      src={`${import.meta.env.BASE_URL}icons/rift-mark.svg`}
+      width={Math.round((size * 344) / 368)}
       height={size}
-      viewBox="0 0 64 64"
-      shapeRendering="crispEdges"
-      aria-hidden="true"
-    >
-      {/* dirt sides */}
-      <polygon points="4,18 32,32 32,62 4,48" fill="#7a4e2c" />
-      <polygon points="60,18 60,48 32,62 32,32" fill="#5e3b20" />
-      {/* grass overhang */}
-      <polygon points="4,18 32,32 32,40 4,26" fill="#4f9a34" />
-      <polygon points="60,18 60,26 32,40 32,32" fill="#3c7c27" />
-      {/* drips */}
-      <polygon points="10,25 14,27 14,31 10,29" fill="#4f9a34" />
-      <polygon points="22,31 26,33 26,36 22,34" fill="#4f9a34" />
-      <polygon points="42,33 46,31 46,35 42,37" fill="#3c7c27" />
-      <polygon points="52,28 56,26 56,29 52,31" fill="#3c7c27" />
-      {/* top */}
-      <polygon points="32,4 60,18 32,32 4,18" fill="#6cbf4a" />
-      <polygon points="32,4 46,11 32,18 18,11" fill="#7fd05a" />
-      {/* specks */}
-      <rect x="12" y="38" width="3" height="3" fill="#5e3b20" />
-      <rect x="22" y="46" width="3" height="3" fill="#94653d" />
-      <rect x="44" y="44" width="3" height="3" fill="#4a2e18" />
-      <rect x="50" y="36" width="3" height="3" fill="#7a4e2c" />
-      {/* outline */}
-      <polygon
-        points="32,4 60,18 60,48 32,62 4,48 4,18"
-        fill="none"
-        stroke="#06080d"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
+      alt=""
+      draggable={false}
+    />
   );
 }
 
@@ -157,10 +129,10 @@ const StartScreen = ({ isMobile = false }) => {
 
       <main className="start-screen__menu">
         <header className="start-screen__brand">
-          <GrassBlockMark size={isMobile ? 52 : 76} />
+          <RiftMark size={isMobile ? 64 : 96} />
           <h1 className="start-screen__title">
-            <span className="start-screen__title-top">Voxel</span>
-            <span className="start-screen__title-bottom">RPG</span>
+            <span className="start-screen__title-top">Rift</span>
+            <span className="start-screen__title-bottom">holm</span>
           </h1>
         </header>
         <p className="start-screen__tagline">Carve the land. Raise a settlement. Close the rifts.</p>
