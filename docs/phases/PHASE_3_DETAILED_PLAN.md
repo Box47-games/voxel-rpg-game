@@ -569,6 +569,14 @@ Resolved November 15, 2026 (the proposed defaults were accepted):
 6. **Map scope (3.8.3)** — a rift list in the pause menu now; a real map in Phase 5.
 7. **Companion in combat** — out of Phase 3. Consider pulling the companion rescue arc forward as its own mini-phase afterwards.
 
+Resolved November 16, 2026 (the former open questions; proposed answers accepted):
+
+8. **Friendly fire** — no in Phase 3: player spells and attacks never hurt settlers, and area spells skip them. Build this into the 3.0.2 damage path.
+9. **Loot from raids** — goblins that steal from stockpiles drop what they stole when killed.
+10. **Peaceful builder mode** (no raids, no resurgence) — Phase 5.
+11. **Guard equipment** — guards' weapons wear like tools (`systems/tools/toolDurability.js`: wear per hit, broken = unarmed, repairable).
+12. **Recruitment** — Phase 5, with trade caravans.
+
 ---
 
 ## Before Starting
@@ -577,20 +585,19 @@ Checks to finish before 3.0.2 (tracked in the Phase 3 prep work):
 
 - [x] Resolve the decisions above
 - [x] Bring this plan, the Phase 2 plan and the roadmap audit up to date
-- [ ] Land the major dependency upgrades (Vitest 5, ESLint 10, lucide-react 1.x) so they don't land mid-phase
-- [ ] Play the full Phase 2 loop in a browser in one session (campfire → settlers → zones → mine → haul → build → housing → night routine), plus the 3.0.1 rift save/load check
-- [ ] Record a performance baseline with many enemies and settlers after the art pass (every character is now a skinned mesh), and add a dev-overlay stress test so it can be re-measured on real hardware
+- [x] Land the major dependency upgrades (Vitest 5, lucide-react 1.x, three r187, Playwright 1.65). ESLint stays on 9: `eslint-plugin-react` doesn't support 10 yet (Dependabot ignores ≥10)
+- [x] Play the full Phase 2 loop in a browser in one session, plus the 3.0.1 rift save/load check: 15/15 after fixing attractiveness, campfire detection and crop planting; settler hunger rebalanced
+- [x] Record a performance baseline with many enemies and settlers, with a dev-overlay stress test (`docs/research/PERFORMANCE_BASELINE.md`): enemies cost about 1 ms each on the main thread, so profile `Enemy.jsx` first
+- [ ] Optional: re-measure the stress test on a mid-range laptop and a phone (GPU time)
+
+Also landed since: shelter perks, tool durability and repair (no wooden tools), the new rift and corruption art, voxel loot, and walkable construction scaffolding.
 
 ---
 
 ## Open Questions
 
-1. **Friendly fire** (carried from Phase 2): can player spells hurt NPCs? Proposed: no in Phase 3; AOE spells skip NPCs.
-2. **Loot from raids:** should goblins that steal from stockpiles drop the stolen items when killed? (Proposed: yes — gives a reason to chase.)
-3. **Difficulty settings:** a "peaceful builder" toggle (no raids, no resurgence) fits the Choose pillar — Phase 3 or Phase 5?
-4. **Guard equipment:** do guards consume weapon durability (tool durability isn't implemented yet either)?
-5. **Recruitment** (carried from Phase 2): defer to Phase 5 trade caravans.
+None: all resolved (Decisions 8–12).
 
 ---
 
-**Next:** finish [Before Starting](#before-starting), then begin with 3.0.2 (combat targets & one damage path) — every later task routes damage through it.
+**Next:** begin with 3.0.2 (combat targets & one damage path, no friendly fire) — every later task routes damage through it. Profile the per-enemy cost early.
