@@ -59,10 +59,10 @@ describe('BuildCatalog (B)', () => {
     expect(s().activeBuildingCatalog).toBe(false);
   });
 
-  test('opening it leaves zone mode; the tab is remembered', () => {
-    act(() => s().enterMode('zone'));
+  test('it opens over plan mode; the tab is remembered', () => {
+    act(() => s().enterMode('plan'));
     act(() => s().openCatalog('buildings'));
-    expect(s().zoneMode).toBe(false);
+    expect([s().planMode, s().activeBuildingCatalog]).toEqual([true, true]);
     act(() => s().closePanels());
     act(() => s().togglePanel('buildings'));
     expect(s().catalogTab).toBe('buildings');

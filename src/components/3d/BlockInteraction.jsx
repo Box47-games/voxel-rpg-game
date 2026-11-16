@@ -469,7 +469,7 @@ export function BlockInteraction({ chunkManager }) {
   const prevTargetRef = useRef({ block: null, face: null });
 
   // Update raycast every few frames (first-person mode OR third-person build mode)
-  const zoneMode = useGameStore((state) => state.zoneMode);
+  const zoneMode = useGameStore((state) => state.zoneMode || state.planMode); // planning: no mining or placing
 
   // Desktop: mining and placing are always on in Play (no build mode needed).
   // Touch still uses build mode until the context button replaces long-press.
@@ -938,7 +938,7 @@ export function BlockInteraction({ chunkManager }) {
                 store.setSpellCooldown('__melee__', MELEE_COOLDOWN);
               }
             }
-          } else if (!store.zoneMode && !store.placingBuildingId) {
+          } else if (!store.zoneMode && !store.planMode && !store.placingBuildingId) {
             // Not an enemy: start mining the targeted block (hold to break)
             isHoldingMine.current = true;
             miningAccum.current = 0;
@@ -946,7 +946,7 @@ export function BlockInteraction({ chunkManager }) {
           }
         } else if (event.button === 2) {
           // Place only with a block in hand (the empty hand places nothing)
-          if (store.selectedBlockType == null || store.zoneMode || store.placingBuildingId) return;
+          if (store.selectedBlockType == null || store.zoneMode || store.planMode || store.placingBuildingId) return;
           // Right click: place block — do a fresh raycast to get current target
           const freshResult = raycastForBlock();
           if (freshResult.block && freshResult.face) {
@@ -1010,7 +1010,7 @@ export function BlockInteraction({ chunkManager }) {
 
       // Mining and placing work in Play; not while zoning or placing a building
       const st = useGameStore.getState();
-      if (st.zoneMode || st.placingBuildingId) return;
+      if (st.zoneMode || st.planMode || st.placingBuildingId) return;
 
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;

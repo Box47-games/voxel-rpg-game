@@ -120,6 +120,16 @@ function BuildingCard({ building, materials, onPlace }) {
   );
 }
 
+/** Placing a building happens in plan mode (raised camera); afterwards you keep planning. */
+function placeFromCatalog(id) {
+  const st = useGameStore.getState();
+  if (!st.planMode) {
+    if (document.pointerLockElement) document.exitPointerLock();
+    st.enterMode('plan');
+  }
+  useGameStore.getState().startPlacingBuilding(id);
+}
+
 export default function BuildCatalog() {
   const isOpen = useGameStore((s) => s.activeBuildingCatalog);
   const tab = useGameStore((s) => s.catalogTab);
@@ -197,7 +207,7 @@ export default function BuildCatalog() {
                   key={b.id}
                   building={b}
                   materials={materials}
-                  onPlace={(id) => st().startPlacingBuilding(id)}
+                  onPlace={placeFromCatalog}
                 />
               ))}
             </div>
@@ -212,7 +222,7 @@ export default function BuildCatalog() {
 
         <footer className="bc-footer">
           {tab === 'buildings'
-            ? 'Pick a blueprint, then click the ground to place it. Settlers build it.'
+            ? 'Pick a blueprint to place it from the plan view (P). Settlers build it.'
             : `Pick a block to hold it, then ${isTouchDevice() ? 'tap' : 'right-click'} to place. Corner number: how many you can afford.`}
           <span className="bc-footer__keys">
             <kbd className="vx-key">B</kbd> / <kbd className="vx-key">Esc</kbd>{' '}

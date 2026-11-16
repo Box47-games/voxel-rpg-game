@@ -39,13 +39,15 @@ describe('modes and panels', () => {
     expect(s().openPanel).toBeNull();
   });
 
-  test('entering a mode closes panels; opening a panel cancels zoning and placement', () => {
+  test('entering a mode closes panels; opening a panel cancels placement', () => {
     s().togglePanel('inventory');
     s().enterMode('build');
     expect(s().openPanel).toBeNull();
-    s().enterMode('zone');
-    s().togglePanel('crafting');
-    expect(s().zoneMode).toBe(false);
+    s().enterMode('zone'); // Z is an alias for plan mode
+    expect([s().planMode, s().zoneMode, s().buildMode]).toEqual([true, true, false]);
+    s().togglePanel('crafting'); // panels open over plan mode
+    expect([s().planMode, s().zoneMode, s().openPanel]).toEqual([true, true, 'crafting']);
+    s().enterMode('play');
     s().startPlacingBuilding('wooden_shelter');
     expect([s().buildMode, s().zoneMode, s().openPanel]).toEqual([false, false, null]);
     s().togglePanel('inventory');
@@ -69,5 +71,35 @@ describe('modes and panels', () => {
     useGameStore.setState({ activeNPCId: 'npc_1' });
     expect(s().backOut()).toBe(true);
     expect(s().activeNPCId).toBeNull();
+  });
+
+  test('plan mode: P toggles; placing a building and backing out returns to the zone tool', () => {
+    s().enterMode('plan');
+    expect([s().planMode, s().zoneMode, s().zoneTypeToPlace]).toEqual([true, true, 'MINING']);
+    s().setZoneMode(true, 'FARMING');
+    s().startPlacingBuilding('farm_plot');
+    expect([s().planMode, s().zoneMode, s().placingBuildingId]).toEqual([true, false, 'farm_plot']);
+    s().placeConstructionSite('farm_plot', [0, 0, 0], {}, 3);
+    expect([s().planMode, s().zoneMode, s().zoneTypeToPlace, s().placingBuildingId]).toEqual([true, true, 'FARMING', null]);
+    s().startPlacingBuilding('farm_plot');
+    expect(s().backOut()).toBe(true); // cancels the placement, still planning
+    expect([s().planMode, s().zoneMode]).toEqual([true, true]);
+    expect(s().backOut()).toBe(true); // leaves plan mode
+    expect([s().planMode, s().zoneMode]).toEqual([false, false]);
+    s().enterMode('plan');
+    s().enterMode('plan'); // same key again: back to play
+    expect(s().planMode).toBe(false);
+  });
+
+  test('placing a building outside plan mode does not start zoning afterwards', () => {
+    s().startPlacingBuilding('farm_plot');
+    s().cancelPlacingBuilding();
+    expect([s().planMode, s().zoneMode]).toEqual([false, false]);
+  });
+
+  test('entering plan mode leaves first person', () => {
+    s().updateCamera({ firstPerson: true });
+    s().enterMode('plan');
+    expect(s().camera.firstPerson).toBe(false);
   });
 });

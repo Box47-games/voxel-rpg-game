@@ -21,6 +21,7 @@ const DESKTOP_CONTROLS = [
   [['1–0'], 'Pick block'],
   [['Right-click'], 'Place block'],
   [['B'], 'Build catalog'],
+  [['P'], 'Plan settlement'],
   [['Right-drag'], 'Look around'],
   [['Q'], 'Spell wheel'],
   [['E'], 'Interact'],

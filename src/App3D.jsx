@@ -4,7 +4,7 @@ import Experience from './components/3d/Experience';
 import GameUI from './components/GameUI';
 import SpellWheel from './components/SpellWheel';
 import BlockHotbar from './components/ui/BlockHotbar';
-import ZoneHotbar from './components/ui/ZoneHotbar';
+import PlanHUD from './components/ui/PlanHUD';
 import Crosshair from './components/ui/Crosshair';
 import ContextualHints from './components/ContextualHints';
 import StockpilePanel from './components/ui/StockpilePanel';
@@ -83,7 +83,7 @@ function App3D() {
       <BlockHotbar />
 
       {/* Zone type selection hotbar */}
-      <ZoneHotbar />
+      <PlanHUD />
 
       {/* Stockpile deposit/withdraw panel */}
       <StockpilePanel />

@@ -53,7 +53,9 @@ const shortcuts = {
       { key: '1 \u2013 0', description: 'Pick a block (press again for empty hand)' },
       { key: 'Right-click', description: 'Place the picked block' },
       { key: 'Tab', description: 'Toggle build mode' },
-      { key: 'Z', description: 'Toggle zone mode' },
+      { key: 'P', description: 'Plan mode: zones and buildings from above (Z also works)' },
+      { key: '1 \u2013 9 (plan)', description: 'Pick a zone tool or blueprint' },
+      { key: 'Wheel (plan)', description: 'Raise or lower the plan camera' },
       { key: 'B', description: 'Build catalog: blocks and buildings (1 / 2 switch tabs)' },
       { key: 'N', description: 'Settlement dashboard' },
       { key: 'Delete', description: 'Delete selected building' },
@@ -74,7 +76,6 @@ const shortcuts = {
   gameControls: {
     title: 'Game Controls',
     keys: [
-      { key: 'P', description: 'Pause / Resume' },
       { key: '[', description: 'Decrease game speed' },
       { key: ']', description: 'Increase game speed' },
       { key: 'F10', description: 'Pause menu (save / load)' },

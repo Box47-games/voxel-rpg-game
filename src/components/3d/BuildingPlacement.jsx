@@ -1,9 +1,11 @@
 /**
  * BuildingPlacement — Ghost preview + click-to-place for construction sites.
  *
- * Active when placingBuildingId !== null. Raycasts from camera center to
- * find terrain surface, renders translucent building preview, validates
- * placement, and commits on click.
+ * Active when placingBuildingId !== null. Raycasts from the cursor (or the
+ * screen centre in first person) to find the terrain surface, renders a
+ * translucent preview, validates placement, and commits on click.
+ * Touch: tap to move the preview there, tap the same spot again to place.
+ * Right-click (without dragging the camera) cancels.
  */
 
 import React, { useRef, useMemo, useEffect } from 'react';
@@ -16,6 +18,9 @@ import { isSolid } from '../../systems/chunks/blockTypes';
 import { getBlockColor } from '../../systems/chunks/blockTypes';
 
 const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
+const MAX_RAY_DISTANCE = 160;
+const DRAG_PX = 8; // more movement than this is a camera drag, not a click
+const RETAP_PX = 40; // touch: a second tap this close to the first confirms
 
 export default function BuildingPlacement({ chunkManager }) {
   const { camera, gl } = useThree();
@@ -27,6 +32,10 @@ export default function BuildingPlacement({ chunkManager }) {
   const positionRef = useRef([0, 0, 0]);
   const validRef = useRef(false);
   const rayDir = useRef(new THREE.Vector3());
+  const raycaster = useRef(new THREE.Raycaster());
+  // Screen point the preview follows (NDC); null = screen centre
+  const pointerNdc = useRef(null);
+  const lastTap = useRef(null);
 
   const building = useMemo(() => placingBuildingId ? getBuildingById(placingBuildingId) : null, [placingBuildingId]);
   const blocks = useMemo(() => building ? parseLayers(building) : [], [building]);
@@ -44,13 +53,19 @@ export default function BuildingPlacement({ chunkManager }) {
   useFrame(() => {
     if (!building || !chunkManager || !previewRef.current) return;
 
-    camera.getWorldDirection(rayDir.current);
-    const origin = camera.position;
-    const dir = rayDir.current;
+    let origin = camera.position;
+    let dir = rayDir.current;
+    if (pointerNdc.current && !document.pointerLockElement) {
+      raycaster.current.setFromCamera(pointerNdc.current, camera);
+      origin = raycaster.current.ray.origin;
+      dir = raycaster.current.ray.direction;
+    } else {
+      camera.getWorldDirection(dir);
+    }
 
-    // Step along ray to find first solid block
+    // Step along ray to find first solid block (long enough for the raised plan camera)
     let foundPos = null;
-    for (let dist = 0; dist < 50; dist += 0.5) {
+    for (let dist = 0; dist < MAX_RAY_DISTANCE; dist += 0.5) {
       const cx = origin.x + dir.x * dist;
       const cy = origin.y + dir.y * dist;
       const cz = origin.z + dir.z * dist;
@@ -139,18 +154,48 @@ export default function BuildingPlacement({ chunkManager }) {
   useEffect(() => {
     if (!placingBuildingId || !chunkManager) return;
 
-    const handleClick = (e) => {
-      if (e.button !== 0) return;
+    const canvas = gl.domElement;
+    const toNdc = (e) => {
+      const r = canvas.getBoundingClientRect();
+      return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 };
+    };
+    const place = () => {
       if (!validRef.current || !building) return;
-
-      const pos = positionRef.current;
-      placeConstructionSite(building.id, [...pos], { ...building.cost }, blocks.length);
+      placeConstructionSite(building.id, [...positionRef.current], { ...building.cost }, blocks.length);
     };
+    let down = null;
 
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-      cancelPlacingBuilding();
+    const handlePointerMove = (e) => {
+      if (e.pointerType === 'mouse') pointerNdc.current = toNdc(e);
     };
+    const handlePointerDown = (e) => {
+      down = { x: e.clientX, y: e.clientY, button: e.button };
+    };
+    const handlePointerUp = (e) => {
+      if (!down) return;
+      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y) > DRAG_PX;
+      const button = down.button;
+      down = null;
+      if (moved) return; // camera drag
+      if (button === 2) {
+        cancelPlacingBuilding();
+        return;
+      }
+      if (button !== 0) return;
+      if (e.pointerType === 'mouse') {
+        place();
+        return;
+      }
+      // Touch / pen: first tap moves the preview, a second tap on the same spot places it
+      const prev = lastTap.current;
+      lastTap.current = { x: e.clientX, y: e.clientY };
+      pointerNdc.current = toNdc(e);
+      if (prev && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < RETAP_PX) {
+        lastTap.current = null;
+        place();
+      }
+    };
+    const handleContextMenu = (e) => e.preventDefault();
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -158,15 +203,19 @@ export default function BuildingPlacement({ chunkManager }) {
       }
     };
 
-    const canvas = gl.domElement;
-    canvas.addEventListener('click', handleClick);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      canvas.removeEventListener('click', handleClick);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
+      lastTap.current = null;
     };
   }, [placingBuildingId, building, blocks, chunkManager, gl, placeConstructionSite, cancelPlacingBuilding]);
 

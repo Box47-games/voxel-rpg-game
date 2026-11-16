@@ -5,7 +5,7 @@
  * HUD layout:
  *  - top left: level/XP and vitals (health, mana, stamina, hunger, rage)
  *  - top right: clock with a day-cycle strip, gold, potions, combat stats
- *  - top center: build/zone mode badge
+ *  - top center: build/plan mode badge
  *  - bottom left: action bar (inventory, crafting, build, zones, settlement)
  * Styles live in GameUI.css on top of the shared styles/voxel-ui.css.
  */
@@ -56,14 +56,9 @@ function pressKey(key) {
   window.dispatchEvent(new KeyboardEvent('keydown', { key }));
 }
 
-function toggleZoneMode() {
-  const store = useGameStore.getState();
-  if (store.zoneMode) {
-    store.setZoneMode(false);
-  } else {
-    if (store.buildMode) store.setBuildMode(false);
-    store.setZoneMode(true, 'MINING');
-  }
+function togglePlanMode() {
+  if (document.pointerLockElement) document.exitPointerLock();
+  useGameStore.getState().enterMode('plan');
 }
 
 /** One square button on the action bar. */
@@ -121,7 +116,7 @@ const GameUI = () => {
   const tool = useGameStore((state) => state.equipment.weapon);
   const worldTime = useGameStore((state) => state.worldTime);
   const buildMode = useGameStore((state) => state.buildMode);
-  const zoneMode = useGameStore((state) => state.zoneMode);
+  const planMode = useGameStore((state) => state.planMode);
   const toggleBuildMode = useGameStore((state) => state.toggleBuildMode);
   const catalogOpen = useGameStore((state) => state.activeBuildingCatalog);
   const [isMobile, setIsMobile] = useState(false);
@@ -144,7 +139,7 @@ const GameUI = () => {
   }
 
   const totalStats = getTotalStats(player, equipment);
-  const inMode = buildMode || zoneMode;
+  const inMode = buildMode || planMode;
   const hidePanelSlots = isMobile && inMode; // save room for the hotbars
   const xpFraction = player.xpToNext > 0 ? Math.min(1, player.xp / player.xpToNext) : 0;
 
@@ -160,11 +155,12 @@ const GameUI = () => {
 
   return (
     <div className={hudClass} data-testid="game-ui">
-      {/* Build / zone mode badge */}
+      {/* Build / plan mode badge: names the mode and how to leave it */}
       {inMode && (
         <div className="hud-mode-badge" style={{ '--chip': buildMode ? '#ffb02e' : '#ff8c1a' }}>
           {buildMode ? <Pickaxe aria-hidden="true" /> : <MapPin aria-hidden="true" />}
-          {buildMode ? 'Build mode' : 'Zone mode'}
+          {buildMode ? 'Build mode' : 'Plan mode'}
+          {!isTouch && <span className="hud-mode-badge__exit">{buildMode ? 'Tab' : 'P'} / Esc to leave</span>}
         </div>
       )}
 
@@ -317,7 +313,7 @@ const GameUI = () => {
             onClick={() => useGameStore.getState().togglePanel('buildings')}
           />
         )}
-        <ActionSlot icon={MapPin} label="Zones" hotkey="Z" color="#ff8c1a" active={zoneMode} compact={isMobile} onClick={toggleZoneMode} />
+        <ActionSlot icon={MapPin} label="Plan" hotkey="P" color="#ff8c1a" active={planMode} compact={isMobile} onClick={togglePlanMode} />
         {!hidePanelSlots && (
           <ActionSlot
             icon={Users}

@@ -40,7 +40,7 @@ const TouchControls = () => {
       if (Date.now() - longPressAt < 500) return;
 
       // Skip if build/zone mode is active
-      if (store.buildMode || store.zoneMode) return;
+      if (store.buildMode || store.zoneMode || store.planMode || store.placingBuildingId) return;
 
       // Raycast from click position
       const rect = gl.domElement.getBoundingClientRect();

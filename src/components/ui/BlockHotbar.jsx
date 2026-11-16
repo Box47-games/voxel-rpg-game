@@ -39,7 +39,7 @@ export function BlockHotbar() {
   const selectedBlockType = useGameStore((state) => state.selectedBlockType);
   const blockPlacementMode = useGameStore((state) => state.blockPlacementMode);
   const buildMode = useGameStore((state) => state.buildMode);
-  const zoneMode = useGameStore((state) => state.zoneMode);
+  const zoneMode = useGameStore((state) => state.zoneMode || state.planMode); // planning: no mining or placing
   const placingBuildingId = useGameStore((state) => state.placingBuildingId);
   const materials = useGameStore((state) => state.inventory.materials);
   const setSelectedBlockType = useGameStore(
@@ -59,7 +59,7 @@ export function BlockHotbar() {
 
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const st = useGameStore.getState();
-      if (st.zoneMode || st.placingBuildingId) return; // number keys mean something else there
+      if (st.zoneMode || st.planMode || st.placingBuildingId) return; // number keys mean something else there
       if (e.key === '`' || e.key === '~') return;
       const keyIndex = parseInt(e.key, 10);
       if (Number.isNaN(keyIndex)) return;

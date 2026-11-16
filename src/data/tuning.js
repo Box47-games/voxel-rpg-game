@@ -212,6 +212,11 @@ export const CAMERA_ZOOM_SPEED = 0.02;         // Pinch sensitivity
 export const CAMERA_ZOOM_LERP = 0.1;           // Smoothing factor
 export const CAMERA_HEIGHT_RATIO = 0.83;        // height = distance × ratio
 export const CAMERA_ROTATION_SENSITIVITY = 0.008; // Radians per pixel
+// Plan mode: camera raised over the player, looking almost straight down
+export const PLAN_CAMERA_DEFAULT_HEIGHT = 48;   // World units above the player
+export const PLAN_CAMERA_MIN_HEIGHT = 24;
+export const PLAN_CAMERA_MAX_HEIGHT = 90;
+export const PLAN_CAMERA_TILT = 0.3;            // Horizontal offset = height × tilt (0 = straight down)
 
 // Gesture disambiguation
 export const TAP_MAX_DURATION_MS = 200;

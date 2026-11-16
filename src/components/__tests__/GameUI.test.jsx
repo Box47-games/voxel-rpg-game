@@ -130,7 +130,7 @@ describe('HUD', () => {
     expect(track.style.getPropertyValue('--fill')).toBe('100%');
   });
 
-  test('Build and Zones slots toggle their modes and show the badge', () => {
+  test('Build (touch) and Plan slots toggle their modes and show the badge', () => {
     render(<GameUI />);
     const build = screen.getByRole('button', { name: 'Build' });
     expect(build).toHaveAttribute('aria-pressed', 'false');
@@ -140,12 +140,14 @@ describe('HUD', () => {
     expect(screen.getByRole('button', { name: 'Build' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Build mode')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Zones' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Plan' }));
+    expect(useGameStore.getState().planMode).toBe(true);
     expect(useGameStore.getState().zoneMode).toBe(true);
     expect(useGameStore.getState().buildMode).toBe(false);
-    expect(screen.getByText('Zone mode')).toBeInTheDocument();
+    expect(screen.getByText('Plan mode')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Zones' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Plan' }));
+    expect(useGameStore.getState().planMode).toBe(false);
     expect(useGameStore.getState().zoneMode).toBe(false);
   });
 

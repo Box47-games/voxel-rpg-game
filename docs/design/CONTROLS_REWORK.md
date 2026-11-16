@@ -50,7 +50,7 @@ Tab is freed (browser focus key). Remapping in Settings comes later.
 2. **Done:** one mode (play, build, zone) and one panel (inventory, crafting, settlement, building catalog) at a time; Esc backs out one step (placement → panel or info card → mode), then pauses.
 3. **Done:** modeless mining and placing in Play (desktop); always-visible hotbar with an empty hand slot (the default; pressing a selected block's key again returns to it). Left-click on terrain within reach mines; ground clicks beyond reach still cast the spell. Touch keeps build mode until step 6.
 4. **Done:** B catalog: blocks and buildings in one, with tabs (1 / 2 switch while open). Picking a block puts it in hand; one not on the bar gets an extra hotbar slot. The desktop dock's Build button opens it; touch keeps build mode and gets a Catalog button in the build hotbar.
-5. Plan mode: zones + building placement with the raised camera; settlement overview alongside.
+5. **Done:** Plan mode (P; Z still works until step 8): zone tools (1–4) and blueprints (5+) in one tool bar, camera raised to a near top-down view (wheel / pinch zoom), settlement overview at the side. Building placement follows the cursor (touch: tap to position, tap again to place) and always happens in plan mode; afterwards you're back on the zone tool. Esc: placement → plan → play.
 6. Touch: context button and tool wheel; drop long-press mining.
 7. Bag: Inventory, Craft and Repair as tabs of one screen.
 8. Key layout above: block on right-mouse/Ctrl, update hints, start screen and the shortcuts panel.

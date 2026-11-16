@@ -24,7 +24,8 @@ const KEYMAP = {
 // Keys that fire a toggle action on keydown (not held state)
 const TOGGLE_KEYS = {
   Tab: 'buildMode',
-  KeyZ: 'zoneMode',
+  KeyP: 'planMode',
+  KeyZ: 'planMode', // old zone-mode key; zones live in plan mode now
 };
 
 // Shared mutable key state — updated synchronously in event handlers,
@@ -52,11 +53,17 @@ export function useKeyboard() {
     const onKeyDown = (e) => {
       // Toggle keys fire a store action once on keydown
       const toggle = TOGGLE_KEYS[e.code];
+      const tag = e.target?.tagName;
+      if (toggle && (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT')) return;
       if (toggle) {
         e.preventDefault();
         // One mode at a time: entering one leaves the other (and closes panels)
         if (toggle === 'buildMode') useGameStore.getState().enterMode('build');
-        if (toggle === 'zoneMode') useGameStore.getState().enterMode('zone');
+        if (toggle === 'planMode') {
+          // The plan camera is third-person: release a first-person pointer lock
+          if (document.pointerLockElement) document.exitPointerLock();
+          useGameStore.getState().enterMode('plan');
+        }
         return;
       }
 

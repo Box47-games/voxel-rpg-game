@@ -63,6 +63,7 @@ const FirstPersonControls = () => {
     (event) => {
       if (event.code === 'KeyV' && !event.repeat) {
         event.preventDefault();
+        if (useGameStore.getState().planMode) return; // plan camera is top-down only
 
         const currentFirstPerson = useGameStore.getState().camera.firstPerson;
 

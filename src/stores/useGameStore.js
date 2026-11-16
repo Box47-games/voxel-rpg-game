@@ -27,6 +27,7 @@ import {
   POTION_HEAL_AMOUNT,
   POTION_COOLDOWN,
   PLAYER_HEALTH_REGEN_DELAY,
+  PLAN_CAMERA_DEFAULT_HEIGHT,
 } from '../data/tuning';
 import { ActionHistory, createActionMiddleware } from '../systems/state/ActionSystem';
 import {
@@ -179,6 +180,11 @@ const CLOSED_PANELS = {
   activeBuildingCatalog: false,
 };
 
+/** In plan mode, leaving a placement (or opening a panel) keeps the zone tool selected. */
+function backToPlanTool(state) {
+  return state.planMode ? { zoneMode: true, zoneTypeToPlace: state.zoneTypeToPlace || 'MINING' } : {};
+}
+
 function isPanelOpen(state, name) {
   if (name === 'settlement') return state.settlementDashboardOpen;
   if (name === 'buildings') return state.activeBuildingCatalog;
@@ -280,6 +286,10 @@ const useGameStore = create((rawSet, get, api) => {
   // Zone designation state (Phase 2.2)
   zones: [],
   zoneMode: false,
+  // Plan mode (P): settlement planning with the raised camera. Its tools are the
+  // zone painter (zoneMode) and building placement (placingBuildingId).
+  planMode: false,
+  planCameraHeight: PLAN_CAMERA_DEFAULT_HEIGHT,
   zoneTypeToPlace: null,
   zoneDragStart: null,    // [worldX, worldZ] of first corner
   activeStockpileZoneId: null,  // Zone ID of open stockpile panel (or null)
@@ -1600,7 +1610,9 @@ const useGameStore = create((rawSet, get, api) => {
     zones: state.zones.map(z => z.id === zoneId ? { ...z, ...updates } : z),
   })),
   setZoneMode: (active, zoneType = null) =>
-    set({ zoneMode: active, zoneTypeToPlace: zoneType, zoneDragStart: null }),
+    set(active
+      ? { zoneMode: true, planMode: true, buildMode: false, placingBuildingId: null, zoneTypeToPlace: zoneType, zoneDragStart: null }
+      : { zoneMode: false, planMode: false, zoneTypeToPlace: null, zoneDragStart: null }),
   setZoneDragStart: (pos) => set({ zoneDragStart: pos }),
   clearZoneDrag: () => set({ zoneDragStart: null }),
 
@@ -1672,7 +1684,8 @@ const useGameStore = create((rawSet, get, api) => {
     zoneMode: false,
     zoneDragStart: null,
   }),
-  cancelPlacingBuilding: () => set({ placingBuildingId: null }),
+  // In plan mode, finishing or cancelling a placement goes back to the zone tool
+  cancelPlacingBuilding: () => set((s) => ({ placingBuildingId: null, ...backToPlanTool(s) })),
 
   placeConstructionSite: (buildingId, position, materialsRequired, totalBlocks) => set((state) => ({
     constructionSites: [...state.constructionSites, {
@@ -1687,6 +1700,7 @@ const useGameStore = create((rawSet, get, api) => {
       createdAt: Date.now(),
     }],
     placingBuildingId: null,
+    ...backToPlanTool(state),
   })),
 
   setActiveConstructionSite: (siteId) => set({ activeConstructionSiteId: siteId }),
@@ -1699,7 +1713,8 @@ const useGameStore = create((rawSet, get, api) => {
   /** Open `name` (closing any other panel and cancelling placement), or close it. */
   togglePanel: (name) => set((s) => (isPanelOpen(s, name)
     ? CLOSED_PANELS
-    : { ...CLOSED_PANELS, ...panelFlags(name), placingBuildingId: null, zoneMode: false, zoneDragStart: null })),
+    // Panels open over plan mode (the zone tool stays selected underneath)
+    : { ...CLOSED_PANELS, ...panelFlags(name), placingBuildingId: null, zoneDragStart: null, ...backToPlanTool(s) })),
   closePanels: () => set(CLOSED_PANELS),
 
   /** Build catalog (B): one panel with 'blocks' and 'buildings' tabs. */
@@ -1709,8 +1724,8 @@ const useGameStore = create((rawSet, get, api) => {
     activeBuildingCatalog: true,
     catalogTab: tab || s.catalogTab,
     placingBuildingId: null,
-    zoneMode: false,
     zoneDragStart: null,
+    ...backToPlanTool(s),
   })),
   setCatalogTab: (tab) => set({ catalogTab: tab }),
   /** Put a block in hand from the catalog and close it (touch: switch build mode to placing). */
@@ -1721,17 +1736,24 @@ const useGameStore = create((rawSet, get, api) => {
    * others and closes any panel. Entering the current mode again returns to play.
    */
   enterMode: (mode) => set((s) => {
-    const current = s.buildMode ? 'build' : s.zoneMode ? 'zone' : 'play';
-    const next = mode === current ? 'play' : mode;
+    const want = mode === 'zone' ? 'plan' : mode; // zone painting lives in plan mode
+    const current = s.planMode ? 'plan' : s.buildMode ? 'build' : 'play';
+    const next = want === current ? 'play' : want;
+    const plan = next === 'plan';
     return {
       ...CLOSED_PANELS,
       placingBuildingId: null,
       buildMode: next === 'build',
-      zoneMode: next === 'zone',
-      zoneTypeToPlace: next === 'zone' ? (s.zoneTypeToPlace || 'MINING') : null,
+      planMode: plan,
+      zoneMode: plan,
+      zoneTypeToPlace: plan ? (s.zoneTypeToPlace || 'MINING') : null,
       zoneDragStart: null,
+      // The plan camera is third-person only
+      ...(plan && s.camera.firstPerson ? { camera: { ...s.camera, firstPerson: false } } : {}),
     };
   }),
+  /** Plan camera zoom (mouse wheel / pinch while planning). */
+  setPlanCameraHeight: (h) => set({ planCameraHeight: h }),
 
   /**
    * Esc: back out one step (cancel placing a building, close a panel or info
@@ -1740,14 +1762,14 @@ const useGameStore = create((rawSet, get, api) => {
    */
   backOut: () => {
     const s = get();
-    if (s.placingBuildingId) { set({ placingBuildingId: null }); return true; }
+    if (s.placingBuildingId) { set({ placingBuildingId: null, ...backToPlanTool(s) }); return true; }
     if (s.openPanel || s.settlementDashboardOpen || s.activeBuildingCatalog) { set(CLOSED_PANELS); return true; }
     if (s.activeNPCId || s.activeConstructionSiteId || s.activeStockpileZoneId) {
       set({ activeNPCId: null, activeConstructionSiteId: null, activeStockpileZoneId: null });
       return true;
     }
-    if (s.buildMode || s.zoneMode) {
-      set({ buildMode: false, zoneMode: false, zoneDragStart: null });
+    if (s.buildMode || s.zoneMode || s.planMode) {
+      set({ buildMode: false, zoneMode: false, planMode: false, zoneDragStart: null });
       return true;
     }
     return false;
@@ -1957,7 +1979,7 @@ const useGameStore = create((rawSet, get, api) => {
       dialogue: { active: false, tree: null, onAction: null },
       buildMode: false, selectedBlockType: null, catalogTab: 'blocks',
       blockPlacementMode: false,
-      zones: [], zoneMode: false, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
+      zones: [], zoneMode: false, planMode: false, planCameraHeight: PLAN_CAMERA_DEFAULT_HEIGHT, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
       constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null, settlementDashboardOpen: false,
     }),
 

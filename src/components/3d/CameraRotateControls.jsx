@@ -7,7 +7,11 @@ import {
   CAMERA_ROTATION_SENSITIVITY,
   TAP_MAX_DURATION_MS,
   TAP_MAX_DISTANCE_PX,
+  PLAN_CAMERA_MIN_HEIGHT,
+  PLAN_CAMERA_MAX_HEIGHT,
 } from '../../data/tuning';
+
+const clampPlanHeight = (h) => Math.max(PLAN_CAMERA_MIN_HEIGHT, Math.min(PLAN_CAMERA_MAX_HEIGHT, h));
 
 /**
  * CameraRotateControls — Handles camera orbit with pitch + yaw
@@ -85,6 +89,12 @@ const CameraRotateControls = () => {
 
     // ── Scroll wheel zoom (desktop) ─────────────────
     const handleWheel = (e) => {
+      const st = useGameStore.getState();
+      if (st.planMode) {
+        st.setPlanCameraHeight(clampPlanHeight(st.planCameraHeight + e.deltaY * 0.08));
+        e.preventDefault();
+        return;
+      }
       const cam = getCameraState();
       const newDist = Math.max(
         CAMERA_MIN_DISTANCE,
@@ -108,7 +118,8 @@ const CameraRotateControls = () => {
         isTouchRotating.current = false;
         touchId.current = null;
         pinchStartDist.current = touchDist(e.touches);
-        pinchStartCameraDist.current = getCameraState().distance;
+        const st0 = useGameStore.getState();
+        pinchStartCameraDist.current = st0.planMode ? st0.planCameraHeight : getCameraState().distance;
         e.preventDefault();
         return;
       }
@@ -132,6 +143,12 @@ const CameraRotateControls = () => {
         getCameraState();
         const currentDist = touchDist(e.touches);
         const scale = pinchStartDist.current / currentDist;
+        const stP = useGameStore.getState();
+        if (stP.planMode) {
+          stP.setPlanCameraHeight(clampPlanHeight(pinchStartCameraDist.current * scale));
+          e.preventDefault();
+          return;
+        }
         const newDist = Math.max(
           CAMERA_MIN_DISTANCE,
           Math.min(CAMERA_MAX_DISTANCE, pinchStartCameraDist.current * scale)

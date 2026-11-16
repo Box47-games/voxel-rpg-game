@@ -9,7 +9,8 @@ import { isTouchDevice } from '../../utils/deviceDetection';
 import { AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_JUMP_MIN_SPEED, JUMP_IMPULSE, JUMP_STAMINA_COST, JUMP_GROUNDED_THRESHOLD, JUMP_COOLDOWN_MS, NAV_WAYPOINT_ARRIVAL, NAV_STUCK_TIMEOUT,
   PLAYER_SPRINT_SPEED_MULT, PLAYER_STAMINA_SPRINT_DRAIN, PLAYER_STAMINA_BLOCK_DRAIN, PLAYER_STAMINA_REGEN,
   PLAYER_MANA_REGEN, PLAYER_MOVE_SMOOTHING, CAMERA_FOLLOW_SMOOTHING,
-  DODGE_STAMINA_COST, DODGE_DURATION, DODGE_SPEED, DODGE_DOUBLE_TAP_MS } from '../../data/tuning';
+  DODGE_STAMINA_COST, DODGE_DURATION, DODGE_SPEED, DODGE_DOUBLE_TAP_MS,
+  PLAN_CAMERA_TILT } from '../../data/tuning';
 import { isSolid as isBlockSolid, isTransparent as isBlockTransparent } from '../../systems/chunks/blockTypes';
 import { applyBonePose } from './voxelRig';
 import { getHealthRegenRate, getStaminaRegenMult } from '../../systems/survival/ShelterEffects';
@@ -431,6 +432,20 @@ const Player = () => {
 
       // Snap to position in first-person (no lerp for responsiveness)
       camera.position.copy(targetCameraPos);
+      camera.lookAt(targetLookAt);
+    } else if (store.planMode) {
+      // Plan camera: raised high over the player, looking nearly straight down.
+      // Right-drag still turns it; wheel / pinch change planCameraHeight.
+      const angle = cameraState.rotationAngle;
+      const height = store.planCameraHeight;
+      const back = height * PLAN_CAMERA_TILT;
+      targetCameraPos.set(
+        currentPos.x + Math.sin(angle) * back,
+        currentPos.y + height,
+        currentPos.z + Math.cos(angle) * back
+      );
+      targetLookAt.set(currentPos.x, currentPos.y, currentPos.z);
+      camera.position.lerp(targetCameraPos, smoothing(CAMERA_FOLLOW_SMOOTHING, delta));
       camera.lookAt(targetLookAt);
     } else {
       // Third-person camera: orbit around player with pitch
