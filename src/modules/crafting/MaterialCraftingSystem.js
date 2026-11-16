@@ -19,6 +19,19 @@
  */
 
 import { CRAFTING_RECIPES, canCraft, consumeMaterials } from '../../data/craftingRecipes.js';
+import { CRAFT_FRACTIONAL_STAT_DECIMALS, CRAFT_UNSCALED_STATS } from '../../data/tuning.js';
+
+/**
+ * Scale one base stat by a quality multiplier. Category stats (toolTier) stay
+ * as they are, fractional stats stay fractional (rounded), integer stats are floored.
+ */
+export function scaleCraftedStat(stat, value, multiplier) {
+  if (typeof value !== 'number' || CRAFT_UNSCALED_STATS.includes(stat)) return value;
+  const scaled = value * multiplier;
+  if (Number.isInteger(value)) return Math.floor(scaled);
+  const factor = 10 ** CRAFT_FRACTIONAL_STAT_DECIMALS;
+  return Math.round(scaled * factor) / factor;
+}
 
 /**
  * Crafting result states
@@ -311,7 +324,7 @@ export class MaterialCraftingSystem {
     if (recipe.stats && quality.multiplier !== 1.0) {
       item.stats = {};
       for (const [stat, value] of Object.entries(recipe.stats)) {
-        item.stats[stat] = Math.floor(value * quality.multiplier);
+        item.stats[stat] = scaleCraftedStat(stat, value, quality.multiplier);
       }
     }
 

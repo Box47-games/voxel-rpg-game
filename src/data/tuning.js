@@ -73,6 +73,14 @@ export const HARVEST_SPEED_STONE = 1.2;
 export const HARVEST_SPEED_IRON = 1.5;
 export const HARVEST_SPEED_DIAMOND = 2.0;
 
+// ─── Crafting Quality ────────────────────────────────────────
+// Crafted-item stats are scaled by the quality multiplier. Stats whose base
+// value is fractional (harvestSpeed, *Yield) are rounded to this many decimals;
+// integer stats (damage, defense) are floored. Unscaled stats are categories,
+// not strengths (toolTier gates ore drops in calculateDrops).
+export const CRAFT_FRACTIONAL_STAT_DECIMALS = 2;
+export const CRAFT_UNSCALED_STATS = ['toolTier'];
+
 // Tool durability (uses before breaking). Range: 20–2000.
 export const DURABILITY_WOOD = 30;
 export const DURABILITY_STONE = 65;
