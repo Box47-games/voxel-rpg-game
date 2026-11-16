@@ -5,6 +5,7 @@
  * deterministically based on world seed, and become more active at night.
  */
 
+import { canSpawnNear } from './ShelterEffects';
 import {
   RIFT_DENSITY,
   RIFT_MIN_SPAWN_DISTANCE,
@@ -151,9 +152,11 @@ export class RiftManager {
    * @param {number[]} playerPos - [x, y, z]
    * @param {{ period: string, isNight: boolean }} worldTime
    * @param {Set<string>} aliveMonsterIds - Set of currently alive monster IDs
+   * @param {{ sheltered?: boolean }} [options] - sheltered: the player is in a
+   *   shelter, so no monster spawns within SHELTER_MONSTER_EXCLUSION of them
    * @returns {Array<{ riftId, position, monsterType, monsterData }>}
    */
-  update(now, playerPos, worldTime, aliveMonsterIds) {
+  update(now, playerPos, worldTime, aliveMonsterIds, { sheltered = false } = {}) {
     const spawnRequests = [];
 
     for (const rift of this.rifts) {
@@ -223,6 +226,8 @@ export class RiftManager {
       const radius = rand() * RIFT_SPAWN_RADIUS;
       const spawnX = rift.x + Math.cos(angle) * radius;
       const spawnZ = rift.z + Math.sin(angle) * radius;
+      // Too close to a sheltered player: try again next update (new position)
+      if (!canSpawnNear(spawnX, spawnZ, playerPos, sheltered)) continue;
 
       const monsterId = `rift-mob-${this.nextMonsterId++}`;
 

@@ -86,7 +86,7 @@ Three patterns explain most gaps:
 | Tool progression wood → stone → iron | 🟡 | Stone/iron/steel pickaxes & axes exist with `harvestSpeed`/`toolTier`. **No wooden tier** recipe (bare hands → stone). Tools must be equipped in the *weapon* slot to count. |
 | **Tool durability** | ❌ | `DURABILITY_WOOD/STONE/IRON` in `tuning.js` are never read; tools never break. |
 | Rift spawning, visuals, night intensification | ✅ | `RiftManager.js` (night spawn table, night pop cap), `RiftVisual.jsx`, `RiftParticles.jsx`. |
-| **Shelter gives tangible benefits** | 🟡 | Only 25% hunger reduction is implemented. `SHELTER_HEALTH_REGEN_MULT`, `SHELTER_STAMINA_REGEN_MULT`, `SHELTER_MONSTER_EXCLUSION` are unused. |
+| **Shelter gives tangible benefits** | ✅ | 25% less hunger, 2× health regen (new base 0.5/s, hunger-gated, paused 8 s after damage), 1.5× stamina regen, no rift spawns within 16 units (2026-11-16). |
 | Survival HUD incl. tool status | 🟡 | Health/mana/stamina/hunger/time/shelter shown; no tool or durability indicator. |
 | Death: lose resources, respawn | ✅ | `respawnPlayer` (50% materials, 50% health/hunger, spawn protection). |
 | Mobile: swipe camera, auto-jump, pinch zoom | ✅ | `CameraRotateControls.jsx` (pinch + wheel), auto-jump in `Player.jsx`. |

@@ -58,9 +58,9 @@ export const STARVATION_DAMAGE_RATE = 0.1; // 1 HP per 10 seconds
 
 // ─── Shelter ─────────────────────────────────────────────────
 export const SHELTER_HUNGER_REDUCTION = 0.25;    // 25% less hunger drain in shelter
-export const SHELTER_HEALTH_REGEN_MULT = 2.0;    // 2× health regen in shelter
-export const SHELTER_STAMINA_REGEN_MULT = 1.5;   // 1.5× stamina regen in shelter
-export const SHELTER_MONSTER_EXCLUSION = 16;      // No spawns within N world units of sheltered player
+export const SHELTER_HEALTH_REGEN_MULT = 2.0;    // 2× health regen in shelter (full or partial)
+export const SHELTER_STAMINA_REGEN_MULT = 1.5;   // 1.5× stamina regen in shelter (full or partial)
+export const SHELTER_MONSTER_EXCLUSION = 16;      // Rifts don't spawn monsters within N world units of a sheltered player
 export const SHELTER_RAY_RANGE_UP = 8;            // Max roof detection distance (blocks)
 export const SHELTER_RAY_RANGE_HORIZ = 4;         // Max wall detection distance (blocks)
 export const SHELTER_CHECK_INTERVAL = 2000;       // ms between shelter checks
@@ -374,6 +374,8 @@ export const PLAYER_STAMINA_SPRINT_DRAIN = 20; // Stamina/sec while sprinting
 export const PLAYER_STAMINA_BLOCK_DRAIN = 15;  // Stamina/sec while blocking
 export const PLAYER_STAMINA_REGEN = 30;        // Stamina/sec when resting
 export const PLAYER_MANA_REGEN = 10;           // Mana/sec
+export const PLAYER_HEALTH_REGEN = 0.5;        // Health/sec when well fed (× hunger modifier, × shelter bonus)
+export const PLAYER_HEALTH_REGEN_DELAY = 8;    // Seconds after taking damage before health regenerates
 export const PLAYER_MOVE_SMOOTHING = 0.2;      // Velocity lerp factor at 60 fps
 export const CAMERA_FOLLOW_SMOOTHING = 0.15;   // Third-person camera lerp factor at 60 fps
 export const DODGE_STAMINA_COST = 30;

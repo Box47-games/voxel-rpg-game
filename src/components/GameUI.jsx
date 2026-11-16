@@ -244,6 +244,7 @@ const GameUI = () => {
           <span
             className="vx-chip hud-shelter"
             style={{ '--chip': shelter.isFullShelter ? '#5cc36b' : '#f2c14e' }}
+            title="Shelter: faster health and stamina regen, slower hunger, no rift spawns close by"
           >
             <Home aria-hidden="true" />
             {shelter.isFullShelter ? 'Sheltered' : 'Partial shelter'}

@@ -26,6 +26,7 @@ import {
   RESPAWN_HEIGHT,
   POTION_HEAL_AMOUNT,
   POTION_COOLDOWN,
+  PLAYER_HEALTH_REGEN_DELAY,
 } from '../data/tuning';
 import { ActionHistory, createActionMiddleware } from '../systems/state/ActionSystem';
 import { getBuildingById, parseLayers } from '../data/buildings';
@@ -94,6 +95,7 @@ const createInitialPlayer = () => ({
   comboTimer: 0,
   isInvincible: false,
   invincibilityTimer: 0,
+  healthRegenDelay: 0, // Seconds until health regenerates again (reset on damage)
   rage: 0,
   maxRage: 100,
   statusEffects: [], // Array of {type, duration, value}
@@ -984,6 +986,7 @@ const useGameStore = create((rawSet, get, api) => {
         health: newHealth,
         statusEffects,
         rage: Math.min(state.player.maxRage, state.player.rage + 10),
+        healthRegenDelay: PLAYER_HEALTH_REGEN_DELAY,
       },
     };
     if (source) {

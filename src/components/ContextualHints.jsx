@@ -127,7 +127,7 @@ const ContextualHints = () => {
     },
     {
       id: 'shelterHint',
-      text: 'Build walls and a roof for shelter benefits at night.',
+      text: 'Build walls and a roof: shelter heals you faster and keeps rift spawns away.',
       condition: () => worldTime.isNight && shelter.isExposed,
       priority: 7,
       duration: 5000,
