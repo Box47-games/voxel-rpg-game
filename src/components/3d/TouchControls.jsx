@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
-import { getSpellById, executeSpell } from '../../data/spells';
-import { performMeleeAttack, MELEE_COOLDOWN } from '../../data/meleeAttack';
+import { attackToward, tryCastSpellAt as tryCastSpellAt_ } from '../../systems/combat/playerAttack';
 
 /**
  * TouchControls — Handles click/tap for attacking and spell casting.
@@ -70,43 +69,11 @@ const TouchControls = () => {
         if (!groundHit) groundHit = hit;
       }
 
-      // Helper: try to cast the active spell toward a world position
-      const tryCastSpellAt = (targetPoint) => {
-        const s = useGameStore.getState();
-        const spell = getSpellById(s.activeSpellId);
-        if (!spell) return false;
-        if (s.player.mana < spell.manaCost) return false;
-        const cooldown = s.getSpellCooldown(spell.id);
-        if (cooldown > 0) return false;
-
-        const playerWithAim = {
-          ...s.player,
-          aimTarget: [targetPoint.x, targetPoint.y, targetPoint.z],
-        };
-
-        const result = executeSpell(spell, playerWithAim, s);
-        if (result.success) {
-          s.setSpellCooldown(spell.id, spell.cooldown);
-        }
-        return result.success;
-      };
+      const tryCastSpellAt = (targetPoint) => tryCastSpellAt_(useGameStore.getState(), targetPoint);
 
       // Tap on enemy = attack (spell or melee)
       if (enemyHit && enemyData?.takeDamage) {
-        const spellFired = tryCastSpellAt(enemyHit.point);
-        if (!spellFired) {
-          const s = useGameStore.getState();
-          const meleeCooldown = s.getSpellCooldown('__melee__');
-          if (!meleeCooldown || meleeCooldown <= 0) {
-            const pp = s.player.position;
-            const facingAngle = Math.atan2(
-              enemyHit.point.x - pp[0],
-              enemyHit.point.z - pp[2]
-            );
-            performMeleeAttack(s, pp, facingAngle, s.enemies);
-            s.setSpellCooldown('__melee__', MELEE_COOLDOWN);
-          }
-        }
+        attackToward(useGameStore.getState(), enemyHit.point);
 
         // Red attack marker
         useGameStore.getState().addTargetMarker({

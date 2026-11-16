@@ -1719,6 +1719,8 @@ const useGameStore = create((rawSet, get, api) => {
 
   /** Build catalog (B): one panel with 'blocks' and 'buildings' tabs. */
   catalogTab: 'blocks',
+  // Touch: what the context button would act on ('use' | 'block' | null); set by BlockInteraction
+  touchAim: null,
   openCatalog: (tab) => set((s) => ({
     ...CLOSED_PANELS,
     activeBuildingCatalog: true,
@@ -1977,7 +1979,7 @@ const useGameStore = create((rawSet, get, api) => {
       tutorialHints: { shownHints: [] },
       settlement: createInitialSettlement(),
       dialogue: { active: false, tree: null, onAction: null },
-      buildMode: false, selectedBlockType: null, catalogTab: 'blocks',
+      buildMode: false, selectedBlockType: null, catalogTab: 'blocks', touchAim: null,
       blockPlacementMode: false,
       zones: [], zoneMode: false, planMode: false, planCameraHeight: PLAN_CAMERA_DEFAULT_HEIGHT, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
       constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null, settlementDashboardOpen: false,

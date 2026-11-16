@@ -29,14 +29,16 @@ const REACH_DISTANCE = 12;
 
 // Longer reach for third-person/mobile (camera is ~16+ world units from terrain)
 const REACH_DISTANCE_THIRD_PERSON = 50;
+// Touch aim: rays from the player's eyes along their facing, [pitch (rad), reach]
+const TOUCH_AIM_RAYS = [[-0.12, 5], [-0.75, 7]];
+const TOUCH_AIM_EYE_HEIGHT = 2.2;
+const TOUCH_AIM_INTERVAL_MS = 100;
 
 // Raycast step size (smaller = more precise, but slower)
 // Using 0.25 for better accuracy near block edges and corners
 const RAY_STEP = 0.25;
 
 // Long press settings for mobile block interaction
-const LONG_PRESS_DURATION = 250; // ms to hold before mining/placing
-const LONG_PRESS_MOVE_THRESHOLD = 20; // pixels of movement that cancels long press
 
 // Mining progress geometry (flat bar above the block)
 const miningBarBgGeometry = new THREE.PlaneGeometry(VOXEL_SIZE * 1.2, 0.3);
@@ -143,6 +145,44 @@ function tryPlaceBlock(chunkManager, block, face, blockType) {
     store.removeMaterial(mat, qty);
   }
   return true;
+}
+
+/**
+ * Nearest block within USE_KEY_RANGE that has a use action (berry bush,
+ * campfire, ...), scanning a small box around the player.
+ * harvestOnly skips actions like picking up a campfire (the touch context
+ * button only harvests, so it can't undo a campfire by accident).
+ * @returns {{x:number,y:number,z:number,type:number}|null}
+ */
+export function findUsableBlock(chunkManager, playerPos, { harvestOnly = false } = {}) {
+  if (!chunkManager || !playerPos) return null;
+  const range = USE_KEY_RANGE;
+  const [px, py, pz] = playerPos;
+  const halfRange = Math.ceil(range / VOXEL_SIZE);
+  const playerVX = Math.floor(px / VOXEL_SIZE);
+  const playerVY = Math.floor(py / VOXEL_SIZE);
+  const playerVZ = Math.floor(pz / VOXEL_SIZE);
+  let bestDist = Infinity;
+  let bestBlock = null;
+  for (let dy = -1; dy <= 2; dy++) {
+    for (let dz = -halfRange; dz <= halfRange; dz++) {
+      for (let dx = -halfRange; dx <= halfRange; dx++) {
+        const wx = (playerVX + dx) * VOXEL_SIZE + VOXEL_SIZE / 2;
+        const wy = (playerVY + dy) * VOXEL_SIZE + VOXEL_SIZE / 2;
+        const wz = (playerVZ + dz) * VOXEL_SIZE + VOXEL_SIZE / 2;
+        const blockType = chunkManager.getBlock(wx, wy, wz);
+        const action = BLOCK_USE_ACTIONS[blockType];
+        if (!action || (harvestOnly && action.action !== 'harvest')) continue;
+        const ddx = wx - px, ddy = wy - py, ddz = wz - pz;
+        const dist = ddx * ddx + ddy * ddy + ddz * ddz;
+        if (dist < bestDist && dist <= range * range) {
+          bestDist = dist;
+          bestBlock = { x: wx, y: wy, z: wz, type: blockType };
+        }
+      }
+    }
+  }
+  return bestBlock;
 }
 
 /**
@@ -278,8 +318,8 @@ export function BlockInteraction({ chunkManager }) {
   // null = empty hand: right-click places nothing
   const selectedBlockType = useGameStore((state) => state.selectedBlockType);
   const firstPerson = useGameStore((state) => state.camera.firstPerson);
-  const blockPlacementMode = useGameStore((state) => state.blockPlacementMode);
-  const buildMode = useGameStore((state) => state.buildMode);
+  // Touch with a block in hand: the context button places, so show the ghost block
+  const touchPlacing = isMobile.current && selectedBlockType != null;
   const placingBuildingId = useGameStore((state) => state.placingBuildingId);
 
   // Raycaster for screen-space raycasting (mobile + desktop third-person)
@@ -288,9 +328,7 @@ export function BlockInteraction({ chunkManager }) {
   // Raycaster for scene intersection (enemy detection in first-person)
   const sceneRaycasterRef = useRef(new THREE.Raycaster());
 
-  // Long press state for mobile
-  const longPressTimer = useRef(null);
-  const longPressActive = useRef(false);
+  // Desktop third-person mouse-down state (block under the cursor)
   const longPressTouchStart = useRef({ x: 0, y: 0 });
   const longPressBlock = useRef(null);
   const longPressFace = useRef(null);
@@ -310,7 +348,7 @@ export function BlockInteraction({ chunkManager }) {
   // Calculate placement preview position (where block will be placed)
   // Show in placement mode OR in first-person (where right-click always places)
   useEffect(() => {
-    const showPreview = blockPlacementMode || firstPerson;
+    const showPreview = touchPlacing || firstPerson;
     if (!showPreview || !targetBlock || !targetFace || !chunkManager) {
       setPreviewPosition(null);
       return;
@@ -343,7 +381,7 @@ export function BlockInteraction({ chunkManager }) {
 
     setPreviewPosition([placeX, placeY, placeZ]);
     setPreviewValid(isValid);
-  }, [blockPlacementMode, firstPerson, targetBlock, targetFace, chunkManager]);
+  }, [touchPlacing, firstPerson, targetBlock, targetFace, chunkManager]);
 
   // Reusable vectors for raycast (avoid allocations)
   const rayDirection = useRef(new THREE.Vector3());
@@ -468,12 +506,50 @@ export function BlockInteraction({ chunkManager }) {
   // Track previous target to avoid unnecessary state updates
   const prevTargetRef = useRef({ block: null, face: null });
 
+  // Touch: the block in front of the player. A level ray first (walls, trees),
+  // then one tilted down at the ground ahead. Publishes store.touchAim for the
+  // context button ('use' when a usable block is close, 'block', or null).
+  const touchEye = useRef(new THREE.Vector3());
+  const touchDir = useRef(new THREE.Vector3());
+  const updateTouchAim = useCallback(() => {
+    const store = useGameStore.getState();
+    const pos = store.player.position;
+    const facing = store.player.facingAngle || 0;
+    let result = { block: null, face: null };
+    if (chunkManager && pos) {
+      for (const [pitch, reach] of TOUCH_AIM_RAYS) {
+        touchEye.current.set(pos[0], pos[1] + TOUCH_AIM_EYE_HEIGHT, pos[2]);
+        touchDir.current.set(
+          Math.sin(facing) * Math.cos(pitch),
+          Math.sin(pitch),
+          Math.cos(facing) * Math.cos(pitch)
+        );
+        result = raycastAlongRay(touchEye.current, touchDir.current, reach);
+        if (result.block) break;
+      }
+    }
+    // Keep mining the same block while the button is held
+    if (!isHoldingMine.current) {
+      const prev = prevTargetRef.current;
+      const key = (b) => (b ? `${Math.floor(b.x / VOXEL_SIZE)},${Math.floor(b.y / VOXEL_SIZE)},${Math.floor(b.z / VOXEL_SIZE)}` : '');
+      if (key(result.block) !== key(prev.block) || result.face !== prev.face) {
+        setTargetBlock(result.block);
+        setTargetFace(result.face);
+        prevTargetRef.current = { block: result.block, face: result.face };
+      }
+    }
+    const aim = findUsableBlock(chunkManager, pos, { harvestOnly: true })
+      ? 'use'
+      : prevTargetRef.current.block ? 'block' : null;
+    if (store.touchAim !== aim) useGameStore.setState({ touchAim: aim });
+  }, [chunkManager, raycastAlongRay]);
+
   // Update raycast every few frames (first-person mode OR third-person build mode)
   const zoneMode = useGameStore((state) => state.zoneMode || state.planMode); // planning: no mining or placing
 
-  // Desktop: mining and placing are always on in Play (no build mode needed).
-  // Touch still uses build mode until the context button replaces long-press.
-  const blocksActive = (buildMode || !isMobile.current) && !zoneMode && !placingBuildingId;
+  // Mining and placing are always on in Play (desktop: mouse; touch: the
+  // context button acting on the block in front of the player).
+  const blocksActive = !zoneMode && !placingBuildingId;
 
   useFrame(() => {
     // Block targeting runs in Play (desktop) or build mode (touch); not while zoning or placing
@@ -486,9 +562,17 @@ export function BlockInteraction({ chunkManager }) {
       return;
     }
 
-    // On mobile or in third-person without first-person, don't do continuous raycasting
-    // Mobile uses tap-to-target instead
-    if (isMobile.current || !firstPerson) {
+    // Touch: aim at the block in front of the player (the context button acts on it)
+    if (isMobile.current) {
+      const now = Date.now();
+      if (now - lastRaycast.current < TOUCH_AIM_INTERVAL_MS) return;
+      lastRaycast.current = now;
+      updateTouchAim();
+      return;
+    }
+
+    // Third-person desktop: no continuous raycasting (the mouse picks blocks)
+    if (!firstPerson) {
       // Clear target when not in first-person, BUT keep it while actively mining
       if (!isMobile.current && targetBlock !== null && !isHoldingMine.current) {
         setTargetBlock(null);
@@ -814,42 +898,7 @@ export function BlockInteraction({ chunkManager }) {
 
     // Otherwise (or if first-person had no usable target): proximity scan
     if (!firstPerson || !targetBlock) {
-      const range = USE_KEY_RANGE;
-      const px = playerPos[0];
-      const py = playerPos[1];
-      const pz = playerPos[2];
-
-      // Scan blocks in range (7x4x7 grid centered on player)
-      const halfRange = Math.ceil(range / VOXEL_SIZE);
-      const playerVX = Math.floor(px / VOXEL_SIZE);
-      const playerVY = Math.floor(py / VOXEL_SIZE);
-      const playerVZ = Math.floor(pz / VOXEL_SIZE);
-
-      let bestDist = Infinity;
-      let bestBlock = null;
-
-      for (let dy = -1; dy <= 2; dy++) {
-        for (let dz = -halfRange; dz <= halfRange; dz++) {
-          for (let dx = -halfRange; dx <= halfRange; dx++) {
-            const wx = (playerVX + dx) * VOXEL_SIZE + VOXEL_SIZE / 2;
-            const wy = (playerVY + dy) * VOXEL_SIZE + VOXEL_SIZE / 2;
-            const wz = (playerVZ + dz) * VOXEL_SIZE + VOXEL_SIZE / 2;
-
-            const blockType = chunkManager.getBlock(wx, wy, wz);
-            if (!BLOCK_USE_ACTIONS[blockType]) continue;
-
-            const ddx = wx - px;
-            const ddy = wy - py;
-            const ddz = wz - pz;
-            const dist = ddx * ddx + ddy * ddy + ddz * ddz;
-
-            if (dist < bestDist && dist <= range * range) {
-              bestDist = dist;
-              bestBlock = { x: wx, y: wy, z: wz, type: blockType };
-            }
-          }
-        }
-      }
+      const bestBlock = findUsableBlock(chunkManager, playerPos);
 
       if (bestBlock) {
         useBlockCooldown.current = now;
@@ -1163,167 +1212,60 @@ export function BlockInteraction({ chunkManager }) {
     };
   }, [gl, chunkManager, raycastFromScreen, firstPerson, camera, scene.children]);
 
-  // Mobile: long-press touch handlers for mining/placement
-  // Calls chunkManager.setBlock() directly to avoid React lifecycle timing issues
+  // Touch: the context button acts on the aimed block (see updateTouchAim).
+  // A drag on the canvas is always the camera, so no long-press handlers here.
   useEffect(() => {
     if (!isMobile.current) return;
-
     const canvas = gl.domElement;
-
-    // Prevent text selection and context menu on long press
     canvas.style.webkitUserSelect = 'none';
     canvas.style.userSelect = 'none';
     canvas.style.webkitTouchCallout = 'none';
-
     const handleContextMenu = (e) => e.preventDefault();
+    canvas.addEventListener('contextmenu', handleContextMenu);
 
-    // Capture-phase click handler: intercepts clicks BEFORE TouchControls
-    // can process them, blocking movement after a long press fires.
-    const handleClickCapture = (e) => {
-      const longPressAt = Number(canvas.dataset.longPressAt || '0');
-      if (Date.now() - longPressAt < 1000) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-      }
-    };
-
-    const handleTouchStart = (e) => {
-      if (e.touches.length !== 1) return;
-
-      // Build mode required for block interaction on mobile
-      if (!useGameStore.getState().buildMode) return;
-
-      const touch = e.touches[0];
-      longPressTouchStart.current = { x: touch.clientX, y: touch.clientY };
-      longPressActive.current = false;
-      longPressBlock.current = null;
-      longPressFace.current = null;
-
-      // Raycast from touch position to find block
-      const rect = canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      const result = raycastFromScreen(x, y);
-
-      if (result.block) {
-        // Store raycast result in refs for the timer callback
-        longPressBlock.current = result.block;
-        longPressFace.current = result.face;
-
-        // Show highlight immediately
-        setTargetBlock(result.block);
-        setTargetFace(result.face);
-
-        // Prevent the synthetic click event chain entirely when targeting a
-        // block. This is the spec-compliant way to suppress clicks from
-        // touch — preventDefault must be called on touchstart, not touchend.
-        e.preventDefault();
-
-        // Start long press timer — after hold threshold, start progressive mining
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = setTimeout(() => {
-          longPressActive.current = true;
-
-          // Stamp canvas so the capture-phase click handler knows to block
-          canvas.dataset.longPressAt = String(Date.now());
-
-          // Use refs + chunkManager directly (no React state dependency)
-          const block = longPressBlock.current;
-          const face = longPressFace.current;
-          if (!block || !chunkManager) return;
-
-          const store = useGameStore.getState();
-          if (store.blockPlacementMode) {
-            // Placement is still instant
-            tryPlaceBlock(chunkManager, block, face, store.selectedBlockType ?? BlockTypes.DIRT);
-          } else {
-            // Start progressive mining (useFrame will accumulate)
-            isHoldingMine.current = true;
-            miningAccum.current = 0;
-            miningBlockKey.current = null;
-          }
-        }, LONG_PRESS_DURATION);
-      }
-    };
-
-    const handleTouchMove = (e) => {
-      if (!longPressTimer.current && !isHoldingMine.current) return;
-
-      const touch = e.touches[0];
-      const dx = touch.clientX - longPressTouchStart.current.x;
-      const dy = touch.clientY - longPressTouchStart.current.y;
-
-      // Cancel long press / mining if finger moved too far
-      if (dx * dx + dy * dy > LONG_PRESS_MOVE_THRESHOLD * LONG_PRESS_MOVE_THRESHOLD) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-        longPressBlock.current = null;
-        longPressFace.current = null;
+    const store = useGameStore.getState();
+    store._touchActions = {
+      startMine: () => {
+        if (!prevTargetRef.current.block) return false;
+        isHoldingMine.current = true;
+        miningAccum.current = 0;
+        miningBlockKey.current = null;
+        return true;
+      },
+      stopMine: () => {
         isHoldingMine.current = false;
         miningAccum.current = 0;
         setMiningProgress(0);
-        setTargetBlock(null);
-        setTargetFace(null);
-      }
+        lastRaycast.current = 0; // re-aim right away
+      },
+      harvest: () => {
+        const st = useGameStore.getState();
+        const b = findUsableBlock(chunkManager, st.player.position, { harvestOnly: true });
+        if (!b) return false;
+        lastRaycast.current = 0;
+        return _executeUseAction(BLOCK_USE_ACTIONS[b.type], b.x, b.y, b.z, b.type, chunkManager, st);
+      },
+      place: () => {
+        const st = useGameStore.getState();
+        const { block, face } = prevTargetRef.current;
+        if (!block || !chunkManager || st.selectedBlockType == null) return false;
+        const ok = tryPlaceBlock(chunkManager, block, face, st.selectedBlockType);
+        lastRaycast.current = 0;
+        return ok;
+      },
     };
-
-    const handleTouchEnd = (e) => {
-      const wasTimerActive = longPressTimer.current !== null;
-
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
-
-      // Stop mining
-      isHoldingMine.current = false;
-      miningAccum.current = 0;
-      setMiningProgress(0);
-
-      if (longPressActive.current) {
-        // Long press action already fired
-        longPressActive.current = false;
-      } else if (wasTimerActive && longPressBlock.current) {
-        // Short tap on a block (lifted before 500ms) — we called
-        // preventDefault on touchstart so the browser won't generate a
-        // click. Dispatch one manually so TouchControls can handle movement.
-        const syntheticClick = new MouseEvent('click', {
-          clientX: longPressTouchStart.current.x,
-          clientY: longPressTouchStart.current.y,
-          bubbles: true,
-        });
-        canvas.dispatchEvent(syntheticClick);
-      }
-
-      // Clear refs and highlight
-      longPressBlock.current = null;
-      longPressFace.current = null;
-      setTargetBlock(null);
-      setTargetFace(null);
-    };
-
-    canvas.addEventListener('click', handleClickCapture, true); // capture phase
-    canvas.addEventListener('contextmenu', handleContextMenu);
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
-    canvas.addEventListener('touchend', handleTouchEnd);
-    canvas.addEventListener('touchcancel', handleTouchEnd);
 
     return () => {
-      clearTimeout(longPressTimer.current);
-      canvas.removeEventListener('click', handleClickCapture, true);
       canvas.removeEventListener('contextmenu', handleContextMenu);
-      canvas.removeEventListener('touchstart', handleTouchStart);
-      canvas.removeEventListener('touchmove', handleTouchMove);
-      canvas.removeEventListener('touchend', handleTouchEnd);
-      canvas.removeEventListener('touchcancel', handleTouchEnd);
+      useGameStore.getState()._touchActions = null;
+      useGameStore.setState({ touchAim: null });
     };
-  }, [gl, chunkManager, raycastFromScreen]);
+  }, [gl, chunkManager]);
 
   return (
     <>
-      {/* Mining target highlight — show when not in placement-only mode, or in first-person (both actions available) */}
-      {(!blockPlacementMode || firstPerson) && (
+      {/* Mining target highlight — hidden on touch while a block is in hand (the ghost shows instead) */}
+      {(!touchPlacing || firstPerson) && (
         <BlockHighlight
           position={highlightPosition}
           visible={targetBlock !== null}
@@ -1331,7 +1273,7 @@ export function BlockInteraction({ chunkManager }) {
       )}
 
       {/* Placement preview ghost block — show in placement mode or first-person (right-click places) */}
-      {(blockPlacementMode || firstPerson) && previewPosition && (
+      {(touchPlacing || firstPerson) && previewPosition && (
         <PlacementPreview
           position={previewPosition}
           blockType={selectedBlockType}

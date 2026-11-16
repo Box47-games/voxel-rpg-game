@@ -8,6 +8,13 @@ import PauseMenu from '../PauseMenu';
 
 const setState = (patch) => act(() => useGameStore.setState(patch));
 
+// Most HUD tests run as desktop; set device.touch = true for the touch layout
+const device = vi.hoisted(() => ({ touch: false }));
+vi.mock('../../utils/deviceDetection', async (orig) => ({
+  ...(await orig()),
+  isTouchDevice: () => device.touch,
+}));
+
 describe('Start screen', () => {
   beforeEach(() => {
     useGameStore.getState().reset();
@@ -130,25 +137,32 @@ describe('HUD', () => {
     expect(track.style.getPropertyValue('--fill')).toBe('100%');
   });
 
-  test('Build (touch) and Plan slots toggle their modes and show the badge', () => {
+  test('desktop: Build opens the catalog; Plan toggles plan mode and shows the badge', () => {
     render(<GameUI />);
-    const build = screen.getByRole('button', { name: 'Build' });
-    expect(build).toHaveAttribute('aria-pressed', 'false');
-
-    fireEvent.click(build);
-    expect(useGameStore.getState().buildMode).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Build' }));
+    expect(useGameStore.getState().activeBuildingCatalog).toBe(true);
     expect(screen.getByRole('button', { name: 'Build' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('Build mode')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Plan' }));
     expect(useGameStore.getState().planMode).toBe(true);
     expect(useGameStore.getState().zoneMode).toBe(true);
-    expect(useGameStore.getState().buildMode).toBe(false);
     expect(screen.getByText('Plan mode')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Plan' }));
     expect(useGameStore.getState().planMode).toBe(false);
     expect(useGameStore.getState().zoneMode).toBe(false);
+  });
+
+  test('touch: the dock is one Tools button that opens the tool wheel', () => {
+    device.touch = true;
+    try {
+      render(<GameUI />);
+      expect(screen.queryByRole('button', { name: 'Inventory' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+      expect(useGameStore.getState().openPanel).toBe('tools');
+    } finally {
+      device.touch = false;
+    }
   });
 
   test('Inventory and Crafting slots press their hotkeys; Settlement opens the dashboard', () => {
@@ -221,9 +235,11 @@ describe('MobileTouchTutorial', () => {
     useGameStore.getState().reset();
     localStorage.removeItem('mobileTutorialSeen');
     window.ontouchstart = null; // makes isTouchDevice() true
+    device.touch = true;
   });
   afterEach(() => {
     delete window.ontouchstart;
+    device.touch = false;
     localStorage.removeItem('mobileTutorialSeen');
   });
 

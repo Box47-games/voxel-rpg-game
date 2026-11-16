@@ -2,28 +2,16 @@
  * BlockHotbar - the block hotbar. On desktop it is always shown in Play:
  * slot 0 is the empty hand (mine and fight; right-click places nothing),
  * 1-9/0 pick a block. Pressing the selected block's key again returns to the hand.
- * Touch keeps it inside build mode until the context button lands.
+ * Touch has no hotbar: blocks are picked from the tool wheel and placed with
+ * the context button.
  */
 
 import React, { useEffect, useRef } from 'react';
 import useGameStore from '../../stores/useGameStore';
-import { BlockTypes, BlockProperties } from '../../systems/chunks/blockTypes';
+import { BlockProperties } from '../../systems/chunks/blockTypes';
 import { isTouchDevice } from '../../utils/deviceDetection';
-import { getPlacementCost, countPlaceable } from '../../data/blockDrops';
+import { getPlacementCost, countPlaceable, HOTBAR_BLOCKS } from '../../data/blockDrops';
 
-// Blocks available in the hotbar
-const HOTBAR_BLOCKS = [
-  BlockTypes.DIRT,
-  BlockTypes.GRASS,
-  BlockTypes.STONE,
-  BlockTypes.SAND,
-  BlockTypes.SNOW,
-  BlockTypes.WOOD,
-  BlockTypes.LEAVES,
-  BlockTypes.GRAVEL,
-  BlockTypes.COAL_ORE,
-  BlockTypes.CAMPFIRE,
-];
 
 /**
  * Convert RGB array [0-1] to CSS color
@@ -37,16 +25,11 @@ function rgbToCSS(rgb) {
 
 export function BlockHotbar() {
   const selectedBlockType = useGameStore((state) => state.selectedBlockType);
-  const blockPlacementMode = useGameStore((state) => state.blockPlacementMode);
-  const buildMode = useGameStore((state) => state.buildMode);
   const zoneMode = useGameStore((state) => state.zoneMode || state.planMode); // planning: no mining or placing
   const placingBuildingId = useGameStore((state) => state.placingBuildingId);
   const materials = useGameStore((state) => state.inventory.materials);
   const setSelectedBlockType = useGameStore(
     (state) => state.setSelectedBlockType
-  );
-  const toggleBlockPlacementMode = useGameStore(
-    (state) => state.toggleBlockPlacementMode
   );
   const isMobile = useRef(isTouchDevice());
 
@@ -74,11 +57,9 @@ export function BlockHotbar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setSelectedBlockType]);
 
-  // Desktop: always in Play. Touch: only in build mode. Hidden while zoning or placing a building.
-  if (isMobile.current && !buildMode) return null;
+  // Desktop only, in Play. Hidden while planning or placing a building.
+  if (isMobile.current) return null;
   if (zoneMode || placingBuildingId) return null;
-
-  const exitBuildMode = () => useGameStore.getState().setBuildMode(false);
 
   return (
     <div
@@ -93,44 +74,6 @@ export function BlockHotbar() {
           : {}),
       }}
     >
-      {/* Mobile: action row with mode toggle + exit */}
-      {isMobile.current && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
-            width: '100%',
-            justifyContent: 'center',
-          }}
-        >
-          <button
-            type="button"
-            className={`vx-btn${blockPlacementMode ? ' vx-btn--primary' : ''}`}
-            style={{ minWidth: '100px' }}
-            onClick={toggleBlockPlacementMode}
-          >
-            {blockPlacementMode ? 'Place' : 'Mine'}
-          </button>
-          <button
-            type="button"
-            className="vx-btn"
-            onClick={() => useGameStore.getState().openCatalog()}
-            aria-label="Build catalog"
-          >
-            ▦ Catalog
-          </button>
-          <button
-            type="button"
-            className="vx-btn vx-btn--danger"
-            onClick={exitBuildMode}
-            aria-label="Exit build mode"
-          >
-            ✕ Exit
-          </button>
-        </div>
-      )}
-
       {/* Block slots */}
       <div
         className="vx-panel"
@@ -211,19 +154,13 @@ export function BlockHotbar() {
 
       {/* Instructions */}
       <div style={styles.instructions}>
-        {isMobile.current ? (
-          <span>Tap to {blockPlacementMode ? 'place' : 'mine'}</span>
-        ) : (
-          <>
-            <span>Hold left-click to mine</span>
-            <span style={styles.separator}>|</span>
-            <span>
-              {selectedBlockType == null
-                ? 'Pick a block (1-0) to place'
-                : 'Right-click to place'}
-            </span>
-          </>
-        )}
+        <span>Hold left-click to mine</span>
+        <span style={styles.separator}>|</span>
+        <span>
+          {selectedBlockType == null
+            ? 'Pick a block (1-0) to place'
+            : 'Right-click to place'}
+        </span>
       </div>
     </div>
   );

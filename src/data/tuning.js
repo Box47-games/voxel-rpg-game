@@ -221,6 +221,9 @@ export const PLAN_CAMERA_TILT = 0.3;            // Horizontal offset = height ×
 // Gesture disambiguation
 export const TAP_MAX_DURATION_MS = 200;
 export const TAP_MAX_DISTANCE_PX = 10;
+// Touch context button: enemies this close (world units) turn it into Attack
+export const TOUCH_ATTACK_RANGE = 14;
+export const TOUCH_ATTACK_REPEAT_MS = 350;      // holding the button keeps attacking
 
 // ─── Settlement Attractiveness ──────────────────────────────
 // Score components that drive NPC immigration decisions.

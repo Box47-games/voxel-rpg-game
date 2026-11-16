@@ -14,6 +14,8 @@ import SettlementDashboard from './components/ui/SettlementDashboard';
 import PickupTextOverlay from './components/ui/PickupTextOverlay';
 import PauseMenu from './components/PauseMenu';
 import MobileActionButtons from './components/ui/MobileActionButtons';
+import ContextButton from './components/ui/ContextButton';
+import ToolWheel from './components/ui/ToolWheel';
 import MobileTouchTutorial from './components/ui/MobileTouchTutorial';
 import VirtualJoystick from './components/ui/VirtualJoystick';
 import NotificationSystem from './components/notifications/NotificationSystem';
@@ -109,6 +111,8 @@ function App3D() {
       {/* Mobile on-screen controls */}
       <VirtualJoystick />
       <MobileActionButtons />
+      <ContextButton />
+      <ToolWheel />
 
       {/* Mobile touch tutorial (shows once on first mobile play) */}
       <MobileTouchTutorial />

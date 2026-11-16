@@ -32,8 +32,9 @@ const DESKTOP_CONTROLS = [
 const TOUCH_CONTROLS = [
   [['Stick'], 'Move'],
   [['Drag'], 'Look around'],
-  [['Tap'], 'Attack'],
-  [['Hold'], 'Mine'],
+  [['Tap'], 'Attack / cast'],
+  [['⚔'], 'Act: attack, mine, place'],
+  [['▦'], 'Tools: bag, build, plan'],
   [['Pinch'], 'Zoom'],
   [['🪄'], 'Spell wheel'],
 ];

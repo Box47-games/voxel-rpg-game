@@ -1,0 +1,152 @@
+/* ToolWheel.css — touch tool wheel (ring of screens + block strip) */
+
+.tw-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+.tw {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 100%;
+}
+
+/* Ring: items sit on a circle of radius --r around the close button */
+.tw-ring {
+  --r: 92px;
+  --item: 68px;
+  position: relative;
+  width: calc(2 * var(--r) + var(--item));
+  height: calc(2 * var(--r) + var(--item));
+  flex-shrink: 0;
+}
+
+.tw-item,
+.tw-close {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 50%;
+  border: 3px solid var(--vx-edge);
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tw-item {
+  width: var(--item);
+  height: var(--item);
+  transform: translate(calc(-50% + var(--x) * var(--r)), calc(-50% + var(--y) * var(--r)));
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--tw) 75%, #fff 5%), color-mix(in srgb, var(--tw) 50%, #000));
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.25), inset 0 -4px 0 rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.4);
+  font-family: var(--vx-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+}
+
+.tw-item svg {
+  width: 24px;
+  height: 24px;
+}
+
+.tw-close {
+  width: 52px;
+  height: 52px;
+  transform: translate(-50%, -50%);
+  background: var(--vx-panel-raised);
+}
+
+.tw-close svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Block strip */
+.tw-blocks {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tw-blocks::-webkit-scrollbar {
+  display: none;
+}
+
+.tw-block {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--vx-edge);
+  border-radius: 2px;
+  box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.3), inset 0 -5px 0 rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.tw-block--hand {
+  background: rgba(20, 18, 14, 0.75);
+  font-size: 20px;
+}
+
+.tw-block--held {
+  outline: 2px solid var(--vx-gold-light);
+  outline-offset: 2px;
+}
+
+.tw-block--empty {
+  opacity: 0.45;
+}
+
+.tw-block__count {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-family: var(--vx-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000;
+}
+
+.tw-hint {
+  margin: 0;
+  font-family: var(--vx-font-ui);
+  font-size: 12px;
+  color: var(--vx-text);
+  text-shadow: 0 1px 2px #000;
+  text-align: center;
+}
+
+/* Short landscape phones: ring beside the strip would be cramped; shrink it */
+@media (max-height: 500px) {
+  .tw-ring {
+    --r: 72px;
+    --item: 58px;
+  }
+  .tw {
+    gap: 6px;
+  }
+  .tw-hint {
+    display: none;
+  }
+}

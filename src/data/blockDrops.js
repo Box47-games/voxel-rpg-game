@@ -120,6 +120,20 @@ export function getPlacementCost(blockType) {
   return BLOCK_PLACEMENT_COSTS[blockType] || null;
 }
 
+/** The desktop hotbar's blocks (keys 1-9, 0) and the touch tool wheel's block strip. */
+export const HOTBAR_BLOCKS = [
+  BlockTypes.DIRT,
+  BlockTypes.GRASS,
+  BlockTypes.STONE,
+  BlockTypes.SAND,
+  BlockTypes.SNOW,
+  BlockTypes.WOOD,
+  BlockTypes.LEAVES,
+  BlockTypes.GRAVEL,
+  BlockTypes.COAL_ORE,
+  BlockTypes.CAMPFIRE,
+];
+
 /** Every block type the player can place, in catalog order. */
 export const PLACEABLE_BLOCKS = Object.keys(BLOCK_PLACEMENT_COSTS).map(Number);
 

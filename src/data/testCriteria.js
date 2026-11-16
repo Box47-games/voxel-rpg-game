@@ -77,7 +77,7 @@ export const TEST_PHASES = [
           { id: 'p1-func-food-consume', label: 'Food consumption', description: 'Eating food restores hunger and/or health' },
           { id: 'p1-func-sprint', label: 'Sprint', description: 'Shift to sprint with stamina drain' },
           { id: 'p1-func-contextual-hints', label: 'Contextual hints', description: 'Hints appear contextually: WASD/SPACE movement, I for inventory, click enemies to attack, Tab for build mode, Shift to sprint, H for potions when low HP, 1-6 for spells + Ctrl for spell wheel, V for first-person, hunger warning (mine berry bushes), night warning, shelter hint' },
-          { id: 'p1-func-build-mode', label: 'Modeless mining & placing', description: 'Desktop: in Play, hold left-click mines; hotbar always shown with an empty hand slot (default); 1-0 picks a block and right-click places it; pressing the same key again returns to the hand. Touch: Tab/Build still toggles build mode' },
+          { id: 'p1-func-build-mode', label: 'Modeless mining & placing', description: 'Desktop: in Play, hold left-click mines; hotbar always shown with an empty hand slot (default); 1-0 picks a block and right-click places it; pressing the same key again returns to the hand. Touch: the context button (bottom right) attacks a nearby enemy, harvests a bush, mines the block in front (hold) or places the held block; its icon follows the target; dragging is always the camera; the Tools button opens the tool wheel (Bag, Craft, Build, Plan, Settlement + block strip)' },
         ],
       },
       {
@@ -101,7 +101,7 @@ export const TEST_PHASES = [
         id: 'p2-settlement',
         name: 'Settlement Loop',
         criteria: [
-          { id: 'p2-sett-campfire-place', label: 'Campfire placement', description: 'Campfire block (warm orange) appears in hotbar slot 9; can be placed in build mode' },
+          { id: 'p2-sett-campfire-place', label: 'Campfire placement', description: 'Campfire block (warm orange) appears in hotbar slot 0 (touch: tool wheel strip); can be placed' },
           { id: 'p2-sett-campfire-mine', label: 'Campfire mining', description: 'Mining a campfire drops 2 wood' },
           { id: 'p2-sett-center-detect', label: 'Settlement center detection', description: 'After placing a campfire, store.settlement.settlementCenter is set within ~5 seconds' },
           { id: 'p2-sett-attractiveness', label: 'Attractiveness calc', description: 'After ~10s with campfire placed, store.settlement.attractiveness >= 20' },

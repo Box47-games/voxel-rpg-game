@@ -21,6 +21,7 @@ import {
   Hammer,
   Pickaxe,
   MapPin,
+  LayoutGrid,
   Users,
   Drumstick,
   Coins,
@@ -70,11 +71,11 @@ const ActionSlot = ({ icon: Icon, label, hotkey, color, active = false, compact,
     onClick={onClick}
     aria-label={label}
     aria-pressed={active}
-    title={`${label} [${hotkey}]`}
+    title={hotkey ? `${label} [${hotkey}]` : label}
   >
     <Icon className="hud-slot__icon" aria-hidden="true" />
     {!compact && <span className="hud-slot__label">{label}</span>}
-    {!compact && <kbd className="hud-slot__key">{hotkey}</kbd>}
+    {!compact && hotkey && <kbd className="hud-slot__key">{hotkey}</kbd>}
   </button>
 );
 
@@ -117,7 +118,7 @@ const GameUI = () => {
   const worldTime = useGameStore((state) => state.worldTime);
   const buildMode = useGameStore((state) => state.buildMode);
   const planMode = useGameStore((state) => state.planMode);
-  const toggleBuildMode = useGameStore((state) => state.toggleBuildMode);
+  const toolsOpen = useGameStore((state) => state.openPanel === 'tools');
   const catalogOpen = useGameStore((state) => state.activeBuildingCatalog);
   const [isMobile, setIsMobile] = useState(false);
   const [isTouch] = useState(isTouchDevice);
@@ -140,7 +141,6 @@ const GameUI = () => {
 
   const totalStats = getTotalStats(player, equipment);
   const inMode = buildMode || planMode;
-  const hidePanelSlots = isMobile && inMode; // save room for the hotbars
   const xpFraction = player.xpToNext > 0 ? Math.min(1, player.xp / player.xpToNext) : 0;
 
   const hudClass = [
@@ -290,39 +290,41 @@ const GameUI = () => {
         )}
       </section>
 
-      {/* Bottom left: action bar */}
+      {/* Bottom left: action bar. Touch: one Tools button opens the tool wheel */}
       <nav className="hud-actions" aria-label="Menus">
-        {!hidePanelSlots && (
-          <ActionSlot icon={Package} label="Inventory" hotkey="I" color="#4f8cf7" compact={isMobile} onClick={() => pressKey('i')} />
-        )}
-        {!hidePanelSlots && (
-          <ActionSlot icon={Hammer} label="Crafting" hotkey="C" color="#f2c14e" compact={isMobile} onClick={() => pressKey('c')} />
-        )}
         {isTouch ? (
-          // Touch still mines/places through build mode (until the context button)
-          <ActionSlot icon={Pickaxe} label="Build" hotkey="Tab" color="#ffb02e" active={buildMode} compact={isMobile} onClick={toggleBuildMode} />
+          <ActionSlot
+            icon={LayoutGrid}
+            label="Tools"
+            color="#f2c14e"
+            active={toolsOpen}
+            compact={isMobile}
+            onClick={() => useGameStore.getState().togglePanel('tools')}
+          />
         ) : (
-          // Desktop mines and places in Play, so Build opens the catalog (blocks + buildings)
-          <ActionSlot
-            icon={Pickaxe}
-            label="Build"
-            hotkey="B"
-            color="#ffb02e"
-            active={catalogOpen}
-            compact={isMobile}
-            onClick={() => useGameStore.getState().togglePanel('buildings')}
-          />
-        )}
-        <ActionSlot icon={MapPin} label="Plan" hotkey="P" color="#ff8c1a" active={planMode} compact={isMobile} onClick={togglePlanMode} />
-        {!hidePanelSlots && (
-          <ActionSlot
-            icon={Users}
-            label="Settlement"
-            hotkey="N"
-            color="#5cc36b"
-            compact={isMobile}
-            onClick={() => useGameStore.getState().toggleSettlementDashboard()}
-          />
+          <>
+            <ActionSlot icon={Package} label="Inventory" hotkey="I" color="#4f8cf7" compact={isMobile} onClick={() => pressKey('i')} />
+            <ActionSlot icon={Hammer} label="Crafting" hotkey="C" color="#f2c14e" compact={isMobile} onClick={() => pressKey('c')} />
+            {/* Desktop mines and places in Play, so Build opens the catalog (blocks + buildings) */}
+            <ActionSlot
+              icon={Pickaxe}
+              label="Build"
+              hotkey="B"
+              color="#ffb02e"
+              active={catalogOpen}
+              compact={isMobile}
+              onClick={() => useGameStore.getState().togglePanel('buildings')}
+            />
+            <ActionSlot icon={MapPin} label="Plan" hotkey="P" color="#ff8c1a" active={planMode} compact={isMobile} onClick={togglePlanMode} />
+            <ActionSlot
+              icon={Users}
+              label="Settlement"
+              hotkey="N"
+              color="#5cc36b"
+              compact={isMobile}
+              onClick={() => useGameStore.getState().toggleSettlementDashboard()}
+            />
+          </>
         )}
       </nav>
     </div>
