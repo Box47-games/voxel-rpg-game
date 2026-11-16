@@ -23,7 +23,7 @@ import useGameStore from './stores/useGameStore';
 // Panels that aren't needed for the first frame are code-split into their own chunks
 const CraftingUI = lazy(() => import('./components/CraftingUI'));
 const InventoryUI = lazy(() => import('./components/InventoryUI'));
-const BuildingCatalog = lazy(() => import('./components/ui/BuildingCatalog'));
+const BuildCatalog = lazy(() => import('./components/ui/BuildCatalog'));
 const KeyboardShortcutsPanel = lazy(() => import('./components/KeyboardShortcutsPanel'));
 const DeathScreen = lazy(() => import('./components/DeathScreen'));
 const DialogueUI = lazy(() => import('./components/ui/DialogueUI'));
@@ -124,7 +124,7 @@ function App3D() {
         <InventoryUI />
 
         {/* Building catalog (B key) */}
-        <BuildingCatalog />
+        <BuildCatalog />
 
         {/* Key assignments help (? to toggle) */}
         <KeyboardShortcutsPanel />

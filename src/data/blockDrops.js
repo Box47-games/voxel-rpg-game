@@ -120,6 +120,25 @@ export function getPlacementCost(blockType) {
   return BLOCK_PLACEMENT_COSTS[blockType] || null;
 }
 
+/** Every block type the player can place, in catalog order. */
+export const PLACEABLE_BLOCKS = Object.keys(BLOCK_PLACEMENT_COSTS).map(Number);
+
+/**
+ * How many of a block the player can afford to place right now.
+ * @param {number} blockType
+ * @param {Object<string, number>} materials - inventory.materials
+ * @returns {number}
+ */
+export function countPlaceable(blockType, materials) {
+  const cost = getPlacementCost(blockType);
+  if (!cost) return 0;
+  let count = Infinity;
+  for (const [mat, qty] of Object.entries(cost)) {
+    count = Math.min(count, Math.floor((materials?.[mat] || 0) / qty));
+  }
+  return Number.isFinite(count) ? count : 0;
+}
+
 /**
  * Check whether an inventory can pay a placement cost.
  * @param {Object<string, number>} materials - inventory.materials

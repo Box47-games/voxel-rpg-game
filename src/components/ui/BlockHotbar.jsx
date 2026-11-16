@@ -9,18 +9,7 @@ import React, { useEffect, useRef } from 'react';
 import useGameStore from '../../stores/useGameStore';
 import { BlockTypes, BlockProperties } from '../../systems/chunks/blockTypes';
 import { isTouchDevice } from '../../utils/deviceDetection';
-import { getPlacementCost } from '../../data/blockDrops';
-
-/** How many of a block the player can afford to place right now. */
-function countPlaceable(blockType, materials) {
-  const cost = getPlacementCost(blockType);
-  if (!cost) return 0;
-  let count = Infinity;
-  for (const [mat, qty] of Object.entries(cost)) {
-    count = Math.min(count, Math.floor((materials?.[mat] || 0) / qty));
-  }
-  return Number.isFinite(count) ? count : 0;
-}
+import { getPlacementCost, countPlaceable } from '../../data/blockDrops';
 
 // Blocks available in the hotbar
 const HOTBAR_BLOCKS = [
@@ -125,6 +114,14 @@ export function BlockHotbar() {
           </button>
           <button
             type="button"
+            className="vx-btn"
+            onClick={() => useGameStore.getState().openCatalog()}
+            aria-label="Build catalog"
+          >
+            ▦ Catalog
+          </button>
+          <button
+            type="button"
             className="vx-btn vx-btn--danger"
             onClick={exitBuildMode}
             aria-label="Exit build mode"
@@ -167,7 +164,13 @@ export function BlockHotbar() {
             ✋
           </span>
         </button>
-        {HOTBAR_BLOCKS.map((blockType, index) => {
+        {/* A block picked from the catalog (B) that isn't on the bar gets its own slot */}
+        {(HOTBAR_BLOCKS.includes(selectedBlockType) || selectedBlockType == null
+          ? HOTBAR_BLOCKS
+          : [...HOTBAR_BLOCKS, selectedBlockType]
+        ).map((blockType, index) => {
+          const keyLabel =
+            index < HOTBAR_BLOCKS.length ? String((index + 1) % 10) : 'B';
           const props = BlockProperties[blockType];
           const isSelected = selectedBlockType === blockType;
           const slotSize = isMobile.current ? '40px' : '48px';
@@ -197,10 +200,10 @@ export function BlockHotbar() {
               onClick={() =>
                 setSelectedBlockType(isSelected ? null : blockType)
               }
-              title={`${props.name} (${(index + 1) % 10}) — costs ${costText || 'n/a'}`}
+              title={`${props.name} (${keyLabel}) — costs ${costText || 'n/a'}`}
             >
               <span style={styles.countBadge}>{placeable}</span>
-              <span style={styles.keyHint}>{(index + 1) % 10}</span>
+              <span style={styles.keyHint}>{keyLabel}</span>
             </button>
           );
         })}

@@ -123,6 +123,7 @@ const GameUI = () => {
   const buildMode = useGameStore((state) => state.buildMode);
   const zoneMode = useGameStore((state) => state.zoneMode);
   const toggleBuildMode = useGameStore((state) => state.toggleBuildMode);
+  const catalogOpen = useGameStore((state) => state.activeBuildingCatalog);
   const [isMobile, setIsMobile] = useState(false);
   const [isTouch] = useState(isTouchDevice);
   const statBreakdowns = useStatBreakdown();
@@ -301,7 +302,21 @@ const GameUI = () => {
         {!hidePanelSlots && (
           <ActionSlot icon={Hammer} label="Crafting" hotkey="C" color="#f2c14e" compact={isMobile} onClick={() => pressKey('c')} />
         )}
-        <ActionSlot icon={Pickaxe} label="Build" hotkey="Tab" color="#ffb02e" active={buildMode} compact={isMobile} onClick={toggleBuildMode} />
+        {isTouch ? (
+          // Touch still mines/places through build mode (until the context button)
+          <ActionSlot icon={Pickaxe} label="Build" hotkey="Tab" color="#ffb02e" active={buildMode} compact={isMobile} onClick={toggleBuildMode} />
+        ) : (
+          // Desktop mines and places in Play, so Build opens the catalog (blocks + buildings)
+          <ActionSlot
+            icon={Pickaxe}
+            label="Build"
+            hotkey="B"
+            color="#ffb02e"
+            active={catalogOpen}
+            compact={isMobile}
+            onClick={() => useGameStore.getState().togglePanel('buildings')}
+          />
+        )}
         <ActionSlot icon={MapPin} label="Zones" hotkey="Z" color="#ff8c1a" active={zoneMode} compact={isMobile} onClick={toggleZoneMode} />
         {!hidePanelSlots && (
           <ActionSlot

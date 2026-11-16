@@ -54,7 +54,7 @@ const shortcuts = {
       { key: 'Right-click', description: 'Place the picked block' },
       { key: 'Tab', description: 'Toggle build mode' },
       { key: 'Z', description: 'Toggle zone mode' },
-      { key: 'B', description: 'Toggle build menu / Go to base' },
+      { key: 'B', description: 'Build catalog: blocks and buildings (1 / 2 switch tabs)' },
       { key: 'N', description: 'Settlement dashboard' },
       { key: 'Delete', description: 'Delete selected building' },
       { key: 'Escape', description: 'Cancel placement' },

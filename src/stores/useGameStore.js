@@ -1702,6 +1702,20 @@ const useGameStore = create((rawSet, get, api) => {
     : { ...CLOSED_PANELS, ...panelFlags(name), placingBuildingId: null, zoneMode: false, zoneDragStart: null })),
   closePanels: () => set(CLOSED_PANELS),
 
+  /** Build catalog (B): one panel with 'blocks' and 'buildings' tabs. */
+  catalogTab: 'blocks',
+  openCatalog: (tab) => set((s) => ({
+    ...CLOSED_PANELS,
+    activeBuildingCatalog: true,
+    catalogTab: tab || s.catalogTab,
+    placingBuildingId: null,
+    zoneMode: false,
+    zoneDragStart: null,
+  })),
+  setCatalogTab: (tab) => set({ catalogTab: tab }),
+  /** Put a block in hand from the catalog and close it (touch: switch build mode to placing). */
+  pickBlock: (blockType) => set({ ...CLOSED_PANELS, selectedBlockType: blockType, blockPlacementMode: true }),
+
   /**
    * Switch mode: 'play' (default), 'build' or 'zone'. Entering one leaves the
    * others and closes any panel. Entering the current mode again returns to play.
@@ -1941,7 +1955,7 @@ const useGameStore = create((rawSet, get, api) => {
       tutorialHints: { shownHints: [] },
       settlement: createInitialSettlement(),
       dialogue: { active: false, tree: null, onAction: null },
-      buildMode: false, selectedBlockType: null,
+      buildMode: false, selectedBlockType: null, catalogTab: 'blocks',
       blockPlacementMode: false,
       zones: [], zoneMode: false, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
       constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null, settlementDashboardOpen: false,

@@ -208,7 +208,7 @@ export const TEST_PHASES = [
         id: 'p2-construction',
         name: 'Construction System (2.4)',
         criteria: [
-          { id: 'p2-build-catalog', label: 'Building catalog', description: 'B key opens building catalog with 4 building types' },
+          { id: 'p2-build-catalog', label: 'Build catalog', description: 'B (or the dock Build button on desktop) opens the Build catalog: Blocks tab picks a block into hand, Buildings tab lists the blueprints; 1 / 2 switch tabs' },
           { id: 'p2-build-blueprint', label: 'Blueprint placement', description: 'Player selects building and places ghost preview on terrain' },
           { id: 'p2-build-validate', label: 'Placement validation', description: 'Invalid placements (uneven terrain, overlap) shown in red' },
           { id: 'p2-build-ghost', label: 'Ghost blocks', description: 'Placed blueprint shows translucent ghost blocks at each position' },
