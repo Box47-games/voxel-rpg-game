@@ -76,7 +76,7 @@ const BlockColors = {
   [BlockTypes.CORRUPTED_STONE]: lin([0.12, 0.05, 0.15]),
   [BlockTypes.CORRUPTED_GRASS]: lin([0.2, 0.3, 0.15]),
   [BlockTypes.DEAD_LEAVES]: lin([0.58, 0.42, 0.28]),
-  [BlockTypes.DEAD_WOOD]: lin([0.45, 0.43, 0.4]),
+  [BlockTypes.DEAD_WOOD]: lin([0.3, 0.27, 0.3]),   // charred bark, violet-grey
 };
 
 // Transparent blocks
@@ -134,6 +134,8 @@ const LEAF_DARK = lin([0.15, 0.4, 0.15]);
 const LEAF_LIGHT = lin([0.34, 0.58, 0.21]);
 const WOOD_RINGS = lin([0.68, 0.52, 0.33]);
 const CORRUPT_SOIL = lin([0.2, 0.12, 0.18]);
+const DEAD_WOOD_RINGS = lin([0.52, 0.47, 0.48]); // pale ash on cut ends
+const CORRUPT_FLECK = lin([0.42, 0.16, 0.6]);    // violet crystal flecks in corrupted stone
 
 // How much each block's color wobbles from vertex to vertex
 const MOTTLE = {
@@ -148,6 +150,8 @@ const MOTTLE = {
   [BlockTypes.CLAY]: 0.05,
   [BlockTypes.WOOD]: 0.1,
   [BlockTypes.CORRUPTED_GRASS]: 0.08,
+  [BlockTypes.CORRUPTED_STONE]: 0.12,
+  [BlockTypes.DEAD_WOOD]: 0.16,
 };
 
 /** Deterministic hash of integer world coordinates → [0, 1). */
@@ -228,6 +232,15 @@ function vertexBaseColor(blockType, face, vTop, wx, wy, wz, vx, vy, vz, out) {
       if (face === 'top' || face === 'bottom') mix3(WOOD_RINGS, WOOD_RINGS, 0, out);
       else mix3(base, base, 0, out);
       break;
+    case BlockTypes.DEAD_WOOD:
+      if (face === 'top' || face === 'bottom') mix3(DEAD_WOOD_RINGS, DEAD_WOOD_RINGS, 0, out);
+      else mix3(base, base, 0, out);
+      break;
+    case BlockTypes.CORRUPTED_STONE:
+      // A few vertices catch violet crystal flecks
+      if (hash3(vx * 7, vy * 13, vz * 3) > 0.93) mix3(base, CORRUPT_FLECK, 0.8, out);
+      else mix3(base, base, 0, out);
+      break;
     default:
       out[0] = base[0]; out[1] = base[1]; out[2] = base[2];
   }
@@ -235,7 +248,8 @@ function vertexBaseColor(blockType, face, vTop, wx, wy, wz, vx, vy, vz, out) {
   const amp = MOTTLE[blockType] || 0.05;
   if (amp > 0) {
     // Bark streaks run vertically; everything else mottles in 3D
-    const n = blockType === BlockTypes.WOOD && face !== 'top' && face !== 'bottom'
+    const barky = blockType === BlockTypes.WOOD || blockType === BlockTypes.DEAD_WOOD;
+    const n = barky && face !== 'top' && face !== 'bottom'
       ? hash3(vx * 3 + vz * 5, 0, 7)
       : hash3(vx, vy, vz);
     const m = 1 + (n - 0.5) * 2 * amp;

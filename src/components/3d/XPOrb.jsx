@@ -3,12 +3,14 @@ import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
+import { XPShard } from './pickups/pickupModels';
 
 /**
  * XPOrb component - Collectible XP that flies toward player
  */
 const XPOrb = ({ position, xpAmount = 25, id, onCollect }) => {
   const rigidBodyRef = useRef();
+  const shardRef = useRef();
   const [collected, setCollected] = React.useState(false);
 
   // Reusable vectors to avoid per-frame allocations
@@ -17,8 +19,14 @@ const XPOrb = ({ position, xpAmount = 25, id, onCollect }) => {
   const _direction = useRef(new THREE.Vector3());
 
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!rigidBodyRef.current || collected) return;
+    if (shardRef.current) {
+      const t = state.clock.elapsedTime;
+      shardRef.current.rotation.y = t * 3;
+      const pulse = 1 + Math.sin(t * 6) * 0.12;
+      shardRef.current.scale.setScalar(pulse);
+    }
 
     const orbTranslation = rigidBodyRef.current.translation();
     const playerPosArr = useGameStore.getState().player.position;
@@ -68,24 +76,8 @@ const XPOrb = ({ position, xpAmount = 25, id, onCollect }) => {
       colliders="ball"
       gravityScale={0}
     >
-      <group>
-        {/* Outer glow */}
-        <mesh>
-          <sphereGeometry args={[0.4, 8, 8]} />
-          <meshBasicMaterial color="#ffd700" transparent opacity={0.3} />
-        </mesh>
-
-        {/* Inner core */}
-        <mesh>
-          <sphereGeometry args={[0.25, 8, 8]} />
-          <meshBasicMaterial color="#ffd700" />
-        </mesh>
-
-        {/* Rotating ring */}
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.3, 0.35, 12]} />
-          <meshBasicMaterial color="#ffd700" transparent opacity={0.6} side={THREE.DoubleSide} />
-        </mesh>
+      <group ref={shardRef}>
+        <XPShard />
       </group>
     </RigidBody>
   );

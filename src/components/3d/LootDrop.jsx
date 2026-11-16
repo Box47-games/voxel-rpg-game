@@ -3,6 +3,15 @@ import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
+import { GoldCoins, MaterialChunk, Potion, PickupShadow } from './pickups/pickupModels';
+
+// Colours for material drops that don't bring their own
+const MATERIAL_COLORS = {
+  wood: '#8a5a32', stone: '#8d8d8d', dirt: '#7a5233', iron: '#b9a08a', coal: '#3a3a3e',
+  gold_ore: '#e0b94a', crystal: '#9b5de5', leather: '#a0673a', bone: '#e8e1cf',
+  fiber: '#9bbf5a', berry: '#c8283c', meat: '#c4524a', sand: '#dccb8e', clay: '#a59fae',
+};
+const materialColor = (m) => MATERIAL_COLORS[m] || '#88ff88';
 
 /**
  * LootDrop component - Collectible loot that drops from enemies
@@ -28,8 +37,8 @@ const LootDrop = ({ position, lootType, type, amount = 10, material, color, id, 
   const lootColor = useMemo(() => {
     if (color) return color;
     switch (resolvedType) {
-      case 'gold': return '#ffd700';
-      case 'health': return '#ff6b6b';
+      case 'gold': return '#f2c14e';
+      case 'health': return '#e5484d';
       case 'mana': return '#4dabf7';
       case 'material': return '#88ff88';
       default: return '#ffffff';
@@ -41,8 +50,8 @@ const LootDrop = ({ position, lootType, type, amount = 10, material, color, id, 
 
     // Bobbing + rotation via direct mutation (no state update)
     if (groupRef.current) {
-      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 3) * 0.2;
-      groupRef.current.rotation.y = state.clock.elapsedTime * 2;
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 3) * 0.12;
+      groupRef.current.rotation.y = state.clock.elapsedTime * 1.4;
     }
 
     // Check distance to player for auto-collect
@@ -97,18 +106,12 @@ const LootDrop = ({ position, lootType, type, amount = 10, material, color, id, 
       colliders="ball"
     >
       <group ref={groupRef}>
-        {/* Loot item */}
-        <mesh castShadow>
-          <octahedronGeometry args={[0.3, 0]} />
-          <meshBasicMaterial color={lootColor} />
-        </mesh>
-
-        {/* Outer ring */}
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.4, 0.5, 12]} />
-          <meshBasicMaterial color={lootColor} transparent opacity={0.3} side={THREE.DoubleSide} />
-        </mesh>
+        {resolvedType === 'gold' && <GoldCoins />}
+        {resolvedType === 'material' && <MaterialChunk color={color || materialColor(material)} />}
+        {(resolvedType === 'health' || resolvedType === 'mana') && <Potion color={lootColor} />}
+        {!['gold', 'material', 'health', 'mana'].includes(resolvedType) && <MaterialChunk color={lootColor} />}
       </group>
+      <PickupShadow />
     </RigidBody>
   );
 };

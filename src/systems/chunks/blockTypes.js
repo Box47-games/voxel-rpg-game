@@ -191,7 +191,7 @@ export const BlockProperties = {
     name: 'Dead Wood',
     solid: true,
     transparent: false,
-    color: [0.45, 0.43, 0.40],
+    color: [0.3, 0.27, 0.3],
     hardness: 1.5,
   },
 };
