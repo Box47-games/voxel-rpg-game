@@ -59,7 +59,7 @@ const ContextualHints = () => {
     },
     {
       id: 'blocks',
-      text: 'Press Tab to enter Build Mode — mine and place blocks',
+      text: 'Hold left-click to mine blocks; pick a block (1-9) and right-click to place',
       condition: () => gameState === 'playing',
       priority: 4,
       delay: 25000,

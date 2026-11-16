@@ -77,7 +77,7 @@ export const TEST_PHASES = [
           { id: 'p1-func-food-consume', label: 'Food consumption', description: 'Eating food restores hunger and/or health' },
           { id: 'p1-func-sprint', label: 'Sprint', description: 'Shift to sprint with stamina drain' },
           { id: 'p1-func-contextual-hints', label: 'Contextual hints', description: 'Hints appear contextually: WASD/SPACE movement, I for inventory, click enemies to attack, Tab for build mode, Shift to sprint, H for potions when low HP, 1-6 for spells + Ctrl for spell wheel, V for first-person, hunger warning (mine berry bushes), night warning, shelter hint' },
-          { id: 'p1-func-build-mode', label: 'Build mode toggle', description: 'Tab toggles build mode — mining/placing only works in build mode; movement/attack disabled; badge + hotbar shown' },
+          { id: 'p1-func-build-mode', label: 'Modeless mining & placing', description: 'Desktop: in Play, hold left-click mines; hotbar always shown with an empty hand slot (default); 1-0 picks a block and right-click places it; pressing the same key again returns to the hand. Touch: Tab/Build still toggles build mode' },
         ],
       },
       {

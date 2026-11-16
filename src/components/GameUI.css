@@ -302,6 +302,14 @@
   bottom: calc(124px + var(--safe-b));
 }
 
+/* Desktop Play: the block hotbar sits right of the bar when there is room,
+   otherwise the bar lifts above it (same as in build / zone mode) */
+@media (max-width: 1119px) {
+  .hud--hotbar .hud-actions {
+    bottom: calc(124px + var(--safe-b));
+  }
+}
+
 /* Touch screens: the joystick owns the bottom-left corner, so sit above it */
 .hud--touch .hud-actions {
   bottom: calc(196px + env(safe-area-inset-bottom, 0px));
@@ -405,4 +413,17 @@
 .hud--compact .hud-slot {
   width: 44px;
   height: 44px;
+}
+
+/* ── Block hotbar placement (desktop) ──
+   Wide windows: centre it in the space right of the action bar (~450px).
+   Narrow windows: plain centre; the action bar lifts above it instead. */
+.vx-block-hotbar {
+  left: 50%;
+}
+
+@media (min-width: 1120px) {
+  .vx-block-hotbar--desktop {
+    left: max(50%, calc(var(--safe-l, 0px) + 770px));
+  }
 }

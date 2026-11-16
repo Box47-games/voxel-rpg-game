@@ -152,6 +152,7 @@ const GameUI = () => {
     isMobile && 'hud--compact',
     isTouch && 'hud--touch',
     inMode && 'hud--mode',
+    !isTouch && !inMode && 'hud--hotbar', // desktop block hotbar is always up in Play
   ]
     .filter(Boolean)
     .join(' ');

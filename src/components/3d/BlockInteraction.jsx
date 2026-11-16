@@ -275,10 +275,12 @@ export function BlockInteraction({ chunkManager }) {
   const isMobile = useRef(isTouchDevice());
 
   // Get selected block type, placement mode, first-person mode, and build mode from store
-  const selectedBlockType = useGameStore((state) => state.selectedBlockType ?? BlockTypes.DIRT);
+  // null = empty hand: right-click places nothing
+  const selectedBlockType = useGameStore((state) => state.selectedBlockType);
   const firstPerson = useGameStore((state) => state.camera.firstPerson);
   const blockPlacementMode = useGameStore((state) => state.blockPlacementMode);
   const buildMode = useGameStore((state) => state.buildMode);
+  const placingBuildingId = useGameStore((state) => state.placingBuildingId);
 
   // Raycaster for screen-space raycasting (mobile + desktop third-person)
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -469,9 +471,13 @@ export function BlockInteraction({ chunkManager }) {
   // Update raycast every few frames (first-person mode OR third-person build mode)
   const zoneMode = useGameStore((state) => state.zoneMode);
 
+  // Desktop: mining and placing are always on in Play (no build mode needed).
+  // Touch still uses build mode until the context button replaces long-press.
+  const blocksActive = (buildMode || !isMobile.current) && !zoneMode && !placingBuildingId;
+
   useFrame(() => {
-    // Build mode must be active for any continuous raycasting; skip in zone mode
-    if (!buildMode || zoneMode) {
+    // Block targeting runs in Play (desktop) or build mode (touch); not while zoning or placing
+    if (!blocksActive) {
       if (targetBlock !== null && !isHoldingMine.current) {
         setTargetBlock(null);
         setTargetFace(null);
@@ -517,7 +523,7 @@ export function BlockInteraction({ chunkManager }) {
 
   // Progressive mining: accumulate progress while holding on a block
   useFrame((_, delta) => {
-    if (!buildMode || !isHoldingMine.current || !chunkManager) {
+    if (!blocksActive || !isHoldingMine.current || !chunkManager) {
       if (miningAccum.current > 0) {
         miningAccum.current = 0;
         miningBlockKey.current = null;
@@ -932,15 +938,15 @@ export function BlockInteraction({ chunkManager }) {
                 store.setSpellCooldown('__melee__', MELEE_COOLDOWN);
               }
             }
-          } else if (store.buildMode) {
-            // Start progressive mining (hold to break) — requires build mode
+          } else if (!store.zoneMode && !store.placingBuildingId) {
+            // Not an enemy: start mining the targeted block (hold to break)
             isHoldingMine.current = true;
             miningAccum.current = 0;
             miningBlockKey.current = null;
           }
         } else if (event.button === 2) {
-          // Build mode required for block placement
-          if (!store.buildMode) return;
+          // Place only with a block in hand (the empty hand places nothing)
+          if (store.selectedBlockType == null || store.zoneMode || store.placingBuildingId) return;
           // Right click: place block — do a fresh raycast to get current target
           const freshResult = raycastForBlock();
           if (freshResult.block && freshResult.face) {
@@ -1002,14 +1008,16 @@ export function BlockInteraction({ chunkManager }) {
       // Only handle in third-person mode (not pointer locked)
       if (document.pointerLockElement) return;
 
-      // Build mode required for block interaction in third-person
-      if (!useGameStore.getState().buildMode) return;
+      // Mining and placing work in Play; not while zoning or placing a building
+      const st = useGameStore.getState();
+      if (st.zoneMode || st.placingBuildingId) return;
 
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
 
       if (event.button === 2) {
+        if (st.selectedBlockType == null) return; // empty hand: right-drag is just the camera
         // Right-click: record position and raycast for potential block placement
         rightClickStart.x = event.clientX;
         rightClickStart.y = event.clientY;
@@ -1116,7 +1124,7 @@ export function BlockInteraction({ chunkManager }) {
         const face = result.face;
         if (block && face && chunkManager) {
           const store = useGameStore.getState();
-          tryPlaceBlock(chunkManager, block, face, store.selectedBlockType ?? BlockTypes.DIRT);
+          if (store.selectedBlockType != null) tryPlaceBlock(chunkManager, block, face, store.selectedBlockType);
         }
         rightClickPending = false;
         rightClickResult = null;

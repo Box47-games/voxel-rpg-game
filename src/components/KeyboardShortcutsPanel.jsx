@@ -49,9 +49,11 @@ const shortcuts = {
   building: {
     title: 'Building & Zones',
     keys: [
+      { key: 'Hold click', description: 'Mine the block you aim at' },
+      { key: '1 \u2013 0', description: 'Pick a block (press again for empty hand)' },
+      { key: 'Right-click', description: 'Place the picked block' },
       { key: 'Tab', description: 'Toggle build mode' },
       { key: 'Z', description: 'Toggle zone mode' },
-      { key: '1 \u2013 0', description: 'Select block type (build mode)' },
       { key: 'B', description: 'Toggle build menu / Go to base' },
       { key: 'N', description: 'Settlement dashboard' },
       { key: 'Delete', description: 'Delete selected building' },

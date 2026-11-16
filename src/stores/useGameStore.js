@@ -253,7 +253,7 @@ const useGameStore = create((rawSet, get, api) => {
   activeSpellId: 'fireball', // Default to fireball
 
   // Block interaction state (Phase 0.3)
-  selectedBlockType: 3, // GRASS by default
+  selectedBlockType: null, // null = empty hand (mine/fight; right-click places nothing)
   blockPlacementMode: false, // false = mining, true = placing
   buildMode: false, // Toggle build mode (Tab key) — gates all block interaction
 
@@ -1941,7 +1941,7 @@ const useGameStore = create((rawSet, get, api) => {
       tutorialHints: { shownHints: [] },
       settlement: createInitialSettlement(),
       dialogue: { active: false, tree: null, onAction: null },
-      buildMode: false,
+      buildMode: false, selectedBlockType: null,
       blockPlacementMode: false,
       zones: [], zoneMode: false, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
       constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null, settlementDashboardOpen: false,

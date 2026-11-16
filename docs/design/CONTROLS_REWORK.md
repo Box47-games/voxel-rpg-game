@@ -48,7 +48,7 @@ Tab is freed (browser focus key). Remapping in Settings comes later.
 
 1. **Done:** spells on the Q wheel; number keys no longer cast spells (fixes the clash with the block hotbar).
 2. **Done:** one mode (play, build, zone) and one panel (inventory, crafting, settlement, building catalog) at a time; Esc backs out one step (placement → panel or info card → mode), then pauses.
-3. Modeless mining and placing in Play (desktop); always-visible hotbar with an empty hand slot.
+3. **Done:** modeless mining and placing in Play (desktop); always-visible hotbar with an empty hand slot (the default; pressing a selected block's key again returns to it). Left-click on terrain within reach mines; ground clicks beyond reach still cast the spell. Touch keeps build mode until step 6.
 4. B catalog: blocks and buildings in one, with tabs.
 5. Plan mode: zones + building placement with the raised camera; settlement overview alongside.
 6. Touch: context button and tool wheel; drop long-press mining.
