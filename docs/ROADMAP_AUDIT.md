@@ -84,10 +84,10 @@ Three patterns explain most gaps:
 | Hunger: drains, food restores, starvation damages | ✅ | `HungerSystem.js`, `SurvivalTick.jsx`, `eatMaterial`. |
 | Mining yields items; all blocks drop appropriately | ✅ | `blockDrops.js` + `calculateDrops`. |
 | Tool progression wood → stone → iron | 🟡 | Stone/iron/steel pickaxes & axes exist with `harvestSpeed`/`toolTier`. **No wooden tier** recipe (bare hands → stone). Tools must be equipped in the *weapon* slot to count. |
-| **Tool durability** | ❌ | `DURABILITY_WOOD/STONE/IRON` in `tuning.js` are never read; tools never break. |
+| **Tool durability** | ✅ | Stone 65 / iron 250 / steel 1000 uses; a block costs ceil(hardness) uses; broken tools mine like bare hands until repaired (half the recipe, scaled by wear); death costs 25% (2026-11-16). No wooden tools by design. |
 | Rift spawning, visuals, night intensification | ✅ | `RiftManager.js` (night spawn table, night pop cap), `RiftVisual.jsx`, `RiftParticles.jsx`. |
 | **Shelter gives tangible benefits** | ✅ | 25% less hunger, 2× health regen (new base 0.5/s, hunger-gated, paused 8 s after damage), 1.5× stamina regen, no rift spawns within 16 units (2026-11-16). |
-| Survival HUD incl. tool status | 🟡 | Health/mana/stamina/hunger/time/shelter shown; no tool or durability indicator. |
+| Survival HUD incl. tool status | ✅ | Health/mana/stamina/hunger/time/shelter, plus the tool in hand and its uses left. |
 | Death: lose resources, respawn | ✅ | `respawnPlayer` (50% materials, 50% health/hunger, spawn protection). |
 | Mobile: swipe camera, auto-jump, pinch zoom | ✅ | `CameraRotateControls.jsx` (pinch + wheel), auto-jump in `Player.jsx`. |
 | Save/load preserves new state | ✅ | Hunger, world time, shelter-relevant world edits saved. |

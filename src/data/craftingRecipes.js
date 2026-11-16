@@ -3,6 +3,8 @@
  * Defines all craftable items, their requirements, and stats
  */
 
+import { DURABILITY_STONE, DURABILITY_IRON, DURABILITY_STEEL } from './tuning';
+
 export const ITEM_TYPES = {
   WEAPON: 'weapon',
   ARMOR: 'armor',
@@ -200,6 +202,7 @@ export const CRAFTING_RECIPES = {
       harvestSpeed: 1.2, // 20% faster harvesting
       woodYield: 1.1, // 10% more wood
     },
+    maxDurability: DURABILITY_STONE,
     craftingBonus: 5, // Bonus to crafting quality when equipped
     icon: '🪓',
   },
@@ -220,6 +223,7 @@ export const CRAFTING_RECIPES = {
       oreYield: 1.1,
       toolTier: 2,
     },
+    maxDurability: DURABILITY_STONE,
     craftingBonus: 5,
     icon: '⛏️',
   },
@@ -239,6 +243,7 @@ export const CRAFTING_RECIPES = {
       harvestSpeed: 1.5,
       woodYield: 1.3,
     },
+    maxDurability: DURABILITY_IRON,
     craftingBonus: 10,
     icon: '🪓',
   },
@@ -260,6 +265,7 @@ export const CRAFTING_RECIPES = {
       oreYield: 1.3,
       toolTier: 3,
     },
+    maxDurability: DURABILITY_IRON,
     craftingBonus: 10,
     icon: '⛏️',
   },
@@ -279,6 +285,7 @@ export const CRAFTING_RECIPES = {
       harvestSpeed: 2.0,
       woodYield: 1.5,
     },
+    maxDurability: DURABILITY_STEEL,
     craftingBonus: 20,
     icon: '🪓',
   },
@@ -300,6 +307,7 @@ export const CRAFTING_RECIPES = {
       oreYield: 1.5,
       toolTier: 4,
     },
+    maxDurability: DURABILITY_STEEL,
     craftingBonus: 20,
     icon: '⛏️',
   },

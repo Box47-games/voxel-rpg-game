@@ -29,6 +29,16 @@ import {
   PLAYER_HEALTH_REGEN_DELAY,
 } from '../data/tuning';
 import { ActionHistory, createActionMiddleware } from '../systems/state/ActionSystem';
+import {
+  isTool,
+  isBroken,
+  wearTool,
+  wearForBlock,
+  applyDeathWear,
+  getRepairCost,
+  canAffordRepair,
+  repairedTool,
+} from '../systems/tools/toolDurability';
 import { getBuildingById, parseLayers } from '../data/buildings';
 import { getPlacedBlocks, getDemolishRefund, getUpgradeProblem } from '../modules/settlement/buildingInfo';
 import { isSettled } from '../modules/settlement/housing';
@@ -1329,13 +1339,55 @@ const useGameStore = create((rawSet, get, api) => {
       };
     }),
 
+  /**
+   * Wear the tool in hand for mining a block of `hardness`.
+   * @returns {boolean} True if this broke it
+   */
+  wearEquippedTool: (hardness) => {
+    const tool = get().equipment.weapon;
+    if (!isTool(tool) || isBroken(tool)) return false;
+    const worn = wearTool(tool, wearForBlock(hardness));
+    set((state) => ({ equipment: { ...state.equipment, weapon: worn } }));
+    return isBroken(worn);
+  },
+
+  /**
+   * Repair a tool to full: the equipped one ({ slot: 'weapon' }) or an
+   * inventory item ({ index }). Takes the materials from the inventory.
+   * @returns {boolean} True if repaired
+   */
+  repairTool: (target) => {
+    const state = get();
+    const item = target?.slot ? state.equipment[target.slot] : state.inventory.items[target?.index];
+    const cost = getRepairCost(item);
+    if (!cost || !canAffordRepair(item, state.inventory.materials)) return false;
+    const materials = { ...state.inventory.materials };
+    for (const [m, n] of Object.entries(cost)) materials[m] -= n;
+    const fixed = repairedTool(item);
+    if (target.slot) {
+      set({
+        equipment: { ...state.equipment, [target.slot]: fixed },
+        inventory: { ...state.inventory, materials },
+      });
+    } else {
+      const items = state.inventory.items.slice();
+      items[target.index] = fixed;
+      set({ inventory: { ...state.inventory, materials, items } });
+    }
+    return true;
+  },
+
   craftItem: (recipe, newMaterials) =>
     set((state) => {
       // Update materials
       const newInventory = {
         ...state.inventory,
         materials: newMaterials,
-        items: [...state.inventory.items, { ...recipe, craftedAt: Date.now() }],
+        items: [...state.inventory.items, {
+          ...recipe,
+          craftedAt: Date.now(),
+          ...(recipe.maxDurability ? { durability: recipe.maxDurability } : {}),
+        }],
       };
 
       // If consumable, add to potion count or specific type
@@ -1428,6 +1480,10 @@ const useGameStore = create((rawSet, get, api) => {
           statusEffects: [],
         },
         pendingTeleport: spawnPos,
+        // Dying wears the tool in hand
+        equipment: isTool(state.equipment.weapon)
+          ? { ...state.equipment, weapon: applyDeathWear(state.equipment.weapon) }
+          : state.equipment,
         hunger: {
           ...state.hunger,
           current: Math.ceil(state.hunger.max * DEATH_RESPAWN_HUNGER_PERCENT),

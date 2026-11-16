@@ -13,6 +13,7 @@ import { BlockTypes, isSolid, getBlockHardness } from '../../systems/chunks/bloc
 import useGameStore from '../../stores/useGameStore';
 import { calculateDrops, getPlacementCost, canAffordPlacement } from '../../data/blockDrops';
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
+import { usableTool } from '../../systems/tools/toolDurability';
 import { HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN, STOCKPILE_INTERACT_RANGE, CONSTRUCTION_INTERACT_RANGE, BUILDING_INTERACT_RANGE, NPC_INTERACT_RANGE } from '../../data/tuning';
 import { findNearestNPC } from '../../utils/npcQueries';
 import { getBuildingById } from '../../data/buildings';
@@ -563,7 +564,7 @@ export function BlockInteraction({ chunkManager }) {
 
     const hardness = getBlockHardness(blockType);
     const store = useGameStore.getState();
-    const equippedTool = store.equipment?.weapon;
+    const equippedTool = usableTool(store.equipment?.weapon); // broken = bare hands
     const harvestSpeed = equippedTool?.stats?.harvestSpeed || HARVEST_SPEED_BARE_HANDS;
     const breakTime = hardness / harvestSpeed;
 
@@ -613,9 +614,15 @@ export function BlockInteraction({ chunkManager }) {
 
       // Calculate and grant drops
       const store = useGameStore.getState();
-      const equippedTool = store.equipment?.weapon;
+      const equippedTool = usableTool(store.equipment?.weapon);
       const toolTier = equippedTool?.stats?.toolTier || 0;
       const drops = calculateDrops(currentBlock, toolTier);
+
+      // Mining wears the tool, harder blocks more
+      if (equippedTool && store.wearEquippedTool(getBlockHardness(currentBlock))) {
+        store.addPickupText(`${equippedTool.name} broke! Repair it in the inventory`, '#ff6b6b');
+        audioManager.play('error');
+      }
 
       drops.forEach((drop) => {
         store.addMaterial(drop.material, drop.amount);

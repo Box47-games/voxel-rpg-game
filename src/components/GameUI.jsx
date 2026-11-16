@@ -11,6 +11,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { isTool, isBroken, getDurability } from '../systems/tools/toolDurability';
 import {
   Heart,
   Zap,
@@ -117,6 +118,7 @@ const GameUI = () => {
   const gameState = useGameStore((state) => state.gameState);
   const hunger = useGameStore((state) => state.hunger);
   const shelter = useGameStore((state) => state.shelter);
+  const tool = useGameStore((state) => state.equipment.weapon);
   const worldTime = useGameStore((state) => state.worldTime);
   const buildMode = useGameStore((state) => state.buildMode);
   const zoneMode = useGameStore((state) => state.zoneMode);
@@ -248,6 +250,17 @@ const GameUI = () => {
           >
             <Home aria-hidden="true" />
             {shelter.isFullShelter ? 'Sheltered' : 'Partial shelter'}
+          </span>
+        )}
+
+        {isTool(tool) && (
+          <span
+            className="vx-chip hud-tool"
+            style={{ '--chip': isBroken(tool) ? '#ff6b6b' : '#a0aec0' }}
+            title={`${tool.name}: ${getDurability(tool)} / ${tool.maxDurability} uses left`}
+          >
+            <Pickaxe aria-hidden="true" />
+            {isBroken(tool) ? `${tool.name} broken` : `${getDurability(tool)}/${tool.maxDurability}`}
           </span>
         )}
       </section>
