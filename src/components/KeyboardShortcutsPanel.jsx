@@ -40,11 +40,10 @@ const shortcuts = {
   combat: {
     title: 'Combat & Spells',
     keys: [
-      { key: '1 \u2013 6', description: 'Activate spell / skill slot' },
-      { key: 'Ctrl (hold)', description: 'Open spell wheel' },
+      { key: 'Q (hold)', description: 'Spell wheel: choose the spell your clicks cast' },
       { key: 'Alt', description: 'Block' },
       { key: 'H', description: 'Use health potion' },
-      { key: 'Click', description: 'Attack / interact' },
+      { key: 'Click enemy', description: 'Attack (casts your chosen spell)' },
     ],
   },
   building: {

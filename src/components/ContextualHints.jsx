@@ -89,7 +89,7 @@ const ContextualHints = () => {
     },
     {
       id: 'spells',
-      text: 'Cast spells with 1-6 keys. Attacks cost 5 mana. Hold Ctrl to view spell wheel.',
+      text: 'Hold Q to pick a spell, then click enemies to cast it. Attacks cost 5 mana.',
       condition: () => gameState === 'playing',
       priority: 5,
       delay: 20000,

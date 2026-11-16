@@ -4,7 +4,7 @@ import useGameStore from '../stores/useGameStore';
 import { SPELLS } from '../data/spells';
 
 /**
- * SpellWheel component - Spell selection wheel that appears on Ctrl key or touch button
+ * SpellWheel component - Spell selection wheel: hold Q (or the touch button), pick, release
  * Mobile-compatible with touch trigger button and responsive layout
  * Supports up to 12 spells with navigation
  */
@@ -45,20 +45,13 @@ const SpellWheel = () => {
       // Skip keyboard controls on mobile
       if (isMobile) return;
 
-      if (e.key === 'Control' || e.key === 'Ctrl') {
+      if (e.code === 'KeyQ' && !e.repeat) {
+        if (e.target?.tagName === 'INPUT' || e.target?.tagName === 'TEXTAREA') return;
         setIsActive(true);
         e.preventDefault();
       }
 
       if (isActive) {
-        // Number keys to select spell (1-6 for current page)
-        if (e.key >= '1' && e.key <= '6') {
-          const index = parseInt(e.key) - 1;
-          if (index < spellsOnPage.length) {
-            setSelectedIndex(page * SPELLS_PER_PAGE + index);
-          }
-        }
-
         // Arrow keys for selection
         if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
           const newIndex = selectedIndex - 1;
@@ -101,7 +94,7 @@ const SpellWheel = () => {
       // Skip keyboard controls on mobile
       if (isMobile) return;
 
-      if (e.key === 'Control' || e.key === 'Ctrl') {
+      if (e.code === 'KeyQ') {
         // Commit selected spell as the active spell for left-click casting
         const spell = availableSpells[selectedIndex];
         if (spell) {
@@ -424,7 +417,7 @@ const SpellWheel = () => {
         ) : (
           <>
             <div>← → / A / D to navigate | ↑ ↓ / W / S to change page</div>
-            <div>1-6 to quick select | Ctrl to release spell</div>
+            <div>A / D or arrows to choose · release Q to select</div>
           </>
         )}
       </div>

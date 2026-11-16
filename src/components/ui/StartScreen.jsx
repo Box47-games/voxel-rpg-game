@@ -19,7 +19,7 @@ const DESKTOP_CONTROLS = [
   [['Shift'], 'Sprint'],
   [['Click'], 'Attack / mine'],
   [['Right-drag'], 'Look around'],
-  [['Ctrl'], 'Spell wheel'],
+  [['Q'], 'Spell wheel'],
   [['Tab'], 'Build'],
   [['E'], 'Interact'],
   [['F10'], 'Pause & save'],

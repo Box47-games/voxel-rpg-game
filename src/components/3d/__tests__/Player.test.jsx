@@ -85,21 +85,16 @@ describe('Player Component', () => {
   });
 
   describe('Spells', () => {
-    test('casting spends mana, spawns a projectile and starts the cooldown', () => {
+    test('number keys no longer cast spells: they belong to the hotbar', () => {
+      // Spells are chosen on the spell wheel (hold Q) and cast by clicking enemies
       render(<Player />);
-      press('Digit1'); // fireball
+      press('Digit1');
       step();
       release('Digit1');
 
       const s = useGameStore.getState();
-      expect(s.projectiles).toHaveLength(1);
-      expect(s.player.mana).toBeLessThan(100);
-      expect(s.getSpellCooldown('fireball')).toBeGreaterThan(0);
-
-      // Cooldown blocks an immediate re-cast
-      press('Digit1');
-      step();
-      expect(useGameStore.getState().projectiles).toHaveLength(1);
+      expect(s.projectiles).toHaveLength(0);
+      expect(s.player.mana).toBe(100);
     });
   });
 

@@ -5,7 +5,6 @@ import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import { calculateEquipmentStats } from '../../utils/equipmentStats';
-import { SPELLS, executeSpell } from '../../data/spells';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import { AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_JUMP_MIN_SPEED, JUMP_IMPULSE, JUMP_STAMINA_COST, JUMP_GROUNDED_THRESHOLD, JUMP_COOLDOWN_MS, NAV_WAYPOINT_ARRIVAL, NAV_STUCK_TIMEOUT,
   PLAYER_SPRINT_SPEED_MULT, PLAYER_STAMINA_SPRINT_DRAIN, PLAYER_STAMINA_BLOCK_DRAIN, PLAYER_STAMINA_REGEN,
@@ -20,16 +19,6 @@ import { getLastPlayerAction } from '../../systems/playerActions';
 
 // Mining keeps reporting while the button is held; it counts as ongoing this long after
 const MINE_ACTION_WINDOW_MS = 200;
-
-// Pre-compute spell key map (SPELLS is static)
-const SPELL_KEY_MAP = {
-  spell1: SPELLS.find(s => s.key === '1'),
-  spell2: SPELLS.find(s => s.key === '2'),
-  spell3: SPELLS.find(s => s.key === '3'),
-  spell4: SPELLS.find(s => s.key === '4'),
-  spell5: SPELLS.find(s => s.key === '5'),
-  spell6: SPELLS.find(s => s.key === '6'),
-};
 
 // Frame-rate independent smoothing: `factor` is the lerp amount per 60fps frame
 const smoothing = (factor, delta) => 1 - Math.pow(1 - factor, delta * 60);
@@ -533,51 +522,15 @@ const Player = () => {
     return () => window.removeEventListener('touchstart', handleDoubleTap);
   }, []);
 
-  // Handle spells, potions, and E key — polled every frame via useFrame
+  // Handle potions and the E key — polled every frame via useFrame
   // (Cannot use useEffect because `keys` is a stable mutable ref that never triggers re-renders)
   useFrame(() => {
     const store = useGameStore.getState();
     if (store.gameState !== 'playing') return;
     const currentPlayer = store.player;
 
-    const spellKeyMap = SPELL_KEY_MAP;
-
-    // In third-person, keyboard-cast spells aim in the camera's forward direction
-    // (camera orbits behind the player, so forward = rotationAngle + PI)
-    const cameraState = store.camera;
-    let spellPlayer = currentPlayer;
-    if (!cameraState.firstPerson) {
-      const aimYaw = (cameraState.rotationAngle || 0) + Math.PI;
-      spellPlayer = { ...currentPlayer, facingAngle: aimYaw };
-    }
-
-    // Check each spell key
-    const trycastSpell = (keyName, spell) => {
-      if (!spell) return;
-      if (!keys[keyName]) return;
-
-      // Check cooldown
-      const cooldown = store.getSpellCooldown(spell.id);
-      if (cooldown > 0) return;
-
-      // Check mana
-      if (currentPlayer.mana < spell.manaCost) return;
-
-      // Execute spell
-      const result = executeSpell(spell, spellPlayer, store);
-      if (result.success) {
-        // Set cooldown
-        store.setSpellCooldown(spell.id, spell.cooldown);
-      }
-    };
-
-    // Try to cast each spell
-    trycastSpell('spell1', spellKeyMap.spell1);
-    trycastSpell('spell2', spellKeyMap.spell2);
-    trycastSpell('spell3', spellKeyMap.spell3);
-    trycastSpell('spell4', spellKeyMap.spell4);
-    trycastSpell('spell5', spellKeyMap.spell5);
-    trycastSpell('spell6', spellKeyMap.spell6);
+    // Spells: choose one on the spell wheel (hold Q), cast it by clicking an
+    // enemy. Number keys belong to the hotbar.
 
     // Potion use (H key)
     if (keys.potion && store.inventory.potions > 0 && currentPlayer.potionCooldown <= 0 && currentPlayer.health > 0) {
