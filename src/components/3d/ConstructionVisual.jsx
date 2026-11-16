@@ -7,38 +7,33 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import useGameStore from '../../stores/useGameStore';
 import { getBuildingById, parseLayers } from '../../data/buildings';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { getBlockColor } from '../../systems/chunks/blockTypes';
+import { getScaffoldRoute, segmentBox } from '../../systems/construction/scaffoldRoute';
+import { SCAFFOLD_OFFSET, SCAFFOLD_WIDTH } from '../../data/tuning';
 
 const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
 const ghostMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.28, depthWrite: false });
 const nextMat = new THREE.MeshBasicMaterial({ color: '#9fd3ff', transparent: true, opacity: 0.5, depthWrite: false });
 const scaffoldMat = new THREE.MeshLambertMaterial({ color: '#9a6a3c' });
+const plankMat = new THREE.MeshLambertMaterial({ color: '#b98551' });
 const BLUEPRINT = new THREE.Color('#7cc4ff');
 const tmpM = new THREE.Matrix4();
 const tmpC = new THREE.Color();
 
-/** Corner posts plus a ring of planks every two levels, around the footprint. */
-function scaffoldBoxes(site, size) {
+/** Posts at the ramp's outer corners, up to the site's height. */
+function scaffoldPosts(site, size) {
   const [x0, y0, z0] = site.position;
   const w = size.width * VOXEL_SIZE;
   const d = size.depth * VOXEL_SIZE;
   const h = size.height * VOXEL_SIZE;
-  const pad = 0.35;
-  const out = [];
-  for (const [cx, cz] of [[x0 - pad, z0 - pad], [x0 + w + pad, z0 - pad], [x0 - pad, z0 + d + pad], [x0 + w + pad, z0 + d + pad]]) {
-    out.push({ p: [cx, y0 + h / 2, cz], s: [0.3, h, 0.3] });
-  }
-  for (let y = VOXEL_SIZE * 2; y <= h; y += VOXEL_SIZE * 2) {
-    out.push({ p: [x0 + w / 2, y0 + y, z0 - pad], s: [w + pad * 2, 0.16, 0.36] });
-    out.push({ p: [x0 + w / 2, y0 + y, z0 + d + pad], s: [w + pad * 2, 0.16, 0.36] });
-    out.push({ p: [x0 - pad, y0 + y, z0 + d / 2], s: [0.36, 0.16, d + pad * 2] });
-    out.push({ p: [x0 + w + pad, y0 + y, z0 + d / 2], s: [0.36, 0.16, d + pad * 2] });
-  }
-  return out;
+  const o = SCAFFOLD_OFFSET + SCAFFOLD_WIDTH / 2 + 0.15;
+  return [[x0 - o, z0 - o], [x0 + w + o, z0 - o], [x0 - o, z0 + d + o], [x0 + w + o, z0 + d + o]]
+    .map(([cx, cz]) => ({ p: [cx, y0 + h / 2, cz], s: [0.3, h, 0.3] }));
 }
 
 /** All the blueprint blocks as one instanced mesh (block colour, tinted blue). */
@@ -56,16 +51,34 @@ function GhostBlocks({ blocks }) {
   return <instancedMesh key={blocks.length} ref={ref} args={[boxGeo, ghostMat, blocks.length]} frustumCulled={false} />;
 }
 
-function Scaffold({ boxes }) {
+function Scaffold({ posts, route }) {
   const ref = (mesh) => {
     if (!mesh) return;
-    boxes.forEach((b, i) => {
+    posts.forEach((b, i) => {
       tmpM.makeScale(...b.s).setPosition(...b.p);
       mesh.setMatrixAt(i, tmpM);
     });
     mesh.instanceMatrix.needsUpdate = true;
   };
-  return <instancedMesh key={boxes.length} ref={ref} args={[unitBox, scaffoldMat, boxes.length]} />;
+  return (
+    <>
+      <instancedMesh key={posts.length} ref={ref} args={[unitBox, scaffoldMat, posts.length]} />
+      {/* The walkway: one plank run per side, spiralling up */}
+      {route?.segments.map((seg, i) => {
+        const box = segmentBox(route, seg);
+        return (
+          <mesh
+            key={i}
+            geometry={unitBox}
+            material={plankMat}
+            position={box.position}
+            rotation={[box.rotation[0], box.rotation[1], box.rotation[2], 'YZX']}
+            scale={box.size}
+          />
+        );
+      })}
+    </>
+  );
 }
 const barBgGeo = new THREE.PlaneGeometry(4, 0.4);
 const barBorderGeo = new THREE.PlaneGeometry(4.1, 0.5);
@@ -107,10 +120,11 @@ function ConstructionSiteVisual({ site }) {
     return 1;
   }, [site.status, site.materialsRequired, site.materialsDelivered, site.blocksPlaced, site.totalBlocks]);
 
-  const scaffold = useMemo(
-    () => (building ? scaffoldBoxes(site, building.size) : []),
+  const posts = useMemo(
+    () => (building ? scaffoldPosts(site, building.size) : []),
     [building, site]
   );
+  const route = useMemo(() => getScaffoldRoute(site), [site]);
 
   // Billboard the progress bar; pulse the next block to place
   useFrame(({ clock }) => {
@@ -141,8 +155,8 @@ function ConstructionSiteVisual({ site }) {
       )}
       {ghostBlocks[0] && site.status !== 'BUILDING' && <GhostBlocks blocks={ghostBlocks.slice(0, 1)} />}
 
-      {/* Wooden scaffolding around the footprint */}
-      <Scaffold boxes={scaffold} />
+      {/* Wooden scaffolding: corner posts and a ramp spiralling up to the top */}
+      <Scaffold posts={posts} route={route} />
 
       {/* Progress bar */}
       <group ref={barGroupRef} position={[barX, barY, barZ]}>
@@ -181,6 +195,41 @@ export default function ConstructionVisual() {
       {activeSites.map(site => (
         <ConstructionSiteVisual key={site.id} site={site} />
       ))}
+    </>
+  );
+}
+
+/**
+ * Physics for the scaffolding ramps (inside <Physics>): one fixed body per
+ * site, a box collider per ramp side, so the player can walk up.
+ */
+export function ScaffoldColliders() {
+  const constructionSites = useGameStore((s) => s.constructionSites);
+  const sites = useMemo(
+    () => constructionSites.filter((s) => s.status !== 'COMPLETE' && getScaffoldRoute(s)),
+    [constructionSites]
+  );
+  return (
+    <>
+      {sites.map((site) => {
+        const route = getScaffoldRoute(site);
+        return (
+          <RigidBody key={`${site.id}:${site.position.join(',')}`} type="fixed" colliders={false}>
+            {route.segments.map((seg, i) => {
+              const box = segmentBox(route, seg);
+              const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(...box.rotation, 'YZX'));
+              return (
+                <CuboidCollider
+                  key={i}
+                  args={[box.size[0] / 2, box.size[1] / 2, box.size[2] / 2]}
+                  position={box.position}
+                  quaternion={[q.x, q.y, q.z, q.w]}
+                />
+              );
+            })}
+          </RigidBody>
+        );
+      })}
     </>
   );
 }

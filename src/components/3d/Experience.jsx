@@ -32,7 +32,7 @@ import WeatherEffects from './WeatherEffects';
 import StockpileVisual from './StockpileVisual';
 import FarmVisual from './FarmVisual';
 import BuildingPlacement from './BuildingPlacement';
-import ConstructionVisual from './ConstructionVisual';
+import ConstructionVisual, { ScaffoldColliders } from './ConstructionVisual';
 import ConstructionTick from './ConstructionTick';
 import useGameStore from '../../stores/useGameStore';
 import { useChunkSystem } from '../../hooks/useChunkSystem';
@@ -321,6 +321,9 @@ const Experience = () => {
           {lootDrops.map((loot) => (
             <LootDrop key={loot.id} {...loot} onCollect={removeLootDrop} />
           ))}
+
+          {/* Construction scaffolding ramps the player can walk up */}
+          <ScaffoldColliders />
         </Suspense>
       </Physics>
 

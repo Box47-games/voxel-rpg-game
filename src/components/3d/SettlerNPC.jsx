@@ -11,6 +11,7 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
+import { getActiveScaffoldRoutes, scaffoldHeightAt } from '../../systems/construction/scaffoldRoute';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { NPC_WALK_SPEED, NPC_APPROACH_SPEED, NPC_HAUL_SPEED } from '../../data/tuning';
@@ -84,6 +85,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
   const statusRef = useRef();
   const lastTerrainCheck = useRef(0);
   const terrainY = useRef(npcData.position[1]);
+  const onScaffold = useRef(false);
   const evalRotation = useRef(0);
   const npcIndexRef = useRef(0);
 
@@ -122,7 +124,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
 
     // Terrain Y clamping (check every 500ms, max 1-block step)
     const now = Date.now();
-    if (now - lastTerrainCheck.current > 500) {
+    if (!onScaffold.current && now - lastTerrainCheck.current > 500) {
       lastTerrainCheck.current = now;
       const chunkMgr = store._chunkManager;
       if (chunkMgr) {
@@ -185,11 +187,19 @@ const SettlerNPC = React.memo(({ npcData }) => {
         const newX = pos.x + _dirVec.x * step;
         const newZ = pos.z + _dirVec.z * step;
 
+        // On a construction scaffold ramp: follow its height (only a walkway
+        // at the settler's feet counts, so walking beneath one does nothing)
+        const scaffoldY = scaffoldHeightAt(
+          getActiveScaffoldRoutes(store.constructionSites), newX, newZ, terrainY.current, 0.8
+        );
+        onScaffold.current = scaffoldY !== null;
+        if (onScaffold.current) terrainY.current = scaffoldY;
+
         // Check for solid blocks at feet and torso height before moving
         const chunkMgr = store._chunkManager;
         let blocked = false;
         let stepUp = false;
-        if (chunkMgr) {
+        if (chunkMgr && !onScaffold.current) {
           const feetY = terrainY.current + VOXEL_SIZE / 2;
           const torsoY = terrainY.current + VOXEL_SIZE + VOXEL_SIZE / 2;
           const feetSolid = isSolid(chunkMgr.getBlock(newX, feetY, newZ));

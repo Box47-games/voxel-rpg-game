@@ -383,6 +383,11 @@ export const NPC_MINE_DURATION = 4;           // Seconds to mine one block
 export const NPC_HAUL_SPEED = 2.5;            // Units/sec while carrying
 export const NPC_BUILD_DURATION = 3;          // Seconds per build-step
 export const NPC_WORK_RANGE = 2.5;            // How close NPC must be to work target
+// Construction scaffolding: a ramp that spirals once round the outside of a
+// site, from the ground to its top level, walkable by the player and settlers.
+export const SCAFFOLD_OFFSET = 1.3;           // Ramp centreline, world units outside the walls
+export const SCAFFOLD_WIDTH = 1.6;            // Walkway width, world units
+export const SCAFFOLD_REACH_LEVELS = 2;       // Settlers build from the ground up to this many levels; above, from the ramp
 export const NPC_SKILL_WEIGHT = 50;           // Task scoring weight for skill match
 export const NPC_DISTANCE_WEIGHT = 1;         // Task scoring penalty per unit distance
 export const NPC_PRIORITY_WEIGHT = 100;       // Task scoring weight for task priority

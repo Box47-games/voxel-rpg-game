@@ -5,6 +5,15 @@
  * Driven through tickNPC, the same way the live tick drives it.
  */
 
+import { parseLayers, getBuildingById } from '../../../data/buildings';
+import { SCAFFOLD_REACH_LEVELS } from '../../../data/tuning';
+import { VOXEL_SIZE } from '../../../systems/chunks/coordinates';
+import {
+  getScaffoldRoute,
+  projectOnRoute,
+  pointOnRoute,
+  alongAtHeight,
+} from '../../../systems/construction/scaffoldRoute';
 import { tickNPC } from '../NPCStateMachine';
 import { getNextBlock } from '../buildingInfo';
 import {
@@ -463,6 +472,44 @@ describe('WORKING_BUILD', () => {
 
     const first = getNextBlock(ctx.constructionSites[0]);
     expect(ctx.chunkAdapter.setBlock).toHaveBeenCalledWith(first.x, first.y, first.z, first.blockType);
+  });
+
+  describe('high blocks: building from the scaffolding', () => {
+    // wooden_shelter at [60, 2, 60]; skip ahead to its first block two levels up
+    const highWorld = () => {
+      const probe = { position: [60, 2, 60], buildingId: 'wooden_shelter' };
+      const firstHigh = parseLayers(getBuildingById('wooden_shelter')).findIndex((b) => b.y >= SCAFFOLD_REACH_LEVELS);
+      const ctx = buildWorld({ ...probe, blocksPlaced: firstHigh, totalBlocks: 99 });
+      const route = getScaffoldRoute(ctx.constructionSites[0]);
+      const next = getNextBlock(ctx.constructionSites[0]);
+      return { ctx, route, goal: alongAtHeight(route, next.y - VOXEL_SIZE * 1.5) };
+    };
+
+    test('a settler on the ground heads for the foot of the ramp', () => {
+      const { ctx, route } = highWorld();
+      const npc = { ...startWork(makeNPC(), ctx), position: AT_SITE };
+      const { updates } = tickNPC(npc, 2, ctx);
+      const foot = route.points[0];
+      expect(Math.hypot(updates.targetPosition[0] - foot[0], updates.targetPosition[2] - foot[2])).toBeLessThan(1.5);
+      expect(updates.workTimer).toBeUndefined();
+    });
+
+    test('on the ramp, they climb corner by corner toward the build spot', () => {
+      const { ctx, route, goal } = highWorld();
+      const foot = pointOnRoute(route, 0.5);
+      const npc = { ...startWork(makeNPC(), ctx), position: foot };
+      const { updates } = tickNPC(npc, 2, ctx);
+      const p = projectOnRoute(route, updates.targetPosition[0], updates.targetPosition[2]);
+      expect(p.along).toBeGreaterThan(0.5);
+      expect(p.along).toBeLessThanOrEqual(goal + 0.01);
+    });
+
+    test('at the build spot on the ramp, they build', () => {
+      const { ctx, route, goal } = highWorld();
+      const npc = { ...startWork(makeNPC(), ctx), position: pointOnRoute(route, goal) };
+      const { updates } = tickNPC(npc, 2, ctx);
+      expect(updates.workTimer).toBe(2);
+    });
   });
 
   test('placing the last block completes the building', () => {

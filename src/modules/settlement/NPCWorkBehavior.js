@@ -41,9 +41,18 @@ import {
   FARM_HARVEST_TIME,
   FARM_HARVEST_YIELD,
   FARM_CROP_MATERIAL,
+  SCAFFOLD_REACH_LEVELS,
 } from '../../data/tuning';
 import { getTileStage, TileStage, withTile } from './farming';
-import { placeNextBlock } from './buildingInfo';
+import { placeNextBlock, getNextBlock } from './buildingInfo';
+import {
+  getScaffoldRoute,
+  projectOnRoute,
+  pointOnRoute,
+  nextWaypoint,
+  alongAtHeight,
+} from '../../systems/construction/scaffoldRoute';
+import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 
 const WORK_STATE_BY_TASK_TYPE = {
   MINE: 'WORKING_MINE',
@@ -384,7 +393,15 @@ function tickBuild(npc, tickDelta, updates, ctx) {
     return true;
   }
 
-  if (distanceTo(npc, task.position) > NPC_WORK_RANGE) {
+  // High blocks are built from the scaffolding ramp; the rest from the ground
+  const high = site.status === 'BUILDING' && scaffoldTarget(site);
+  if (high) {
+    const climb = scaffoldApproach(npc, high);
+    if (climb) {
+      updates.targetPosition = climb;
+      return false;
+    }
+  } else if (distanceTo(npc, task.position) > NPC_WORK_RANGE) {
     updates.targetPosition = [...task.position];
     return false;
   }
@@ -415,6 +432,31 @@ function tickBuild(npc, tickDelta, updates, ctx) {
   updates.targetPosition = null;
   ctx.host.addPickupText('Building complete!', '#44ff44');
   return true;
+}
+
+/**
+ * Where a builder must walk to build from the scaffolding, or null once they
+ * are in place. Settlers climb the ramp from its foot, corner by corner,
+ * to the spot where the walkway is one level below the block.
+ */
+function scaffoldApproach(npc, { route, goal }) {
+  const [x, y, z] = npc.position;
+  const p = projectOnRoute(route, x, z);
+  const onRamp = p.off <= route.width / 2 + 0.3 && Math.abs(p.y - (y ?? 0)) < 1.2;
+  if (!onRamp) return pointOnRoute(route, Math.min(1, goal)); // the foot of the ramp
+  if (Math.abs(p.along - goal) <= 1) return null; // in place
+  return nextWaypoint(route, p.along, goal);
+}
+
+/** The route and the build spot along it, for a block too high to reach from the ground. */
+function scaffoldTarget(site) {
+  const next = getNextBlock(site);
+  if (!next) return null;
+  const level = Math.round((next.y - site.position[1] - VOXEL_SIZE / 2) / VOXEL_SIZE);
+  if (level < SCAFFOLD_REACH_LEVELS) return null;
+  const route = getScaffoldRoute(site);
+  if (!route) return null;
+  return { route, goal: alongAtHeight(route, next.y - VOXEL_SIZE * 1.5) };
 }
 
 /**
