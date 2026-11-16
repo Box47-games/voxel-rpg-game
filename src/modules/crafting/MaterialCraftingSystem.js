@@ -334,6 +334,8 @@ export class MaterialCraftingSystem {
       qualityMultiplier: quality.multiplier,
       qualityColor: quality.color,
     };
+    // Tools start at full durability
+    if (recipe.maxDurability) item.durability = recipe.maxDurability;
 
     // Apply quality multiplier to stats
     if (recipe.stats && quality.multiplier !== 1.0) {

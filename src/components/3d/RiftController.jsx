@@ -7,6 +7,7 @@
 
 import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
+import { isSheltered } from '../../systems/survival/ShelterEffects';
 import useGameStore from '../../stores/useGameStore';
 import { RiftManager, RiftState } from '../../systems/survival/RiftManager';
 import CorruptionManager from '../../systems/survival/CorruptionManager';
@@ -113,7 +114,9 @@ const RiftController = ({ chunkManager }) => {
     const aliveIds = new Set(state.enemies.map((e) => e.id));
 
     // ── Normal rift spawns ──
-    const spawns = rm.update(now, state.player.position, state.worldTime, aliveIds);
+    const spawns = rm.update(now, state.player.position, state.worldTime, aliveIds, {
+      sheltered: isSheltered(state.shelter),
+    });
 
     for (const spawn of spawns) {
       const [sx, , sz] = spawn.position;

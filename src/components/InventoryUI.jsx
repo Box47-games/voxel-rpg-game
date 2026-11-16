@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Package } from 'lucide-react';
 import useGameStore, { selectPlayerStats } from '../stores/useGameStore';
+import ToolDurability from './ui/ToolDurability';
 import { useShallow } from 'zustand/react/shallow';
 import { ITEM_TYPES } from '../data/craftingRecipes';
 import {
@@ -382,6 +383,7 @@ const InventoryUI = () => {
                             >
                               {equippedItem.name}
                             </div>
+                            <ToolDurability item={equippedItem} target={{ slot }} />
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -481,6 +483,7 @@ const InventoryUI = () => {
                     <div style={{ color: '#a0aec0', fontSize: isMobile ? '0.8rem' : '0.85rem', textAlign: 'center', marginBottom: '10px' }}>
                       {item.rarity?.name}
                     </div>
+                    <ToolDurability item={item} target={{ index }} />
                     {item.type === ITEM_TYPES.CONSUMABLE ? (
                       <button
                         onClick={(e) => {

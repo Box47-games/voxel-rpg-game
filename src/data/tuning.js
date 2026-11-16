@@ -58,20 +58,20 @@ export const STARVATION_DAMAGE_RATE = 0.1; // 1 HP per 10 seconds
 
 // ─── Shelter ─────────────────────────────────────────────────
 export const SHELTER_HUNGER_REDUCTION = 0.25;    // 25% less hunger drain in shelter
-export const SHELTER_HEALTH_REGEN_MULT = 2.0;    // 2× health regen in shelter
-export const SHELTER_STAMINA_REGEN_MULT = 1.5;   // 1.5× stamina regen in shelter
-export const SHELTER_MONSTER_EXCLUSION = 16;      // No spawns within N world units of sheltered player
+export const SHELTER_HEALTH_REGEN_MULT = 2.0;    // 2× health regen in shelter (full or partial)
+export const SHELTER_STAMINA_REGEN_MULT = 1.5;   // 1.5× stamina regen in shelter (full or partial)
+export const SHELTER_MONSTER_EXCLUSION = 16;      // Rifts don't spawn monsters within N world units of a sheltered player
 export const SHELTER_RAY_RANGE_UP = 8;            // Max roof detection distance (blocks)
 export const SHELTER_RAY_RANGE_HORIZ = 4;         // Max wall detection distance (blocks)
 export const SHELTER_CHECK_INTERVAL = 2000;       // ms between shelter checks
 
 // ─── Mining ──────────────────────────────────────────────────
-// harvestSpeed values per tool tier (divides block hardness to get break time in seconds)
+// harvestSpeed values per tool tier (divides block hardness to get break time in seconds).
+// There are no wooden tools: bare hands, then stone, iron and steel.
 export const HARVEST_SPEED_BARE_HANDS = 0.5;
-export const HARVEST_SPEED_WOOD = 1.0;
 export const HARVEST_SPEED_STONE = 1.2;
 export const HARVEST_SPEED_IRON = 1.5;
-export const HARVEST_SPEED_DIAMOND = 2.0;
+export const HARVEST_SPEED_STEEL = 2.0;
 
 // ─── Crafting Quality ────────────────────────────────────────
 // Quality score = base + tool craftingBonus + skillLevel × weight (skill system
@@ -97,18 +97,21 @@ export const CRAFT_FRACTIONAL_STAT_DECIMALS = 2;
 export const CRAFT_UNSCALED_STATS = ['toolTier'];
 
 // Tool durability (uses before breaking). Range: 20–2000.
-export const DURABILITY_WOOD = 30;
+// Each block mined costs ceil(hardness) uses, at least 1: dirt 1, stone 2, ore 3.
 export const DURABILITY_STONE = 65;
 export const DURABILITY_IRON = 250;
-export const DURABILITY_DIAMOND = 1000;
+export const DURABILITY_STEEL = 1000;
+// A broken tool stays in the inventory and mines like bare hands until
+// repaired. Repair restores it to full for this fraction of its recipe,
+// scaled by how worn it is (rounded up, at least 1 of each material).
+export const TOOL_REPAIR_COST_FRACTION = 0.5;
 
 // ─── Tool Tiers ──────────────────────────────────────────────
 export const TOOL_TIER = {
   NONE: 0,
-  WOOD: 1,
   STONE: 2,
   IRON: 3,
-  DIAMOND: 4,
+  STEEL: 4,
 };
 
 // ─── Night Threats / Rift Spawning ───────────────────────────
@@ -384,7 +387,7 @@ export const NPC_SKILL_WEIGHT = 50;           // Task scoring weight for skill m
 export const NPC_DISTANCE_WEIGHT = 1;         // Task scoring penalty per unit distance
 export const NPC_PRIORITY_WEIGHT = 100;       // Task scoring weight for task priority
 export const NPC_JOB_PREF_BONUS = 30;         // Bonus when preferred job matches task
-export const NPC_MINE_TOOL_TIER = 1;          // NPCs mine as if wood pickaxe
+export const NPC_MINE_TOOL_TIER = 1;          // NPCs mine below stone-pickaxe tier (no ore drops)
 export const NPC_THOUGHT_DURATION = 4;        // Seconds thought bubble shows
 export const NPC_SKILL_GROWTH = 0.01;         // Skill increment per completed task
 
@@ -397,6 +400,8 @@ export const PLAYER_STAMINA_SPRINT_DRAIN = 20; // Stamina/sec while sprinting
 export const PLAYER_STAMINA_BLOCK_DRAIN = 15;  // Stamina/sec while blocking
 export const PLAYER_STAMINA_REGEN = 30;        // Stamina/sec when resting
 export const PLAYER_MANA_REGEN = 10;           // Mana/sec
+export const PLAYER_HEALTH_REGEN = 0.5;        // Health/sec when well fed (× hunger modifier, × shelter bonus)
+export const PLAYER_HEALTH_REGEN_DELAY = 8;    // Seconds after taking damage before health regenerates
 export const PLAYER_MOVE_SMOOTHING = 0.2;      // Velocity lerp factor at 60 fps
 export const CAMERA_FOLLOW_SMOOTHING = 0.15;   // Third-person camera lerp factor at 60 fps
 export const DODGE_STAMINA_COST = 30;

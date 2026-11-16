@@ -33,6 +33,7 @@ vi.mock('../../../data/tuning', () => ({
   RIFT_REINFORCEMENT_ESCALATION: 1,
   RIFT_VOID_SHARD_DROP_CHANCE: 0.3,
   RIFT_DORMANT_DURATION: 300,
+  SHELTER_MONSTER_EXCLUSION: 16,
 }));
 
 describe('RiftManager — Rift Closing', () => {
@@ -289,6 +290,36 @@ describe('RiftManager — Rift Closing', () => {
       }, new Set());
 
       expect(spawns).toHaveLength(0);
+    });
+  });
+
+  describe('update (shelter exclusion)', () => {
+    const night = { period: 'night', isNight: true };
+    const spawnsOver = (playerPos, sheltered, times = 40) => {
+      const all = [];
+      for (let i = 0; i < times; i++) {
+        rm.rifts[0].lastSpawnTime = 0;
+        rm.rifts[0].spawnedMonsterIds = [];
+        all.push(...rm.update(1000 + i * 50, playerPos, night, new Set(), { sheltered }));
+      }
+      return all;
+    };
+
+    test('no monster spawns within 16 units of a sheltered player', () => {
+      const rift = rm.rifts[0];
+      const player = [rift.x + 6, 0, rift.z]; // right beside the rift
+      const spawns = spawnsOver(player, true);
+      for (const s of spawns) {
+        expect(Math.hypot(s.position[0] - player[0], s.position[2] - player[2])).toBeGreaterThan(16);
+      }
+      // The same player out in the open does get monsters that close
+      const open = spawnsOver(player, false);
+      expect(open.some((s) => Math.hypot(s.position[0] - player[0], s.position[2] - player[2]) <= 16)).toBe(true);
+    });
+
+    test('a sheltered player farther away does not stop the rift', () => {
+      const rift = rm.rifts[0];
+      expect(spawnsOver([rift.x + 40, 0, rift.z], true).length).toBeGreaterThan(0);
     });
   });
 

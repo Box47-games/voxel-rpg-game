@@ -13,6 +13,7 @@ import { AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_
   DODGE_STAMINA_COST, DODGE_DURATION, DODGE_SPEED, DODGE_DOUBLE_TAP_MS } from '../../data/tuning';
 import { isSolid as isBlockSolid, isTransparent as isBlockTransparent } from '../../systems/chunks/blockTypes';
 import { applyBonePose } from './voxelRig';
+import { getHealthRegenRate, getStaminaRegenMult } from '../../systems/survival/ShelterEffects';
 import { createHumanoidInstance, PLAYER_LOOK } from './characters/humanoidModel';
 import { createHumanoidAnimState, stepHumanoidAnimation, triggerAction } from './characters/humanoidAnimation';
 import { getLastPlayerAction } from '../../systems/playerActions';
@@ -262,7 +263,17 @@ const Player = () => {
     } else if (isSprintingNow && isMoving) {
       batch.stamina = Math.max(0, curStamina - delta * PLAYER_STAMINA_SPRINT_DRAIN);
     } else {
-      batch.stamina = Math.min(player.maxStamina, curStamina + delta * PLAYER_STAMINA_REGEN);
+      batch.stamina = Math.min(player.maxStamina, curStamina + delta * PLAYER_STAMINA_REGEN * getStaminaRegenMult(store.shelter));
+    }
+
+    // Health regeneration: slow, hunger-gated, doubled in shelter, paused after damage
+    if (store.gameState === 'playing' && player.health > 0) {
+      const regenDelay = Math.max(0, (player.healthRegenDelay || 0) - delta);
+      if (regenDelay !== (player.healthRegenDelay || 0)) batch.healthRegenDelay = regenDelay;
+      const regen = getHealthRegenRate(store.hunger.current, store.shelter, regenDelay) * delta;
+      if (regen > 0 && player.health < player.maxHealth) {
+        batch.health = Math.min(player.maxHealth, player.health + regen);
+      }
     }
 
     // Mana regeneration
