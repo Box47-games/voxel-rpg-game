@@ -73,6 +73,29 @@ export const HARVEST_SPEED_STONE = 1.2;
 export const HARVEST_SPEED_IRON = 1.5;
 export const HARVEST_SPEED_STEEL = 2.0;
 
+// ─── Crafting Quality ────────────────────────────────────────
+// Quality score = base + tool craftingBonus + skillLevel × weight (skill system
+// only) + random(0, variance); the highest tier whose threshold it reaches wins.
+export const CRAFT_QUALITY_BASE_SCORE = 50;
+export const CRAFT_QUALITY_SKILL_WEIGHT = 0.2;    // Score per skill level
+export const CRAFT_QUALITY_RANDOM_VARIANCE = 10;  // Max random score added per craft
+export const CRAFT_QUALITY_THRESHOLD_NORMAL = 40; // Below this: Poor
+export const CRAFT_QUALITY_THRESHOLD_GOOD = 60;
+export const CRAFT_QUALITY_THRESHOLD_EXCELLENT = 75;
+export const CRAFT_QUALITY_THRESHOLD_MASTERWORK = 90;
+// Stat multipliers per quality tier
+export const CRAFT_QUALITY_MULT_POOR = 0.7;
+export const CRAFT_QUALITY_MULT_NORMAL = 1.0;
+export const CRAFT_QUALITY_MULT_GOOD = 1.2;
+export const CRAFT_QUALITY_MULT_EXCELLENT = 1.5;
+export const CRAFT_QUALITY_MULT_MASTERWORK = 2.0;
+// Crafted-item stats are scaled by the quality multiplier. Stats whose base
+// value is fractional (harvestSpeed, *Yield) are rounded to this many decimals;
+// integer stats (damage, defense) are floored. Unscaled stats are categories,
+// not strengths (toolTier gates ore drops in calculateDrops).
+export const CRAFT_FRACTIONAL_STAT_DECIMALS = 2;
+export const CRAFT_UNSCALED_STATS = ['toolTier'];
+
 // Tool durability (uses before breaking). Range: 20–2000.
 // Each block mined costs ceil(hardness) uses, at least 1: dirt 1, stone 2, ore 3.
 export const DURABILITY_STONE = 65;

@@ -19,6 +19,34 @@
  */
 
 import { CRAFTING_RECIPES, canCraft, consumeMaterials } from '../../data/craftingRecipes.js';
+import {
+  CRAFT_FRACTIONAL_STAT_DECIMALS,
+  CRAFT_UNSCALED_STATS,
+  CRAFT_QUALITY_BASE_SCORE,
+  CRAFT_QUALITY_SKILL_WEIGHT,
+  CRAFT_QUALITY_RANDOM_VARIANCE,
+  CRAFT_QUALITY_THRESHOLD_NORMAL,
+  CRAFT_QUALITY_THRESHOLD_GOOD,
+  CRAFT_QUALITY_THRESHOLD_EXCELLENT,
+  CRAFT_QUALITY_THRESHOLD_MASTERWORK,
+  CRAFT_QUALITY_MULT_POOR,
+  CRAFT_QUALITY_MULT_NORMAL,
+  CRAFT_QUALITY_MULT_GOOD,
+  CRAFT_QUALITY_MULT_EXCELLENT,
+  CRAFT_QUALITY_MULT_MASTERWORK,
+} from '../../data/tuning.js';
+
+/**
+ * Scale one base stat by a quality multiplier. Category stats (toolTier) stay
+ * as they are, fractional stats stay fractional (rounded), integer stats are floored.
+ */
+export function scaleCraftedStat(stat, value, multiplier) {
+  if (typeof value !== 'number' || CRAFT_UNSCALED_STATS.includes(stat)) return value;
+  const scaled = value * multiplier;
+  if (Number.isInteger(value)) return Math.floor(scaled);
+  const factor = 10 ** CRAFT_FRACTIONAL_STAT_DECIMALS;
+  return Math.round(scaled * factor) / factor;
+}
 
 /**
  * Crafting result states
@@ -34,11 +62,11 @@ export const CRAFT_RESULT = {
  * Quality tiers for crafted items based on tool quality
  */
 export const QUALITY_TIERS = {
-  POOR: { name: 'Poor', multiplier: 0.7, color: '#9e9e9e' },
-  NORMAL: { name: 'Normal', multiplier: 1.0, color: '#ffffff' },
-  GOOD: { name: 'Good', multiplier: 1.2, color: '#4caf50' },
-  EXCELLENT: { name: 'Excellent', multiplier: 1.5, color: '#2196f3' },
-  MASTERWORK: { name: 'Masterwork', multiplier: 2.0, color: '#9c27b0' },
+  POOR: { name: 'Poor', multiplier: CRAFT_QUALITY_MULT_POOR, color: '#9e9e9e' },
+  NORMAL: { name: 'Normal', multiplier: CRAFT_QUALITY_MULT_NORMAL, color: '#ffffff' },
+  GOOD: { name: 'Good', multiplier: CRAFT_QUALITY_MULT_GOOD, color: '#4caf50' },
+  EXCELLENT: { name: 'Excellent', multiplier: CRAFT_QUALITY_MULT_EXCELLENT, color: '#2196f3' },
+  MASTERWORK: { name: 'Masterwork', multiplier: CRAFT_QUALITY_MULT_MASTERWORK, color: '#9c27b0' },
 };
 
 /**
@@ -271,26 +299,26 @@ export class MaterialCraftingSystem {
       return QUALITY_TIERS.NORMAL;
     }
 
-    let qualityScore = 50; // Base 50/100
+    let qualityScore = CRAFT_QUALITY_BASE_SCORE;
 
-    // Tool quality modifier (0-30 points)
+    // Tool quality modifier
     if (options.tool && options.tool.craftingBonus) {
       qualityScore += options.tool.craftingBonus;
     }
 
-    // Skill level modifier (0-20 points)
+    // Skill level modifier
     if (this.enableSkillSystem && options.skillLevel) {
-      qualityScore += options.skillLevel * 0.2;
+      qualityScore += options.skillLevel * CRAFT_QUALITY_SKILL_WEIGHT;
     }
 
-    // Random variance (0-10 points)
-    qualityScore += Math.random() * 10;
+    // Random variance
+    qualityScore += Math.random() * CRAFT_QUALITY_RANDOM_VARIANCE;
 
     // Determine quality tier
-    if (qualityScore >= 90) return QUALITY_TIERS.MASTERWORK;
-    if (qualityScore >= 75) return QUALITY_TIERS.EXCELLENT;
-    if (qualityScore >= 60) return QUALITY_TIERS.GOOD;
-    if (qualityScore >= 40) return QUALITY_TIERS.NORMAL;
+    if (qualityScore >= CRAFT_QUALITY_THRESHOLD_MASTERWORK) return QUALITY_TIERS.MASTERWORK;
+    if (qualityScore >= CRAFT_QUALITY_THRESHOLD_EXCELLENT) return QUALITY_TIERS.EXCELLENT;
+    if (qualityScore >= CRAFT_QUALITY_THRESHOLD_GOOD) return QUALITY_TIERS.GOOD;
+    if (qualityScore >= CRAFT_QUALITY_THRESHOLD_NORMAL) return QUALITY_TIERS.NORMAL;
     return QUALITY_TIERS.POOR;
   }
 
@@ -313,7 +341,7 @@ export class MaterialCraftingSystem {
     if (recipe.stats && quality.multiplier !== 1.0) {
       item.stats = {};
       for (const [stat, value] of Object.entries(recipe.stats)) {
-        item.stats[stat] = Math.floor(value * quality.multiplier);
+        item.stats[stat] = scaleCraftedStat(stat, value, quality.multiplier);
       }
     }
 

@@ -354,6 +354,49 @@ describe('MaterialCraftingSystem', () => {
       // Higher skill should generally produce better or equal quality
       expect(highSkill.quality.multiplier).toBeGreaterThanOrEqual(lowSkill.quality.multiplier);
     });
+
+    describe('stone pickaxe stats by quality', () => {
+      const recipe = CRAFTING_RECIPES.stonePickaxe;
+      const craft = (quality) =>
+        new MaterialCraftingSystem(createMockStore())._createCraftedItem(recipe, quality);
+
+      test('harvestSpeed keeps its fractional value: Poor < Normal < Good', () => {
+        const poor = craft(QUALITY_TIERS.POOR).stats;
+        const normal = craft(QUALITY_TIERS.NORMAL).stats;
+        const good = craft(QUALITY_TIERS.GOOD).stats;
+
+        expect(poor.harvestSpeed).toBe(0.84);
+        expect(normal.harvestSpeed).toBe(1.2);
+        expect(good.harvestSpeed).toBe(1.44);
+        expect(poor.harvestSpeed).toBeGreaterThan(0);
+        expect(poor.harvestSpeed).toBeLessThan(normal.harvestSpeed);
+        expect(normal.harvestSpeed).toBeLessThan(good.harvestSpeed);
+      });
+
+      test('yield multipliers stay fractional', () => {
+        expect(craft(QUALITY_TIERS.POOR).stats.oreYield).toBe(0.77);
+        expect(craft(QUALITY_TIERS.GOOD).stats.stoneYield).toBe(1.32);
+      });
+
+      test('toolTier is never scaled', () => {
+        for (const quality of Object.values(QUALITY_TIERS)) {
+          expect(craft(quality).stats.toolTier).toBe(2);
+        }
+      });
+
+      test('does not mutate the recipe stats', () => {
+        craft(QUALITY_TIERS.MASTERWORK);
+        expect(recipe.stats.harvestSpeed).toBe(1.2);
+        expect(recipe.stats.toolTier).toBe(2);
+      });
+    });
+
+    test('integer stats are still floored', () => {
+      const system = new MaterialCraftingSystem(createMockStore());
+      const item = system._createCraftedItem(CRAFTING_RECIPES.ironSword, QUALITY_TIERS.GOOD);
+      expect(item.stats.damage).toBe(6); // floor(5 * 1.2)
+      expect(item.stats.critChance).toBe(2); // floor(2 * 1.2)
+    });
   });
 
   describe('craftMultiple()', () => {
