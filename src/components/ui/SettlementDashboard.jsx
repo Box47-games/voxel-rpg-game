@@ -239,16 +239,13 @@ export default function SettlementDashboard() {
   const [tab, setTab] = useState('population');
   const [data, setData] = useState(null);
 
-  // N toggles, Escape closes (not while typing in a field)
+  // N toggles (not while typing in a field); Esc is handled centrally (backOut)
   useEffect(() => {
     const onKey = (e) => {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if ((e.key === 'n' || e.key === 'N') && !e.ctrlKey && !e.metaKey && !e.altKey) {
         toggle();
-      } else if (e.key === 'Escape' && useGameStore.getState().settlementDashboardOpen) {
-        e.stopPropagation();
-        close();
       }
     };
     window.addEventListener('keydown', onKey);

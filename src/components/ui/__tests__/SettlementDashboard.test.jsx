@@ -30,7 +30,7 @@ describe('SettlementDashboard', () => {
     seed();
   });
 
-  test('N opens and closes it; Escape closes it', () => {
+  test('N opens and closes it; Esc (the central back-out) closes it', () => {
     render(<SettlementDashboard />);
     expect(screen.queryByRole('dialog')).toBeNull();
     pressKey('n');
@@ -38,7 +38,7 @@ describe('SettlementDashboard', () => {
     pressKey('N');
     expect(screen.queryByRole('dialog')).toBeNull();
     pressKey('n');
-    pressKey('Escape');
+    act(() => { expect(useGameStore.getState().backOut()).toBe(true); });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

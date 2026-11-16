@@ -98,6 +98,16 @@ const PauseMenu = () => {
         return;
       }
 
+      // Esc backs out one step (placement, panel, mode); with nothing left, it pauses
+      if (!isOpen && e.key === 'Escape') {
+        const tag = e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!useGameStore.getState().backOut()) pause();
+        return;
+      }
+
       if (!isOpen) return;
 
       // Escape also closes

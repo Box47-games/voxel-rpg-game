@@ -39,7 +39,13 @@ const EDIBLE_MATERIALS = {
  * Mobile-compatible with responsive layout
  */
 const InventoryUI = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  // Open state lives in the store: one panel at a time, Esc handled centrally
+  const isOpen = useGameStore((state) => state.openPanel === 'inventory');
+  const setIsOpen = (open) => {
+    const store = useGameStore.getState();
+    if (typeof open === 'function') open = open(isOpen);
+    if (open !== isOpen) store.togglePanel('inventory');
+  };
   const [selectedItem, setSelectedItem] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileView, setMobileView] = useState('equipment'); // 'equipment' | 'items' | 'materials' | 'details'
@@ -116,11 +122,10 @@ const InventoryUI = () => {
 
   useEffect(() => {
     const handleKeyPress = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'i' || e.key === 'I') {
-        setIsOpen((prev) => !prev);
-      }
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+        useGameStore.getState().togglePanel('inventory');
       }
     };
 

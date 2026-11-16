@@ -169,6 +169,28 @@ const createInitialSettlement = () => ({
   lastNeedsUpdate: 0,
 });
 
+// ── One mode, one panel ───────────────────────────────────────
+// At most one panel is open (inventory, crafting, settlement, building
+// catalog), and at most one mode is on (build or zone). Opening either
+// clears the others. Esc backs out one step (see backOut).
+const CLOSED_PANELS = {
+  openPanel: null,
+  settlementDashboardOpen: false,
+  activeBuildingCatalog: false,
+};
+
+function isPanelOpen(state, name) {
+  if (name === 'settlement') return state.settlementDashboardOpen;
+  if (name === 'buildings') return state.activeBuildingCatalog;
+  return state.openPanel === name;
+}
+
+function panelFlags(name) {
+  if (name === 'settlement') return { settlementDashboardOpen: true };
+  if (name === 'buildings') return { activeBuildingCatalog: true };
+  return { openPanel: name };
+}
+
 const useGameStore = create((rawSet, get, api) => {
   // Wrap set with action middleware - intercepts action objects for validation/history
   // Regular set() calls (functions/plain objects without .type) pass through unchanged
@@ -269,6 +291,7 @@ const useGameStore = create((rawSet, get, api) => {
   activeConstructionSiteId: null, // Site ID of open construction panel
   activeNPCId: null,            // Settler shown in the NPC detail panel (or null)
   settlementDashboardOpen: false, // Settlement dashboard (N key)
+  openPanel: null, // Store-owned screens: 'inventory' | 'crafting' (at most one panel of any kind is open)
 
   // Actions
   setGameState: (state) => set({ gameState: state }),
@@ -1640,12 +1663,15 @@ const useGameStore = create((rawSet, get, api) => {
   }),
 
   // Construction system actions (Phase 2.4)
-  toggleBuildingCatalog: () => set((state) => ({
-    activeBuildingCatalog: !state.activeBuildingCatalog,
-    placingBuildingId: state.activeBuildingCatalog ? null : state.placingBuildingId,
-  })),
+  toggleBuildingCatalog: () => get().togglePanel('buildings'),
   closeBuildingCatalog: () => set({ activeBuildingCatalog: false }),
-  startPlacingBuilding: (buildingId) => set({ placingBuildingId: buildingId, activeBuildingCatalog: false }),
+  startPlacingBuilding: (buildingId) => set({
+    ...CLOSED_PANELS,
+    placingBuildingId: buildingId,
+    buildMode: false,
+    zoneMode: false,
+    zoneDragStart: null,
+  }),
   cancelPlacingBuilding: () => set({ placingBuildingId: null }),
 
   placeConstructionSite: (buildingId, position, materialsRequired, totalBlocks) => set((state) => ({
@@ -1668,7 +1694,50 @@ const useGameStore = create((rawSet, get, api) => {
 
   setActiveNPC: (npcId) => set({ activeNPCId: npcId }),
   closeNPCPanel: () => set({ activeNPCId: null }),
-  toggleSettlementDashboard: () => set((s) => ({ settlementDashboardOpen: !s.settlementDashboardOpen })),
+  toggleSettlementDashboard: () => get().togglePanel('settlement'),
+
+  /** Open `name` (closing any other panel and cancelling placement), or close it. */
+  togglePanel: (name) => set((s) => (isPanelOpen(s, name)
+    ? CLOSED_PANELS
+    : { ...CLOSED_PANELS, ...panelFlags(name), placingBuildingId: null, zoneMode: false, zoneDragStart: null })),
+  closePanels: () => set(CLOSED_PANELS),
+
+  /**
+   * Switch mode: 'play' (default), 'build' or 'zone'. Entering one leaves the
+   * others and closes any panel. Entering the current mode again returns to play.
+   */
+  enterMode: (mode) => set((s) => {
+    const current = s.buildMode ? 'build' : s.zoneMode ? 'zone' : 'play';
+    const next = mode === current ? 'play' : mode;
+    return {
+      ...CLOSED_PANELS,
+      placingBuildingId: null,
+      buildMode: next === 'build',
+      zoneMode: next === 'zone',
+      zoneTypeToPlace: next === 'zone' ? (s.zoneTypeToPlace || 'MINING') : null,
+      zoneDragStart: null,
+    };
+  }),
+
+  /**
+   * Esc: back out one step (cancel placing a building, close a panel or info
+   * card, leave build/zone mode). Returns false when there was nothing to
+   * back out of, so the caller can pause instead.
+   */
+  backOut: () => {
+    const s = get();
+    if (s.placingBuildingId) { set({ placingBuildingId: null }); return true; }
+    if (s.openPanel || s.settlementDashboardOpen || s.activeBuildingCatalog) { set(CLOSED_PANELS); return true; }
+    if (s.activeNPCId || s.activeConstructionSiteId || s.activeStockpileZoneId) {
+      set({ activeNPCId: null, activeConstructionSiteId: null, activeStockpileZoneId: null });
+      return true;
+    }
+    if (s.buildMode || s.zoneMode) {
+      set({ buildMode: false, zoneMode: false, zoneDragStart: null });
+      return true;
+    }
+    return false;
+  },
   closeSettlementDashboard: () => set({ settlementDashboardOpen: false }),
 
   deliverToConstruction: (siteId, material, amount) => set((state) => {

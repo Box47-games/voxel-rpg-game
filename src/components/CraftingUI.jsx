@@ -9,7 +9,13 @@ import { MaterialCraftingSystem, QUALITY_TIERS } from '../modules/crafting/Mater
  * Mobile-compatible with responsive layout
  */
 const CraftingUI = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  // Open state lives in the store: one panel at a time, Esc handled centrally
+  const isOpen = useGameStore((state) => state.openPanel === 'crafting');
+  const setIsOpen = (open) => {
+    const store = useGameStore.getState();
+    if (typeof open === 'function') open = open(isOpen);
+    if (open !== isOpen) store.togglePanel('crafting');
+  };
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [craftingAnimation, setCraftingAnimation] = useState(false);
@@ -41,11 +47,10 @@ const CraftingUI = () => {
 
   useEffect(() => {
     const handleKeyPress = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'c' || e.key === 'C') {
-        setIsOpen((prev) => !prev);
-      }
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+        useGameStore.getState().togglePanel('crafting');
       }
     };
 

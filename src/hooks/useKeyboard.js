@@ -54,20 +54,9 @@ export function useKeyboard() {
       const toggle = TOGGLE_KEYS[e.code];
       if (toggle) {
         e.preventDefault();
-        if (toggle === 'buildMode') {
-          const store = useGameStore.getState();
-          if (store.zoneMode) store.setZoneMode(false);
-          store.toggleBuildMode();
-        }
-        if (toggle === 'zoneMode') {
-          const store = useGameStore.getState();
-          if (store.zoneMode) {
-            store.setZoneMode(false);
-          } else {
-            if (store.buildMode) store.setBuildMode(false);
-            store.setZoneMode(true, 'MINING');
-          }
-        }
+        // One mode at a time: entering one leaves the other (and closes panels)
+        if (toggle === 'buildMode') useGameStore.getState().enterMode('build');
+        if (toggle === 'zoneMode') useGameStore.getState().enterMode('zone');
         return;
       }
 

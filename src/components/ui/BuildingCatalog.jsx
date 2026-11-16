@@ -99,9 +99,6 @@ export default function BuildingCatalog() {
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         toggleCatalog();
       }
-      if (e.key === 'Escape' && isOpen) {
-        closeCatalog();
-      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);

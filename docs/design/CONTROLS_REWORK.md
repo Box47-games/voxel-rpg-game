@@ -47,7 +47,7 @@ Tab is freed (browser focus key). Remapping in Settings comes later.
 ## Steps
 
 1. **Done:** spells on the Q wheel; number keys no longer cast spells (fixes the clash with the block hotbar).
-2. One `mode` + `panel` in the store; Esc backs out one step; HUD badge.
+2. **Done:** one mode (play, build, zone) and one panel (inventory, crafting, settlement, building catalog) at a time; Esc backs out one step (placement → panel or info card → mode), then pauses.
 3. Modeless mining and placing in Play (desktop); always-visible hotbar with an empty hand slot.
 4. B catalog: blocks and buildings in one, with tabs.
 5. Plan mode: zones + building placement with the raised camera; settlement overview alongside.
