@@ -7,7 +7,7 @@
  *
  * Motion inputs:
  *  - speed: horizontal speed (world units/s); walk blends into a run
- *  - airborne: jumping or falling
+ *  - airborne: jumping (knee tucked, arms reaching) or falling (legs braced, arms out)
  *  - activity: a looping activity, one of
  *      'mine' | 'build' | 'farm' | 'carry' | 'eat' | 'wave' | null
  *  - alert: suppress idle glances
@@ -19,6 +19,8 @@
 
 import { TOOL_BONES } from './humanoidModel';
 
+/** Vertical speed (world units/s) for the full rising or falling pose. */
+const AIR_VY_FULL = 6;
 const TAU = Math.PI * 2;
 const MOVING_SPEED = 0.4;
 const RUN_SPEED = 7; // full run pose at this speed
@@ -42,6 +44,7 @@ export function createHumanoidAnimState(seed = 0) {
     phase: seed * TAU,
     speed: 0,
     airborne: 0, // 0-1 blend into the jump pose
+    rise: 0, // -1 (falling) .. 1 (rising), smoothed
     action: null, // { type, t }
     lookYaw: 0,
     lookTarget: 0,
@@ -58,7 +61,8 @@ export function triggerAction(anim, type) {
 
 /**
  * @param {object} anim - from createHumanoidAnimState (mutated)
- * @param {{ speed: number, airborne?: boolean, activity?: string|null, alert?: boolean }} motion
+ * @param {{ speed: number, airborne?: boolean, vy?: number, activity?: string|null, alert?: boolean }} motion
+ *   vy: vertical velocity (world units/s) picks the rising or falling pose
  * @param {number} delta - seconds
  */
 export function stepHumanoidAnimation(anim, motion, delta) {
@@ -66,6 +70,7 @@ export function stepHumanoidAnimation(anim, motion, delta) {
   anim.time += dt;
   anim.speed = lerp(anim.speed, motion.speed, clamp(dt * 10, 0, 1));
   anim.airborne = lerp(anim.airborne, motion.airborne ? 1 : 0, clamp(dt * 12, 0, 1));
+  anim.rise = lerp(anim.rise, clamp((motion.vy || 0) / AIR_VY_FULL, -1, 1), clamp(dt * 10, 0, 1));
   if (anim.action) {
     anim.action.t += dt;
     if (anim.action.t > ACTION_DURATION[anim.action.type]) anim.action = null;
@@ -112,13 +117,20 @@ export function stepHumanoidAnimation(anim, motion, delta) {
   // ── Jumping / falling ──
   const air = anim.airborne;
   if (air > 0.01) {
-    legL.rx = lerp(legL.rx, -0.6, air);
-    legR.rx = lerp(legR.rx, 0.35, air);
-    armL.rx = lerp(armL.rx, -0.5, air);
-    armR.rx = lerp(armR.rx, -0.5, air);
-    armL.rz = lerp(armL.rz, 0.55, air);
-    armR.rz = lerp(armR.rz, -0.55, air);
-    cape.rx = lerp(cape.rx, -0.6, air);
+    // Blend the rising pose (one knee driven up, arms reaching) into the
+    // falling one (legs together and braced, arms out for balance)
+    const up = (anim.rise + 1) / 2; // 0 falling .. 1 rising
+    const mix = (fall, rise) => lerp(fall, rise, up);
+    legL.rx = lerp(legL.rx, mix(-0.35, -1.05), air);
+    legR.rx = lerp(legR.rx, mix(-0.2, 0.3), air);
+    armL.rx = lerp(armL.rx, mix(-0.35, -1.35), air);
+    armR.rx = lerp(armR.rx, mix(-0.35, -1.35), air);
+    armL.rz = lerp(armL.rz, mix(1.0, 0.2), air);
+    armR.rz = lerp(armR.rz, mix(-1.0, -0.2), air);
+    body.rx = lerp(body.rx, mix(0.08, -0.06), air);
+    body.lift = lerp(body.lift, 0, air);
+    head.rx = lerp(head.rx, mix(0.15, -0.1), air); // look down at the landing
+    cape.rx = lerp(cape.rx, mix(-1.05, -0.35), air); // streams up as you drop
   }
 
   // ── Idle glances ──

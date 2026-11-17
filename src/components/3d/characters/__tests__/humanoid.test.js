@@ -186,3 +186,19 @@ describe('getSettlerActivity', () => {
     expect(getSettlerActivity({ state: 'IDLE' }, false)).toBeNull();
   });
 });
+
+describe('jumping', () => {
+  test('rising: a knee driven up and arms reaching; falling: arms spread for balance', () => {
+    const rising = run({ speed: 0, airborne: true, vy: 10 }, 0.6).poses.at(-1);
+    const falling = run({ speed: 0, airborne: true, vy: -10 }, 0.6).poses.at(-1);
+    expect(get(rising, 'legL', 'rx')).toBeLessThan(get(falling, 'legL', 'rx') - 0.4);
+    expect(get(rising, 'armL', 'rx')).toBeLessThan(get(falling, 'armL', 'rx') - 0.5);
+    expect(get(falling, 'armL', 'rz')).toBeGreaterThan(get(rising, 'armL', 'rz') + 0.5);
+  });
+
+  test('back on the ground the jump pose fades out', () => {
+    const { anim } = run({ speed: 0, airborne: true, vy: -10 }, 0.6);
+    const landed = run({ speed: 0, airborne: false, vy: 0 }, 1, anim).poses.at(-1);
+    expect(Math.abs(get(landed, 'armL', 'rz'))).toBeLessThan(0.2);
+  });
+});

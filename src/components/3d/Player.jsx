@@ -6,7 +6,7 @@ import useGameStore from '../../stores/useGameStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import { calculateEquipmentStats } from '../../utils/equipmentStats';
 import { isTouchDevice } from '../../utils/deviceDetection';
-import { AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_JUMP_MIN_SPEED, JUMP_IMPULSE, JUMP_STAMINA_COST, JUMP_GROUNDED_THRESHOLD, JUMP_COOLDOWN_MS, NAV_WAYPOINT_ARRIVAL, NAV_STUCK_TIMEOUT,
+import { AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_JUMP_MIN_SPEED, JUMP_IMPULSE, JUMP_STAMINA_COST, JUMP_GROUNDED_THRESHOLD, SCAFFOLD_GROUNDED_VY, JUMP_COOLDOWN_MS, NAV_WAYPOINT_ARRIVAL, NAV_STUCK_TIMEOUT,
   PLAYER_SPRINT_SPEED_MULT, PLAYER_STAMINA_SPRINT_DRAIN, PLAYER_STAMINA_BLOCK_DRAIN, PLAYER_STAMINA_REGEN,
   PLAYER_MANA_REGEN, PLAYER_MOVE_SMOOTHING, CAMERA_FOLLOW_SMOOTHING,
   DODGE_STAMINA_COST, DODGE_DURATION, DODGE_SPEED, DODGE_DOUBLE_TAP_MS,
@@ -15,6 +15,7 @@ import { isSolid as isBlockSolid, isTransparent as isBlockTransparent } from '..
 import { applyBonePose } from './voxelRig';
 import { getHealthRegenRate, getStaminaRegenMult } from '../../systems/survival/ShelterEffects';
 import { createHumanoidInstance, PLAYER_LOOK } from './characters/humanoidModel';
+import { getActiveScaffoldRoutes, scaffoldHeightAt } from '../../systems/construction/scaffoldRoute';
 import { createHumanoidAnimState, stepHumanoidAnimation, triggerAction } from './characters/humanoidAnimation';
 import { getLastPlayerAction } from '../../systems/playerActions';
 
@@ -30,16 +31,44 @@ const smoothing = (factor, delta) => 1 - Math.pow(1 - factor, delta * 60);
  * block corner still counts. Falls back to the velocity heuristic when the
  * chunk system isn't ready.
  */
-function isOnGround(cm, pos, vy) {
-  if (Math.abs(vy) >= JUMP_GROUNDED_THRESHOLD) return false;
-  if (!cm) return true;
-  const footY = pos.y - 0.15;
+/** Solid block within `depth` below the feet (centre and four sides). */
+function blockUnderFeet(cm, pos, depth) {
+  const footY = pos.y - depth;
   const r = 0.45;
   const samples = [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]];
   for (const [ox, oz] of samples) {
     if (isBlockSolid(cm.getBlock(pos.x + ox, footY, pos.z + oz))) return true;
   }
   return false;
+}
+
+/** Standing on a construction ramp: its walkway is within `depth` under the feet. */
+function onScaffold(routes, pos, depth) {
+  if (!routes.length) return false;
+  const y = scaffoldHeightAt(routes, pos.x, pos.z, pos.y, depth + 0.3);
+  return y !== null && y <= pos.y + 0.1 && pos.y - y <= depth;
+}
+
+/**
+ * Grounded for jumping. Blocks need near-zero vertical speed (no air jumps);
+ * on a ramp walking up or down gives some, so allow that until a real jump.
+ */
+function isOnGround(cm, pos, vy, routes = []) {
+  if (onScaffold(routes, pos, 0.25)) return Math.abs(vy) < SCAFFOLD_GROUNDED_VY;
+  if (Math.abs(vy) >= JUMP_GROUNDED_THRESHOLD) return false;
+  if (!cm) return true;
+  return blockUnderFeet(cm, pos, 0.15);
+}
+
+/**
+ * Looks airborne (the jump pose): off the ground and not just stepping. A
+ * step up or down, or walking a slope or ramp, keeps the walk cycle.
+ */
+function looksAirborne(cm, pos, vy, grounded, routes) {
+  if (grounded) return false;
+  if (vy > 1.5) return true; // rising: a jump
+  if (!cm) return false;
+  return !blockUnderFeet(cm, pos, 0.6) && !onScaffold(routes, pos, 0.6);
 }
 
 /** Sum the speed multiplier of active movement buffs (haste). */
@@ -321,7 +350,8 @@ const Player = () => {
       }
     }
 
-    const grounded = isOnGround(cm, currentPos, currentVel.y);
+    const scaffoldRoutes = getActiveScaffoldRoutes(useGameStore.getState().constructionSites);
+    const grounded = isOnGround(cm, currentPos, currentVel.y, scaffoldRoutes);
 
     // Auto-jump: detect 1-block obstacles ahead and jump over them
     // Triggers on mobile (always) and desktop click-to-move (no keyboard to press Space)
@@ -392,7 +422,8 @@ const Player = () => {
     }
     const pose = stepHumanoidAnimation(animRef.current, {
       speed: xzSpeed,
-      airborne: !grounded,
+      airborne: looksAirborne(cm, currentPos, currentVel.y, grounded, scaffoldRoutes),
+      vy: currentVel.y,
       activity,
     }, delta);
     applyBonePose(rig, pose);
