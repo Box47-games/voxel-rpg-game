@@ -111,10 +111,14 @@ function BuildingCard({ building, materials, onPlace }) {
       <button
         type="button"
         className={`vx-btn vx-btn--block${canAfford ? ' vx-btn--primary' : ''}`}
-        disabled={!canAfford}
         onClick={() => onPlace(building.id)}
+        title={
+          canAfford
+            ? 'You pay the cost when you place it'
+            : 'You pay what you carry; settlers haul the rest from a stockpile'
+        }
       >
-        {canAfford ? 'Place' : 'Need materials'}
+        {canAfford ? 'Place' : 'Place (short)'}
       </button>
     </div>
   );

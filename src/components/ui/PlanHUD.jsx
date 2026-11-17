@@ -205,6 +205,12 @@ export default function PlanHUD() {
     hint = touch
       ? `${placing.name}: tap a spot, tap it again to place`
       : `${placing.name}: click to place · right-click or Esc to cancel`;
+    const short = Object.fromEntries(
+      Object.entries(placing.cost)
+        .map(([m, q]) => [m, q - (materials?.[m] || 0)])
+        .filter(([, q]) => q > 0)
+    );
+    if (Object.keys(short).length) hint += ` · short ${costText(short)}: settlers haul it from a stockpile`;
   } else if (zoneTool === DELETE_TOOL) {
     hint = touch ? 'Tap a zone to remove it' : 'Click a zone to remove it';
   } else {
@@ -258,9 +264,8 @@ export default function PlanHUD() {
                     className={`plan-tool plan-tool--building${active ? ' plan-tool--active' : ''}${ok ? '' : ' plan-tool--short'}`}
                     style={{ '--tool': '#f2c14e' }}
                     aria-pressed={active}
-                    disabled={!ok && !active}
                     onClick={() => selectBlueprint(b.id)}
-                    title={`${b.name} — ${costText(b.cost)}${ok ? '' : ' (not enough materials)'}`}
+                    title={`${b.name} — ${costText(b.cost)}${ok ? '' : ' (short: settlers haul the rest from a stockpile)'}`}
                   >
                     <span className="plan-tool__label">{b.name}</span>
                     {!touch && i + ZONE_TOOLS.length + 1 <= 9 && (

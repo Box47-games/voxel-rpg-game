@@ -1683,21 +1683,40 @@ const useGameStore = create((rawSet, get, api) => {
   // In plan mode, finishing or cancelling a placement goes back to the zone tool
   cancelPlacingBuilding: () => set((s) => ({ placingBuildingId: null, ...backToPlanTool(s) })),
 
-  placeConstructionSite: (buildingId, position, materialsRequired, totalBlocks) => set((state) => ({
-    constructionSites: [...state.constructionSites, {
-      id: `cs_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      buildingId,
-      position,
-      status: 'PLACED',
-      materialsDelivered: {},
-      materialsRequired,
-      blocksPlaced: 0,
-      totalBlocks,
-      createdAt: Date.now(),
-    }],
-    placingBuildingId: null,
-    ...backToPlanTool(state),
-  })),
+  /**
+   * Put down a construction site. The player pays what they're carrying of the
+   * cost up front (that much counts as delivered); settlers haul the rest
+   * from stockpiles. With everything paid the site goes straight to BUILDING.
+   */
+  placeConstructionSite: (buildingId, position, materialsRequired, totalBlocks) => set((state) => {
+    const materials = { ...state.inventory.materials };
+    const materialsDelivered = {};
+    let allMet = true;
+    for (const [mat, req] of Object.entries(materialsRequired)) {
+      const paid = Math.min(req, materials[mat] || 0);
+      if (paid > 0) {
+        materialsDelivered[mat] = paid;
+        materials[mat] -= paid;
+      }
+      if (paid < req) allMet = false;
+    }
+    return {
+      constructionSites: [...state.constructionSites, {
+        id: `cs_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        buildingId,
+        position,
+        status: allMet ? 'BUILDING' : 'PLACED',
+        materialsDelivered,
+        materialsRequired,
+        blocksPlaced: 0,
+        totalBlocks,
+        createdAt: Date.now(),
+      }],
+      inventory: { ...state.inventory, materials },
+      placingBuildingId: null,
+      ...backToPlanTool(state),
+    };
+  }),
 
   setActiveConstructionSite: (siteId) => set({ activeConstructionSiteId: siteId }),
   closeConstructionPanel: () => set({ activeConstructionSiteId: null }),

@@ -12,6 +12,8 @@ import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { getActiveScaffoldRoutes, scaffoldHeightAt } from '../../systems/construction/scaffoldRoute';
+
+const BUILDER_ARRIVE_DISTANCE = 0.25;
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { NPC_WALK_SPEED, NPC_APPROACH_SPEED, NPC_HAUL_SPEED } from '../../data/tuning';
@@ -153,7 +155,10 @@ const SettlerNPC = React.memo(({ npcData }) => {
       _currentVec.set(pos.x, 0, pos.z);
       const dist = _currentVec.distanceTo(_targetVec);
 
-      if (dist < 1.5) {
+      // Builders walk exact routes round a site (ramp corners, a spot beside
+      // the wall), so they need to really get there; everyone else is close enough
+      const arriveDist = npc.state === 'WORKING_BUILD' ? BUILDER_ARRIVE_DISTANCE : 1.5;
+      if (dist < arriveDist) {
         // Arrived at target
         if (npc.state === 'APPROACHING' && (npc.stateTimer || 0) <= 60) {
           // Transition to EVALUATING (skip if the state machine already timed out to LEAVING)
@@ -182,7 +187,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
         }
 
         _dirVec.subVectors(_targetVec, _currentVec).normalize();
-        const step = speed * delta;
+        const step = Math.min(speed * delta, dist); // never overshoot the target
 
         const newX = pos.x + _dirVec.x * step;
         const newZ = pos.z + _dirVec.z * step;

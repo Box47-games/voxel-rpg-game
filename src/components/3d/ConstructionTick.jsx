@@ -1,6 +1,8 @@
 /**
  * ConstructionTick — Invisible useFrame component that auto-places blocks
- * for construction sites in BUILDING status.
+ * for construction sites in BUILDING status, until the first settler joins.
+ * From then on building is the settlers' job (BUILD tasks), so they're seen
+ * doing it.
  *
  * Pattern: same as SurvivalTick, SettlementTick (accumulator-based tick).
  */
@@ -12,6 +14,11 @@ import { getBuildingById, parseLayers } from '../../data/buildings';
 import { placeNextBlock } from '../../modules/settlement/buildingInfo';
 import { CONSTRUCTION_BLOCK_INTERVAL } from '../../data/tuning';
 import { siteHasNPCBuilder } from '../../systems/settlement/TaskAssignmentEngine';
+
+/** Anyone settled in (not on their way in or out)? */
+export function hasSettlers(npcs) {
+  return (npcs || []).some((n) => n.arrivedAtSettlement && !['APPROACHING', 'EVALUATING', 'LEAVING'].includes(n.state));
+}
 
 export default function ConstructionTick({ chunkManager }) {
   const accumRef = useRef(0);
@@ -25,6 +32,9 @@ export default function ConstructionTick({ chunkManager }) {
     accumRef.current += delta;
     if (accumRef.current < CONSTRUCTION_BLOCK_INTERVAL) return;
     accumRef.current -= CONSTRUCTION_BLOCK_INTERVAL;
+
+    // Settlers have arrived: they do the building
+    if (hasSettlers(store.settlement?.npcs)) return;
 
     // Process each BUILDING site (one block per site per tick)
     // Skip sites being built by NPCs to prevent double block-placement

@@ -155,3 +155,75 @@ export function alongAtHeight(route, y) {
   if (rise <= 0) return 0;
   return route.length * Math.max(0, Math.min(1, (y - y0) / rise));
 }
+
+const ringCache = new Map(); // site id → { key, ring }
+
+/**
+ * The closed walking loop at ground level round a site's footprint, on the
+ * same line as the ramp (SCAFFOLD_OFFSET outside the walls) and with the same
+ * `along` origin and direction, so ramp and ring positions line up. Builders
+ * walk it to reach their spot without climbing over the walls they're building.
+ * @returns {{ points: number[][], segments: Object[], length: number, y: number }|null}
+ */
+export function getGroundRing(site) {
+  const building = site && getBuildingById(site.buildingId);
+  if (!building) return null;
+  const key = `${site.position.join(',')}|${site.buildingId}`;
+  const hit = ringCache.get(site.id);
+  if (hit && hit.key === key) return hit.ring;
+
+  const [x0, y0, z0] = site.position;
+  const w = building.size.width * VOXEL_SIZE;
+  const d = building.size.depth * VOXEL_SIZE;
+  const o = SCAFFOLD_OFFSET;
+  const points = [
+    [x0 - o, y0, z0 + d + o],
+    [x0 + w + o, y0, z0 + d + o],
+    [x0 + w + o, y0, z0 - o],
+    [x0 - o, y0, z0 - o],
+    [x0 - o, y0, z0 + d + o],
+  ];
+  let start = 0;
+  const segments = [];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    const len = Math.hypot(b[0] - a[0], b[2] - a[2]);
+    segments.push({ a, b, len, start });
+    start += len;
+  }
+  const ring = { points, segments, length: start, y: y0 };
+  ringCache.set(site.id, { key, ring });
+  return ring;
+}
+
+/** `along` wrapped into [0, ring.length). */
+const wrapAlong = (ring, along) => ((along % ring.length) + ring.length) % ring.length;
+
+/** [x, y, z] on the ring at `along` (wraps round). */
+export function pointOnRing(ring, along) {
+  return pointOnRoute(ring, wrapAlong(ring, along));
+}
+
+/** Shortest distance round the ring between two `along` values. */
+export function ringGap(ring, a, b) {
+  const d = Math.abs(wrapAlong(ring, a) - wrapAlong(ring, b));
+  return Math.min(d, ring.length - d);
+}
+
+/**
+ * Next point to head for on the ring, going the short way round from `here`
+ * to `goal`: the next corner on the way, or the goal itself.
+ */
+export function ringWaypoint(ring, here, goal) {
+  const P = ring.length;
+  const fwd = wrapAlong(ring, goal - here); // distance going forwards
+  const dir = fwd <= P / 2 ? 1 : -1;
+  const dist = dir > 0 ? fwd : P - fwd;
+  let best = dist;
+  for (const s of ring.segments) {
+    const off = wrapAlong(ring, dir > 0 ? s.start - here : here - s.start);
+    if (off > 0.3 && off < best) best = off;
+  }
+  return pointOnRing(ring, here + dir * best);
+}

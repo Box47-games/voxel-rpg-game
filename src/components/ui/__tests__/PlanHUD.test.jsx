@@ -41,10 +41,15 @@ describe('PlanHUD', () => {
     expect([s().placingBuildingId, s().zoneMode]).toEqual([null, true]);
   });
 
-  test('unaffordable blueprints are disabled', () => {
+  test('blueprints you are short for can still be placed, and the hint says what is missing', () => {
     render(<PlanHUD />);
     act(() => s().enterMode('plan'));
-    expect(screen.getByRole('button', { name: /Stone House/ })).toBeDisabled();
+    const house = screen.getByRole('button', { name: /Stone House/ });
+    expect(house).toBeEnabled();
+    expect(house).toHaveClass('plan-tool--short');
+    fireEvent.click(house);
+    expect(s().placingBuildingId).toBe('stone_house');
+    expect(screen.getByText(/short .*settlers haul it from a stockpile/)).toBeInTheDocument();
   });
 
   test('overview shows the settlement once founded; Details opens the dashboard', () => {

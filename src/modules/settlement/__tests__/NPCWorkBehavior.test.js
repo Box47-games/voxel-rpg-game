@@ -13,6 +13,8 @@ import {
   projectOnRoute,
   pointOnRoute,
   alongAtHeight,
+  getGroundRing,
+  pointOnRing,
 } from '../../../systems/construction/scaffoldRoute';
 import { tickNPC } from '../NPCStateMachine';
 import { getNextBlock } from '../buildingInfo';
@@ -463,10 +465,17 @@ describe('WORKING_BUILD', () => {
     expect(ctx.host.addPickupText).not.toHaveBeenCalled();
   });
 
+  // Where a builder stands for a site's next low block: on the ground ring beside it
+  const standSpot = (site) => {
+    const ring = getGroundRing(site);
+    const next = getNextBlock(site);
+    return pointOnRing(ring, projectOnRoute(ring, next.x, next.z).along);
+  };
+
   test('puts the blueprint block in the world, not just the count', () => {
     const ctx = buildWorld({ buildingId: 'wooden_shelter', totalBlocks: 3 });
     ctx.chunkAdapter = { ...ctx.chunkAdapter, setBlock: vi.fn() };
-    const npc = { ...startWork(makeNPC(), ctx), position: AT_SITE, workTimer: ALMOST };
+    const npc = { ...startWork(makeNPC(), ctx), position: standSpot(ctx.constructionSites[0]), workTimer: ALMOST };
 
     tickNPC(npc, 2, ctx);
 
@@ -485,13 +494,27 @@ describe('WORKING_BUILD', () => {
       return { ctx, route, goal: alongAtHeight(route, next.y - VOXEL_SIZE * 1.5) };
     };
 
-    test('a settler on the ground heads for the foot of the ramp', () => {
-      const { ctx, route } = highWorld();
-      const npc = { ...startWork(makeNPC(), ctx), position: AT_SITE };
+    test('a settler on the ground walks round the outside to the foot of the ramp', () => {
+      const { ctx } = highWorld();
+      const ring = getGroundRing(ctx.constructionSites[0]);
+      // Just past the first corner: the foot is behind them, the short way round
+      const npc = { ...startWork(makeNPC(), ctx), position: pointOnRing(ring, ring.segments[1].start + 1) };
       const { updates } = tickNPC(npc, 2, ctx);
-      const foot = route.points[0];
-      expect(Math.hypot(updates.targetPosition[0] - foot[0], updates.targetPosition[2] - foot[2])).toBeLessThan(1.5);
+      const p = projectOnRoute(ring, updates.targetPosition[0], updates.targetPosition[2]);
+      expect(p.off).toBeLessThan(0.01); // stays on the ring, outside the walls
+      expect(p.along).toBeCloseTo(ring.segments[1].start, 5); // back to the corner first
       expect(updates.workTimer).toBeUndefined();
+    });
+
+    test('a settler up on the walls steps out to the ring first', () => {
+      const { ctx } = highWorld();
+      const ring = getGroundRing(ctx.constructionSites[0]);
+      // On top of the front wall (the corner block), two levels up
+      const npc = { ...startWork(makeNPC(), ctx), position: [61, 2 + VOXEL_SIZE * 2, 65] };
+      const { updates } = tickNPC(npc, 2, ctx);
+      const p = projectOnRoute(ring, updates.targetPosition[0], updates.targetPosition[2]);
+      expect(p.off).toBeLessThan(0.01);
+      expect(Math.hypot(updates.targetPosition[0] - 61, updates.targetPosition[2] - 65)).toBeLessThan(2.5); // the nearest bit of ring
     });
 
     test('on the ramp, they climb corner by corner toward the build spot', () => {

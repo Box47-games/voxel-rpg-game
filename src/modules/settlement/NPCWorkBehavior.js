@@ -51,6 +51,10 @@ import {
   pointOnRoute,
   nextWaypoint,
   alongAtHeight,
+  getGroundRing,
+  pointOnRing,
+  ringGap,
+  ringWaypoint,
 } from '../../systems/construction/scaffoldRoute';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 
@@ -393,18 +397,16 @@ function tickBuild(npc, tickDelta, updates, ctx) {
     return true;
   }
 
-  // High blocks are built from the scaffolding ramp; the rest from the ground
+  // High blocks are built from the scaffolding ramp; the rest from the ground,
+  // standing just outside the wall. Either way builders walk round the
+  // outside of the footprint, never over the walls they're putting up.
   const high = site.status === 'BUILDING' && scaffoldTarget(site);
-  if (high) {
-    const climb = scaffoldApproach(npc, high);
-    if (climb) {
-      updates.targetPosition = climb;
-      return false;
-    }
-  } else if (distanceTo(npc, task.position) > NPC_WORK_RANGE) {
-    updates.targetPosition = [...task.position];
+  const move = high ? scaffoldApproach(npc, high, site) : groundApproach(npc, site);
+  if (move) {
+    updates.targetPosition = move;
     return false;
   }
+  updates.targetPosition = null; // in place: stand still and work
 
   // Site not ready yet (still PLACED)
   if (site.status !== 'BUILDING') return false;
@@ -434,16 +436,48 @@ function tickBuild(npc, tickDelta, updates, ctx) {
   return true;
 }
 
+/** How close (along the ring) a builder must be to their spot to work. */
+const BUILD_SPOT_TOLERANCE = 0.6;
+/** Further than this from the ring line and a builder walks straight to it first. */
+const RING_JOIN_DISTANCE = 0.6;
+
+/**
+ * Walk round the outside of the site to `goal` (along the ground ring), or
+ * null once there. Someone off the ring (arriving, or up on a wall) heads
+ * for the nearest point on it first.
+ */
+function walkRing(npc, site, goal) {
+  const ring = getGroundRing(site);
+  if (!ring) return null;
+  const [x, , z] = npc.position;
+  const p = projectOnRoute(ring, x, z);
+  if (p.off > RING_JOIN_DISTANCE) return pointOnRing(ring, p.along);
+  if (ringGap(ring, p.along, goal) <= BUILD_SPOT_TOLERANCE) return null;
+  return ringWaypoint(ring, p.along, goal);
+}
+
+/** Where to walk to build the next low block (beside it, outside the wall), or null once there. */
+function groundApproach(npc, site) {
+  const ring = getGroundRing(site);
+  const next = getNextBlock(site);
+  if (!ring || !next) {
+    // Nothing to place yet: just get near the site
+    return distanceTo(npc, site.position) > NPC_WORK_RANGE ? [...site.position] : null;
+  }
+  return walkRing(npc, site, projectOnRoute(ring, next.x, next.z).along);
+}
+
 /**
  * Where a builder must walk to build from the scaffolding, or null once they
- * are in place. Settlers climb the ramp from its foot, corner by corner,
- * to the spot where the walkway is one level below the block.
+ * are in place. Settlers walk round the site to the foot of the ramp, then
+ * climb it corner by corner to the spot where the walkway is one level below
+ * the block.
  */
-function scaffoldApproach(npc, { route, goal }) {
+function scaffoldApproach(npc, { route, goal }, site) {
   const [x, y, z] = npc.position;
   const p = projectOnRoute(route, x, z);
   const onRamp = p.off <= route.width / 2 + 0.3 && Math.abs(p.y - (y ?? 0)) < 1.2;
-  if (!onRamp) return pointOnRoute(route, Math.min(1, goal)); // the foot of the ramp
+  if (!onRamp) return walkRing(npc, site, 0) || pointOnRoute(route, Math.min(1, goal)); // the foot of the ramp
   if (Math.abs(p.along - goal) <= 1) return null; // in place
   return nextWaypoint(route, p.along, goal);
 }
