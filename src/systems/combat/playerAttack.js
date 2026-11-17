@@ -1,6 +1,6 @@
 /**
  * playerAttack.js — The player's "attack toward a point" action, shared by
- * tap-to-attack (TouchControls) and the touch context button.
+ * tap-to-attack (TouchControls) and the touch attack button (melee only).
  * Casts the chosen spell if it can (mana, cooldown); otherwise swings melee.
  */
 
@@ -31,13 +31,24 @@ export function tryCastSpellAt(store, point) {
  */
 export function attackToward(store, point) {
   if (tryCastSpellAt(store, point)) return 'spell';
+  return meleeToward(store, point) ? 'melee' : null;
+}
+
+/**
+ * Swing the melee weapon toward a world point, or the way the player faces
+ * when `point` is null. Respects the melee cooldown.
+ * @returns {boolean} whether a swing happened
+ */
+export function meleeToward(store, point) {
   const meleeCooldown = store.getSpellCooldown('__melee__');
-  if (meleeCooldown && meleeCooldown > 0) return null;
+  if (meleeCooldown && meleeCooldown > 0) return false;
   const pp = store.player.position;
-  const facingAngle = Math.atan2(point.x - pp[0], point.z - pp[2]);
+  const facingAngle = point
+    ? Math.atan2(point.x - pp[0], point.z - pp[2])
+    : store.player.facingAngle || 0;
   performMeleeAttack(store, pp, facingAngle, store.enemies);
   store.setSpellCooldown('__melee__', MELEE_COOLDOWN);
-  return 'melee';
+  return true;
 }
 
 /**

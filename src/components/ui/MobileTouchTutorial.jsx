@@ -18,7 +18,8 @@ const TIPS = [
   { icon: '🪄', text: 'Tap ground to cast spells' },
   { icon: '🔄', text: 'Drag to rotate camera' },
   { icon: '🔍', text: 'Pinch to zoom in/out' },
-  { icon: '⛏️', text: 'Big button (bottom-right) mines, attacks or places — its icon shows which' },
+  { icon: '⛏️', text: 'Hold a block (within 4) to mine it · tap to place the block in hand' },
+  { icon: '⚔️', text: 'Big button (bottom-right) swings your weapon' },
   { icon: '🧰', text: 'Tools button: bag, crafting, building, plan, settlement' },
 ];
 

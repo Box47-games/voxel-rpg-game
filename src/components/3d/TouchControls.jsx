@@ -89,6 +89,9 @@ const TouchControls = () => {
         return;
       }
 
+      // Tap on a block within reach: place the held block, or harvest a bush
+      if (store._touchActions?.tapBlock?.(event.clientX, event.clientY)) return;
+
       // Tap on ground = cast spell at location (no movement)
       if (groundHit) {
         const didCast = tryCastSpellAt(groundHit.point);

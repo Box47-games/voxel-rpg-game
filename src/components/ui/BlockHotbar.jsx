@@ -3,7 +3,7 @@
  * slot 0 is the empty hand (mine and fight; right-click places nothing),
  * 1-9/0 pick a block. Pressing the selected block's key again returns to the hand.
  * Touch has no hotbar: blocks are picked from the tool wheel and placed with
- * the context button.
+ * a tap on the world.
  */
 
 import React, { useEffect, useRef } from 'react';

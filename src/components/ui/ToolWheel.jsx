@@ -2,7 +2,7 @@
  * ToolWheel — the touch menu behind the HUD's Tools button (panel 'tools').
  * A ring of the big screens (Bag, Craft, Build catalog, Plan, Settlement)
  * around a close button, and a strip of blocks underneath: tap one to hold it
- * (the context button then places it), or the hand to go back to mining.
+ * (then tap the world to place it), or the hand to empty your hands.
  * Spells keep their own wand button.
  */
 
@@ -94,7 +94,7 @@ export default function ToolWheel() {
             );
           })}
         </div>
-        <p className="tw-hint">Hold a block, then the context button places it. The hand mines.</p>
+        <p className="tw-hint">Pick a block, then tap where it goes. Hold a block on screen to mine it.</p>
       </div>
     </div>
   );

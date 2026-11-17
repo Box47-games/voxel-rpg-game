@@ -192,7 +192,8 @@ const CameraRotateControls = () => {
         return;
       }
 
-      // Single-finger rotation
+      // Single-finger rotation (not while that finger is mining a block)
+      if (useGameStore.getState()._touchMining) return;
       if (e.touches.length === 1 && touchId.current !== null) {
         const t = Array.from(e.touches).find((tt) => tt.identifier === touchId.current);
         if (!t) return;
