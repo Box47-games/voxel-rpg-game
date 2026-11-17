@@ -31,6 +31,8 @@ import {
   RIFT_NPC_DEFENDER_SPEED_BONUS,
   RIFT_REINFORCEMENT_COUNT_BASE,
   RIFT_REINFORCEMENT_ESCALATION,
+  RIFT_REINFORCEMENT_RING,
+  RIFT_REINFORCEMENT_FIRST_DELAY,
 } from '../../data/tuning';
 
 // Rift states
@@ -271,7 +273,8 @@ export class RiftManager {
 
     rift.state = RiftState.CLOSING;
     rift.anchorHealth = RIFT_ANCHOR_HEALTH;
-    rift.lastReinforcementTime = now;
+    // First wave shortly after the anchor goes down
+    rift.lastReinforcementTime = now - RIFT_REINFORCEMENT_INTERVAL + RIFT_REINFORCEMENT_FIRST_DELAY;
 
     // Chain reaction: boost nearby active rifts
     for (const other of this.rifts) {
@@ -375,19 +378,10 @@ export class RiftManager {
     closingRift.lastReinforcementTime = now;
     const spawns = [];
 
-    // Find nearby active rifts to send reinforcements from
-    const sources = this.rifts.filter(r => {
-      if (r.id === closingRift.id) return false;
-      if (r.state !== RiftState.ACTIVE) return false;
-      const dx = r.x - closingRift.x;
-      const dz = r.z - closingRift.z;
-      return Math.sqrt(dx * dx + dz * dz) < RIFT_CHAIN_REACTION_RANGE;
-    });
-
-    // Fallback: if no nearby active rifts, the closing rift spawns its own defenders
-    const spawnSource = sources.length > 0
-      ? sources[Math.floor(Math.random() * sources.length)]
-      : closingRift;
+    // The rift defends itself: waves pour out of it, close enough to see and
+    // fight (other rifts are usually out of the active range, so their
+    // monsters never arrived).
+    const spawnSource = closingRift;
 
     // Determine escalation tier based on corruption progress
     const progress = closingRift.corruptionProgress;
@@ -414,7 +408,8 @@ export class RiftManager {
 
       // Spawn near the source rift
       const angle = rand() * Math.PI * 2;
-      const radius = rand() * RIFT_SPAWN_RADIUS;
+      const [ringMin, ringMax] = RIFT_REINFORCEMENT_RING;
+      const radius = ringMin + rand() * (ringMax - ringMin);
       const spawnX = source.x + Math.cos(angle) * radius;
       const spawnZ = source.z + Math.sin(angle) * radius;
 

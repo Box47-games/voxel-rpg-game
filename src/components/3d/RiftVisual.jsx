@@ -23,6 +23,7 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
+import { RIFT_VISUAL_SCALE } from '../../data/tuning';
 
 const TEAR_W = 5;
 const TEAR_H = 10;
@@ -322,7 +323,7 @@ const RiftVisual = ({
   });
 
   return (
-    <group position={[x, y, z]}>
+    <group position={[x, y, z]} scale={RIFT_VISUAL_SCALE}>
       <mesh geometry={groundGeo} material={groundMat} position={[0, 0.06, 0]} renderOrder={1} />
 
       <instancedMesh ref={placeSpikes} args={[cubeGeo, crystalMat, SPIKE_COUNT]} scale={[scale, scale, scale]} />

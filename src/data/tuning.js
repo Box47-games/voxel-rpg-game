@@ -115,14 +115,15 @@ export const TOOL_TIER = {
 };
 
 // ─── Night Threats / Rift Spawning ───────────────────────────
-export const RIFT_DENSITY = 0.25;              // Rifts per chunk (~1 per 4 chunks)
-export const RIFT_MIN_SPAWN_DISTANCE = 96;     // World units from spawn point (safe zone)
-export const RIFT_MIN_SEPARATION = 128;        // World units between rifts (no clustering)
-export const RIFT_SPAWN_RADIUS = 10;           // Monster spawn radius around rift center
+export const RIFT_DENSITY = 0.12;              // Rifts per chunk (~1 per 8 chunks)
+export const RIFT_MIN_SPAWN_DISTANCE = 128;    // World units from spawn point (safe zone)
+export const RIFT_MIN_SEPARATION = 224;        // World units between rifts (no clustering)
+export const RIFT_SPAWN_RADIUS = 16;           // Monster spawn radius around rift center
+export const RIFT_VISUAL_SCALE = 1.8;          // Rift tear, crystals and scorched ground, relative to the base model
 
-export const RIFT_SPAWN_INTERVAL_DAY = 120;    // Seconds between spawns (daytime)
-export const RIFT_SPAWN_INTERVAL_DUSK = 60;
-export const RIFT_SPAWN_INTERVAL_NIGHT = 20;
+export const RIFT_SPAWN_INTERVAL_DAY = 180;    // Seconds between spawns (daytime)
+export const RIFT_SPAWN_INTERVAL_DUSK = 90;
+export const RIFT_SPAWN_INTERVAL_NIGHT = 35;
 export const RIFT_POP_CAP_DAY = 3;             // Max monsters per rift (daytime)
 export const RIFT_POP_CAP_NIGHT = 8;           // Max monsters per rift (nighttime)
 export const RIFT_ACTIVE_RANGE = 80;           // Only tick rifts within physics collider range (~3 chunks)
@@ -147,7 +148,9 @@ export const RIFT_NPC_DEFENDER_SPEED_BONUS = 0.5;   // Extra fade speed per NPC 
 export const RIFT_WOUNDED_SPAWN_MULT = 0.5;         // Wounded rifts spawn at 50% rate
 export const RIFT_CHAIN_REACTION_RANGE = 200;       // Nearby rifts react when one enters CLOSING
 export const RIFT_CHAIN_SPAWN_BOOST = 1.5;          // 50% spawn rate increase for chain reaction
-export const RIFT_REINFORCEMENT_INTERVAL = 15;      // Seconds between reinforcement waves
+export const RIFT_REINFORCEMENT_INTERVAL = 20;      // Seconds between reinforcement waves 
+export const RIFT_REINFORCEMENT_FIRST_DELAY = 5;   // Seconds after the anchor goes down until the first wave
+export const RIFT_REINFORCEMENT_RING = [14, 22];    // Waves pour out of the rift this far (world units) from its centre
 export const RIFT_REINFORCEMENT_COUNT_BASE = 2;     // Base enemies per reinforcement wave
 export const RIFT_REINFORCEMENT_ESCALATION = 1;     // Extra enemies per wave as corruption shrinks
 export const RIFT_VOID_SHARD_DROP_CHANCE = 0.3;     // Chance per corrupted block to drop void shard
@@ -197,6 +200,7 @@ export const APPLE_DROP_CHANCE = 0.10;         // 10% from leaves
 export const JUMP_IMPULSE = 12;              // Vertical velocity on jump (clears ~1.5 blocks)
 export const JUMP_STAMINA_COST = 25;         // Stamina consumed per jump
 export const JUMP_GROUNDED_THRESHOLD = 0.1;  // Max |velY| to count as grounded (tight to prevent air-jumps)
+export const SCAFFOLD_GROUNDED_VY = 4;       // On a scaffold ramp: walking up/down it moves you vertically this fast at most
 export const JUMP_COOLDOWN_MS = 500;         // Min ms between jumps (prevents hold-to-spam)
 
 // ─── Mobile Controls ─────────────────────────────────────────
@@ -221,8 +225,13 @@ export const PLAN_CAMERA_TILT = 0.3;            // Horizontal offset = height ×
 // Gesture disambiguation
 export const TAP_MAX_DURATION_MS = 200;
 export const TAP_MAX_DISTANCE_PX = 10;
-// Touch context button: enemies this close (world units) turn it into Attack
+// Touch attack button: swings at enemies this close (world units)
 export const TOUCH_ATTACK_RANGE = 14;
+// Touch blocks: hold a block on screen this long to start mining it; reach in blocks (both mining and tap-to-place)
+export const TOUCH_MINE_HOLD_MS = 250;
+export const TOUCH_BLOCK_REACH = 4;
+// Contextual hints: quiet time between ordinary hints (urgent ones may cut in)
+export const HINT_MIN_GAP_MS = 25000;
 // Desktop block: holding the right mouse button still this long (empty hand) raises the guard
 export const RIGHT_HOLD_BLOCK_MS = 180;
 export const TOUCH_ATTACK_REPEAT_MS = 350;      // holding the button keeps attacking

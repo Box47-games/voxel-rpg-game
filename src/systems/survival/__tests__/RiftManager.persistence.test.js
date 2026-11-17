@@ -40,7 +40,8 @@ describe('RiftManager persistence', () => {
     expect(r.state).toBe(RiftState.CLOSING);
     expect(r.corruptionProgress).toBe(0.42);
     expect(r.anchorHealth).toBe(RIFT_ANCHOR_HEALTH - 30);
-    expect(r.lastReinforcementTime).toBe(50);
+    // First wave is due shortly after the anchor went down (interval - first delay earlier)
+    expect(r.lastReinforcementTime).toBe(rift.lastReinforcementTime);
     expect(restored.getClosingRifts().map((x) => x.id)).toEqual([rift.id]);
   });
 

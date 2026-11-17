@@ -31,6 +31,8 @@ vi.mock('../../../data/tuning', () => ({
   RIFT_REINFORCEMENT_INTERVAL: 15,
   RIFT_REINFORCEMENT_COUNT_BASE: 2,
   RIFT_REINFORCEMENT_ESCALATION: 1,
+  RIFT_REINFORCEMENT_FIRST_DELAY: 5,
+  RIFT_REINFORCEMENT_RING: [14, 22],
   RIFT_VOID_SHARD_DROP_CHANCE: 0.3,
   RIFT_DORMANT_DURATION: 300,
   SHELTER_MONSTER_EXCLUSION: 16,
@@ -324,7 +326,7 @@ describe('RiftManager — Rift Closing', () => {
   });
 
   describe('getReinforcementSpawns', () => {
-    test('returns reinforcements from nearby active rifts', () => {
+    test('waves pour out of the closing rift itself, on a ring round it, even with other rifts nearby', () => {
       const closingRift = rm.rifts[0];
       closingRift.state = RiftState.CLOSING;
       closingRift.corruptionProgress = 0.8;
@@ -348,6 +350,22 @@ describe('RiftManager — Rift Closing', () => {
       expect(spawns.length).toBeGreaterThan(0);
       expect(spawns[0].targetPosition).toBeDefined();
       expect(spawns[0].targetPosition[0]).toBe(closingRift.x);
+      for (const sp of spawns) {
+        expect(sp.riftId).toBe(closingRift.id);
+        const d = Math.hypot(sp.position[0] - closingRift.x, sp.position[2] - closingRift.z);
+        expect(d).toBeGreaterThanOrEqual(14);
+        expect(d).toBeLessThanOrEqual(22);
+      }
+    });
+
+    test('the first wave comes 5 seconds after closing starts', () => {
+      const rift = rm.rifts[0];
+      rift.state = RiftState.ACTIVE;
+      rift.spawnedMonsterIds = [];
+      rm.beginClosing(rift.id, 100);
+      rift.corruptionProgress = 0.9;
+      expect(rm.getReinforcementSpawns(rift, 104)).toEqual([]);
+      expect(rm.getReinforcementSpawns(rift, 105).length).toBeGreaterThan(0);
     });
 
     test('closing rift spawns its own defenders if no nearby active rifts', () => {
