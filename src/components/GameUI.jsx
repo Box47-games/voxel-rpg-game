@@ -18,7 +18,6 @@ import {
   Package,
   Activity,
   Flame,
-  Hammer,
   Pickaxe,
   MapPin,
   LayoutGrid,
@@ -119,6 +118,7 @@ const GameUI = () => {
   const buildMode = useGameStore((state) => state.buildMode);
   const planMode = useGameStore((state) => state.planMode);
   const toolsOpen = useGameStore((state) => state.openPanel === 'tools');
+  const bagOpen = useGameStore((state) => ['inventory', 'crafting', 'repair'].includes(state.openPanel));
   const catalogOpen = useGameStore((state) => state.activeBuildingCatalog);
   const [isMobile, setIsMobile] = useState(false);
   const [isTouch] = useState(isTouchDevice);
@@ -303,8 +303,16 @@ const GameUI = () => {
           />
         ) : (
           <>
-            <ActionSlot icon={Package} label="Inventory" hotkey="I" color="#4f8cf7" compact={isMobile} onClick={() => pressKey('i')} />
-            <ActionSlot icon={Hammer} label="Crafting" hotkey="C" color="#f2c14e" compact={isMobile} onClick={() => pressKey('c')} />
+            {/* Bag: Inventory, Craft and Repair are tabs of one screen (C opens Craft directly) */}
+            <ActionSlot
+              icon={Package}
+              label="Bag"
+              hotkey="I"
+              color="#4f8cf7"
+              active={bagOpen}
+              compact={isMobile}
+              onClick={() => pressKey('i')}
+            />
             {/* Desktop mines and places in Play, so Build opens the catalog (blocks + buildings) */}
             <ActionSlot
               icon={Pickaxe}

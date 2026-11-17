@@ -157,7 +157,7 @@ describe('HUD', () => {
     device.touch = true;
     try {
       render(<GameUI />);
-      expect(screen.queryByRole('button', { name: 'Inventory' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Bag' })).toBeNull();
       fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
       expect(useGameStore.getState().openPanel).toBe('tools');
     } finally {
@@ -165,15 +165,15 @@ describe('HUD', () => {
     }
   });
 
-  test('Inventory and Crafting slots press their hotkeys; Settlement opens the dashboard', () => {
+  test('Bag presses I; Settlement opens the dashboard', () => {
     const keys = [];
     const onKey = (e) => keys.push(e.key);
     window.addEventListener('keydown', onKey);
     render(<GameUI />);
-    fireEvent.click(screen.getByRole('button', { name: 'Inventory' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Crafting' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Bag' }));
+    expect(screen.queryByRole('button', { name: 'Crafting' })).toBeNull(); // Craft is a Bag tab now
     window.removeEventListener('keydown', onKey);
-    expect(keys).toEqual(['i', 'c']);
+    expect(keys).toEqual(['i']);
 
     const before = useGameStore.getState().settlementDashboardOpen;
     fireEvent.click(screen.getByRole('button', { name: 'Settlement' }));

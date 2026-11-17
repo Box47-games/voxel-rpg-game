@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Hammer, Package, Sword, Shield, Zap, Pickaxe } from 'lucide-react';
 import useGameStore from '../stores/useGameStore';
+import BagTabs from './ui/BagTabs';
 import { CRAFTING_RECIPES, ITEM_TYPES, canCraft } from '../data/craftingRecipes';
 import { MaterialCraftingSystem, QUALITY_TIERS } from '../modules/crafting/MaterialCraftingSystem';
 
@@ -226,6 +227,8 @@ const CraftingUI = () => {
             <X size={isMobile ? 20 : 24} color="#fff" />
           </button>
         </div>
+
+        <BagTabs active="crafting" isMobile={isMobile} />
 
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Sidebar - Categories */}

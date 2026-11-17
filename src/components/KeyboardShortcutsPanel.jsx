@@ -65,8 +65,8 @@ const shortcuts = {
   menus: {
     title: 'Menus & Panels',
     keys: [
-      { key: 'I', description: 'Inventory' },
-      { key: 'C', description: 'Crafting' },
+      { key: 'I', description: 'Bag: Inventory tab (Craft and Repair are tabs too)' },
+      { key: 'C', description: 'Bag: Craft tab' },
       { key: 'K', description: 'Skills' },
       { key: 'M', description: 'Map' },
       { key: 'Escape', description: 'Close current panel / Menu' },

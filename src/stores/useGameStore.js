@@ -301,7 +301,7 @@ const useGameStore = create((rawSet, get, api) => {
   activeConstructionSiteId: null, // Site ID of open construction panel
   activeNPCId: null,            // Settler shown in the NPC detail panel (or null)
   settlementDashboardOpen: false, // Settlement dashboard (N key)
-  openPanel: null, // Store-owned screens: 'inventory' | 'crafting' (at most one panel of any kind is open)
+  openPanel: null, // Store-owned screens: 'inventory' | 'crafting' | 'repair' (the Bag tabs) | 'tools' (touch wheel); at most one panel of any kind is open
 
   // Actions
   setGameState: (state) => set({ gameState: state }),
@@ -1953,6 +1953,7 @@ const useGameStore = create((rawSet, get, api) => {
 
   reset: () =>
     set({
+      ...CLOSED_PANELS, // a new game starts with no screen open
       gameState: 'intro',
       camera: createInitialCamera(),
       player: createInitialPlayer(),

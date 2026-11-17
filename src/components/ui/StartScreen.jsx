@@ -20,6 +20,7 @@ const DESKTOP_CONTROLS = [
   [['Click'], 'Attack / hold to mine'],
   [['1–0'], 'Pick block'],
   [['Right-click'], 'Place block'],
+  [['I'], 'Bag: items, craft, repair'],
   [['B'], 'Build catalog'],
   [['P'], 'Plan settlement'],
   [['Right-drag'], 'Look around'],

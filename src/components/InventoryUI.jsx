@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Package } from 'lucide-react';
 import useGameStore, { selectPlayerStats } from '../stores/useGameStore';
 import ToolDurability from './ui/ToolDurability';
+import BagTabs from './ui/BagTabs';
 import { useShallow } from 'zustand/react/shallow';
 import { ITEM_TYPES } from '../data/craftingRecipes';
 import {
@@ -299,6 +300,8 @@ const InventoryUI = () => {
             <X size={isMobile ? 20 : 24} color="#fff" />
           </button>
         </div>
+
+        <BagTabs active="inventory" isMobile={isMobile} />
 
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Equipment Panel */}

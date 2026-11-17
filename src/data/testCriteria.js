@@ -63,6 +63,7 @@ export const TEST_PHASES = [
           { id: 'p1-func-day-night', label: 'Day/night cycle', description: 'Sky and lighting change over time with visible sun/moon' },
           { id: 'p1-func-crafting', label: 'Crafting system', description: 'Player can craft items from gathered materials at crafting UI' },
           { id: 'p1-func-inventory', label: 'Inventory', description: 'Items and materials are tracked and displayed in inventory UI' },
+          { id: 'p1-func-bag-tabs', label: 'Bag tabs', description: 'I opens the Bag on Inventory, C on Craft; tabs switch Inventory / Craft / Repair in place; Repair lists tools most-worn first and repairs them; Esc closes' },
           { id: 'p1-func-equipment', label: 'Equipment', description: 'Player can equip/unequip items with stat effects' },
           { id: 'p1-func-harvesting', label: 'Resource harvesting', description: 'Trees, rocks, berry bushes, and plants yield materials when broken' },
           { id: 'p1-func-tool-tiers', label: 'Tool tiers', description: 'Higher-tier pickaxes break harder blocks and yield better drops' },
