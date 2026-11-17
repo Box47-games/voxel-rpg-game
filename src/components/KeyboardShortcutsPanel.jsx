@@ -11,102 +11,63 @@
 import React, { useState, useEffect } from 'react';
 import './KeyboardShortcutsPanel.css';
 
+// Only keys that are actually bound (see useKeyboard.js and the components named)
 const shortcuts = {
   movement: {
     title: 'Movement',
     keys: [
-      { key: 'W', description: 'Move forward' },
-      { key: 'A', description: 'Move left' },
-      { key: 'S', description: 'Move backward' },
-      { key: 'D', description: 'Move right' },
-      { key: 'Space', description: 'Jump' },
-      { key: 'Shift', description: 'Sprint / Run' },
-      { key: 'E', description: 'Interact / Use (next to a settler: view details)' },
-      { key: 'V', description: 'Toggle first-person mode' },
+      { key: 'W A S D', description: 'Move' },
+      { key: 'Space', description: 'Jump (double-tap: dodge)' },
+      { key: 'Shift', description: 'Sprint' },
+      { key: 'E', description: 'Interact: harvest, pick up, settler / site / stockpile details, close a rift' },
+      { key: 'V', description: 'First-person view on / off' },
     ],
   },
   camera: {
-    title: 'Camera & View',
+    title: 'Camera',
     keys: [
-      { key: '\u2190 \u2191 \u2192 \u2193', description: 'Pan camera' },
-      { key: '+ / -', description: 'Zoom in / out' },
-      { key: 'PgUp / .', description: 'Go up one Z-level' },
-      { key: 'PgDn / ,', description: 'Go down one Z-level' },
-      { key: 'Home', description: 'Jump to surface level' },
-      { key: 'End', description: 'Jump to lowest level' },
-      { key: 'Shift + Scroll', description: 'Navigate Z-levels' },
+      { key: 'Right-drag', description: 'Turn the camera' },
+      { key: 'Wheel', description: 'Zoom (in plan mode: raise / lower the camera)' },
     ],
   },
   combat: {
     title: 'Combat & Spells',
     keys: [
+      { key: 'Click enemy', description: 'Attack (casts your chosen spell, or melee)' },
       { key: 'Q (hold)', description: 'Spell wheel: choose the spell your clicks cast' },
-      { key: 'Alt', description: 'Block' },
-      { key: 'H', description: 'Use health potion' },
-      { key: 'Click enemy', description: 'Attack (casts your chosen spell)' },
+      { key: 'Right-hold / Alt', description: 'Block (hold the right button still, empty hand)' },
+      { key: 'H', description: 'Drink a health potion' },
     ],
   },
   building: {
-    title: 'Building & Zones',
+    title: 'Blocks & Building',
     keys: [
-      { key: 'Hold click', description: 'Mine the block you aim at' },
-      { key: '1 \u2013 0', description: 'Pick a block (press again for empty hand)' },
+      { key: 'Hold click', description: 'Mine the block under the cursor' },
+      { key: '1 \u2013 9, 0', description: 'Pick a block (same key again: empty hand)' },
       { key: 'Right-click', description: 'Place the picked block' },
-      { key: 'Tab', description: 'Toggle build mode' },
-      { key: 'P', description: 'Plan mode: zones and buildings from above (Z also works)' },
-      { key: '1 \u2013 9 (plan)', description: 'Pick a zone tool or blueprint' },
-      { key: 'Wheel (plan)', description: 'Raise or lower the plan camera' },
       { key: 'B', description: 'Build catalog: blocks and buildings (1 / 2 switch tabs)' },
-      { key: 'N', description: 'Settlement dashboard' },
-      { key: 'Delete', description: 'Delete selected building' },
-      { key: 'Escape', description: 'Cancel placement' },
+      { key: 'P', description: 'Plan mode: zones and buildings from above' },
+      { key: '1 \u2013 9 (plan)', description: 'Pick a zone tool (1\u20134) or blueprint (5+)' },
+      { key: 'Right-click (placing)', description: 'Cancel placing a building' },
     ],
   },
   menus: {
-    title: 'Menus & Panels',
+    title: 'Screens',
     keys: [
       { key: 'I', description: 'Bag: Inventory tab (Craft and Repair are tabs too)' },
       { key: 'C', description: 'Bag: Craft tab' },
-      { key: 'K', description: 'Skills' },
-      { key: 'M', description: 'Map' },
-      { key: 'Escape', description: 'Close current panel / Menu' },
-      { key: '?', description: 'Toggle this help screen' },
-    ],
-  },
-  gameControls: {
-    title: 'Game Controls',
-    keys: [
-      { key: '[', description: 'Decrease game speed' },
-      { key: ']', description: 'Increase game speed' },
+      { key: 'N', description: 'Settlement overview' },
+      { key: 'Esc', description: 'Back out one step (placement \u2192 screen \u2192 mode), then pause' },
       { key: 'F10', description: 'Pause menu (save / load)' },
-      { key: '`', description: 'Toggle clean mode (hide UI)' },
-      { key: 'N', description: 'Spawn NPC' },
-    ],
-  },
-  saveLoad: {
-    title: 'Save & Load',
-    keys: [
-      { key: 'S', description: 'Quick save' },
-      { key: 'L', description: 'Quick load' },
-      { key: 'Ctrl + S', description: 'Save game' },
-    ],
-  },
-  dungeon: {
-    title: 'Dungeon',
-    keys: [
-      { key: '\u2190 \u2191 \u2192 \u2193', description: 'Move in dungeon' },
-      { key: 'Tab', description: 'Cycle target' },
-      { key: 'Space / Enter', description: 'Attack current target' },
-      { key: '1 \u2013 6', description: 'Use dungeon skill' },
-      { key: 'Escape', description: 'Exit dungeon' },
+      { key: '?', description: 'This help screen' },
     ],
   },
   debug: {
-    title: 'Debug & Info',
+    title: 'Debug (dev builds or ?debug=1)',
     keys: [
-      { key: 'F3', description: 'Dev overlay: open / mini / close (dev builds or ?debug=1)' },
+      { key: 'F3', description: 'Dev overlay: open / mini / close' },
       { key: 'F4', description: 'Dev overlay: settlement tab' },
-      { key: 'D', description: 'Toggle debug panel' },
+      { key: '`', description: 'QA test tracker' },
     ],
   },
 };

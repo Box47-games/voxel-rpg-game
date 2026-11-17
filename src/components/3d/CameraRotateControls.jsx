@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import useGameStore from '../../stores/useGameStore';
+import { setVirtualKey } from '../../hooks/useKeyboard';
 import {
   CAMERA_MIN_DISTANCE,
   CAMERA_MAX_DISTANCE,
@@ -9,6 +10,7 @@ import {
   TAP_MAX_DISTANCE_PX,
   PLAN_CAMERA_MIN_HEIGHT,
   PLAN_CAMERA_MAX_HEIGHT,
+  RIGHT_HOLD_BLOCK_MS,
 } from '../../data/tuning';
 
 const clampPlanHeight = (h) => Math.max(PLAN_CAMERA_MIN_HEIGHT, Math.min(PLAN_CAMERA_MAX_HEIGHT, h));
@@ -50,18 +52,46 @@ const CameraRotateControls = () => {
 
     const clampPitch = (p) => Math.max(-1.05, Math.min(1.05, p)); // ±60°
 
-    // ── Desktop: right-click drag ───────────────────
+    // ── Desktop: right-click drag turns the camera; holding it still blocks ──
+    // (empty hand only: with a block in hand, right-click places it)
+    let blockTimer = null;
+    let blockingByMouse = false;
+    let rightDownX = 0;
+    let rightDownY = 0;
+    const stopBlocking = () => {
+      clearTimeout(blockTimer);
+      blockTimer = null;
+      if (blockingByMouse) setVirtualKey('block', false);
+      blockingByMouse = false;
+    };
+
     const handleMouseDown = (e) => {
       if (e.button === 2) {
         isDragging.current = true;
         lastMouseX.current = e.clientX;
         lastMouseY.current = e.clientY;
+        rightDownX = e.clientX;
+        rightDownY = e.clientY;
         e.preventDefault();
+        const st = useGameStore.getState();
+        if (st.selectedBlockType == null && !st.planMode && !st.placingBuildingId) {
+          clearTimeout(blockTimer);
+          blockTimer = setTimeout(() => {
+            blockTimer = null;
+            blockingByMouse = true;
+            setVirtualKey('block', true);
+          }, RIGHT_HOLD_BLOCK_MS);
+        }
       }
     };
 
     const handleMouseMove = (e) => {
       if (!isDragging.current) return;
+      // Moving before the hold kicks in makes it a camera drag, not a block
+      if (blockTimer && Math.hypot(e.clientX - rightDownX, e.clientY - rightDownY) > TAP_MAX_DISTANCE_PX) {
+        clearTimeout(blockTimer);
+        blockTimer = null;
+      }
       const cam = getCameraState();
 
       const deltaX = e.clientX - lastMouseX.current;
@@ -79,12 +109,16 @@ const CameraRotateControls = () => {
     };
 
     const handleMouseUp = (e) => {
-      if (e.button === 2) isDragging.current = false;
+      if (e.button === 2) {
+        isDragging.current = false;
+        stopBlocking();
+      }
     };
 
     // Cancel drag if window loses focus (Alt+Tab, mouse leaves browser, etc.)
     const handleBlur = () => {
       isDragging.current = false;
+      stopBlocking();
     };
 
     // ── Scroll wheel zoom (desktop) ─────────────────
@@ -228,6 +262,7 @@ const CameraRotateControls = () => {
     window.addEventListener('blur', handleBlur);
 
     return () => {
+      stopBlocking();
       canvas.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);

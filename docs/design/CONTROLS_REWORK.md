@@ -31,15 +31,15 @@ The store holds exactly one `mode` (`play` or `plan`) and at most one open `pane
 | Key | Does |
 |---|---|
 | WASD, Space, Shift | Move, jump, run |
-| 1–9 / mouse wheel | Hotbar |
+| 1–9, 0 | Hotbar (same key again: empty hand). The wheel stays on camera zoom. |
 | Q (hold) | Spell wheel |
 | E | Interact / pick up |
 | B | Build catalog (blocks and buildings, tabs) |
-| P | Plan mode (zones, buildings, top-down) |
+| P | Plan mode (zones, buildings, top-down). Z no longer does anything. |
 | I / C | Bag (Inventory / Craft tab) |
 | N | Settlement overview |
 | H | Potion |
-| Right-mouse hold or Ctrl | Block (was Alt, which browsers grab) |
+| Right-mouse hold (still, empty hand) or Alt | Block. Not Ctrl: Ctrl+W (block while walking forward) closes the browser tab and pages can't stop it. |
 | Esc | Back out one step / pause |
 
 Tab is freed (browser focus key). Remapping in Settings comes later.
@@ -53,4 +53,4 @@ Tab is freed (browser focus key). Remapping in Settings comes later.
 5. **Done:** Plan mode (P; Z still works until step 8): zone tools (1–4) and blueprints (5+) in one tool bar, camera raised to a near top-down view (wheel / pinch zoom), settlement overview at the side. Building placement follows the cursor (touch: tap to position, tap again to place) and always happens in plan mode; afterwards you're back on the zone tool. Esc: placement → plan → play.
 6. **Done:** Touch: context button (bottom right; Attack → Use/harvest → Place → Mine, aimed at the block in front of the player; hold mines or keeps attacking) and the tool wheel (the dock's one Tools button: Bag, Craft, Build, Plan, Settlement in a ring, block strip below). Long-press mining and touch build mode are gone, so a drag is always the camera. Picking up a campfire stays on E (the context button only harvests); spells keep their wand button; E stays for settlers, sites and rifts.
 7. **Done:** Bag: Inventory, Craft and Repair as tabs of one screen (I opens Inventory, C opens Craft; the dock's Inventory and Crafting buttons became one Bag button). Repair lists every tool, most worn first, with its repair cost.
-8. Key layout above: block on right-mouse/Ctrl, update hints, start screen and the shortcuts panel.
+8. **Done:** key layout above. Block on right-mouse hold (Alt kept; Ctrl dropped, see the table). Tab freed and build mode removed (nothing needs it now); Z no longer opens plan mode. Shortcuts panel rewritten to list only bound keys (the 2D-era camera, Z-level, game-speed, dungeon and quick-save entries were never wired up in 3D); hints and start screen updated.

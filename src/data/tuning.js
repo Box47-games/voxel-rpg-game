@@ -223,6 +223,8 @@ export const TAP_MAX_DURATION_MS = 200;
 export const TAP_MAX_DISTANCE_PX = 10;
 // Touch context button: enemies this close (world units) turn it into Attack
 export const TOUCH_ATTACK_RANGE = 14;
+// Desktop block: holding the right mouse button still this long (empty hand) raises the guard
+export const RIGHT_HOLD_BLOCK_MS = 180;
 export const TOUCH_ATTACK_REPEAT_MS = 350;      // holding the button keeps attacking
 
 // ─── Settlement Attractiveness ──────────────────────────────

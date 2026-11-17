@@ -27,6 +27,7 @@ export function BlockHotbar() {
   const selectedBlockType = useGameStore((state) => state.selectedBlockType);
   const zoneMode = useGameStore((state) => state.zoneMode || state.planMode); // planning: no mining or placing
   const placingBuildingId = useGameStore((state) => state.placingBuildingId);
+  const playing = useGameStore((state) => state.gameState === 'playing');
   const materials = useGameStore((state) => state.inventory.materials);
   const setSelectedBlockType = useGameStore(
     (state) => state.setSelectedBlockType
@@ -58,7 +59,7 @@ export function BlockHotbar() {
   }, [setSelectedBlockType]);
 
   // Desktop only, in Play. Hidden while planning or placing a building.
-  if (isMobile.current) return null;
+  if (isMobile.current || !playing) return null; // not on the title, death or pause screens
   if (zoneMode || placingBuildingId) return null;
 
   return (

@@ -17,15 +17,16 @@ const KEYMAP = {
   Escape: 'menu',
   KeyE: 'use',
   KeyH: 'potion',
+  // Block: Alt, or hold the right mouse button still (CameraRotateControls).
+  // Not Ctrl: Ctrl+W (block while walking) closes the browser tab.
   AltLeft: 'block',
   AltRight: 'block',
 };
 
 // Keys that fire a toggle action on keydown (not held state)
+// (Tab is left to the browser for focus; Z is free.)
 const TOGGLE_KEYS = {
-  Tab: 'buildMode',
   KeyP: 'planMode',
-  KeyZ: 'planMode', // old zone-mode key; zones live in plan mode now
 };
 
 // Shared mutable key state — updated synchronously in event handlers,
@@ -58,7 +59,6 @@ export function useKeyboard() {
       if (toggle) {
         e.preventDefault();
         // One mode at a time: entering one leaves the other (and closes panels)
-        if (toggle === 'buildMode') useGameStore.getState().enterMode('build');
         if (toggle === 'planMode') {
           // The plan camera is third-person: release a first-person pointer lock
           if (document.pointerLockElement) document.exitPointerLock();

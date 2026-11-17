@@ -39,7 +39,7 @@ const ContextualHints = () => {
     },
     {
       id: 'inventory',
-      text: 'Press I to open inventory',
+      text: 'Press I to open your bag (items, crafting, repairs)',
       condition: () => gameState === 'playing',
       priority: 2,
       delay: 8000,
@@ -59,7 +59,7 @@ const ContextualHints = () => {
     },
     {
       id: 'blocks',
-      text: 'Hold left-click to mine blocks; pick a block (1-9) and right-click to place',
+      text: 'Hold left-click to mine blocks; pick a block (1-0) and right-click to place',
       condition: () => gameState === 'playing',
       priority: 4,
       delay: 25000,
@@ -109,7 +109,7 @@ const ContextualHints = () => {
     },
     {
       id: 'hungerWarning',
-      text: 'You\'re getting hungry! Mine berry bushes or craft food.',
+      text: 'You\'re getting hungry! Harvest berry bushes or craft food.',
       condition: () => hunger.current < 40 && hunger.current > 0,
       priority: 9,
       duration: 5000,
@@ -188,7 +188,7 @@ const ContextualHints = () => {
     },
     {
       id: 'housing-needed',
-      text: 'Out of beds! Build a Wooden Shelter (B) so more settlers can move in.',
+      text: 'Out of beds! Place a Wooden Shelter (Plan mode, or B) so more settlers can move in.',
       condition: () => {
         if (gameState !== 'playing') return false;
         const s = useGameStore.getState();

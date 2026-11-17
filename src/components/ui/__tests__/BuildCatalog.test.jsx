@@ -42,6 +42,7 @@ describe('BuildCatalog (B)', () => {
   });
 
   test('a block picked off the bar gets its own hotbar slot', () => {
+    useGameStore.setState({ gameState: 'playing' });
     render(<BlockHotbar />);
     expect(screen.queryByTitle(/^Clay/)).toBeNull();
     act(() => s().pickBlock(BlockTypes.CLAY));
@@ -49,6 +50,7 @@ describe('BuildCatalog (B)', () => {
   });
 
   test('number keys switch tabs while open without changing the held block', () => {
+    useGameStore.setState({ gameState: 'playing' });
     render(<><BuildCatalog /><BlockHotbar /></>);
     act(() => s().openCatalog('blocks'));
     press('2');

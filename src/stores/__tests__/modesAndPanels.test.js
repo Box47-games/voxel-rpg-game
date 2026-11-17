@@ -5,7 +5,7 @@ import useGameStore from '../useGameStore';
 
 const s = () => useGameStore.getState();
 const reset = () => useGameStore.setState({
-  buildMode: false, zoneMode: false, placingBuildingId: null,
+  planMode: false, zoneMode: false, placingBuildingId: null,
   openPanel: null, settlementDashboardOpen: false, activeBuildingCatalog: false,
   activeNPCId: null, activeConstructionSiteId: null, activeStockpileZoneId: null,
 });
@@ -13,14 +13,13 @@ const reset = () => useGameStore.setState({
 describe('modes and panels', () => {
   beforeEach(reset);
 
-  test('entering a mode leaves the other; entering it again returns to play', () => {
-    s().enterMode('build');
-    expect([s().buildMode, s().zoneMode]).toEqual([true, false]);
-    s().enterMode('zone');
-    expect([s().buildMode, s().zoneMode]).toEqual([false, true]);
+  test('plan mode toggles; there is no build mode any more', () => {
+    s().enterMode('plan');
+    expect([s().planMode, s().zoneMode]).toEqual([true, true]);
     expect(s().zoneTypeToPlace).toBe('MINING');
-    s().enterMode('zone');
-    expect([s().buildMode, s().zoneMode]).toEqual([false, false]);
+    s().enterMode('plan');
+    expect([s().planMode, s().zoneMode]).toEqual([false, false]);
+    expect('buildMode' in s()).toBe(false);
   });
 
   test('one panel at a time', () => {
@@ -41,27 +40,26 @@ describe('modes and panels', () => {
 
   test('entering a mode closes panels; opening a panel cancels placement', () => {
     s().togglePanel('inventory');
-    s().enterMode('build');
+    s().enterMode('plan');
     expect(s().openPanel).toBeNull();
-    s().enterMode('zone'); // Z is an alias for plan mode
-    expect([s().planMode, s().zoneMode, s().buildMode]).toEqual([true, true, false]);
+    expect([s().planMode, s().zoneMode]).toEqual([true, true]);
     s().togglePanel('crafting'); // panels open over plan mode
     expect([s().planMode, s().zoneMode, s().openPanel]).toEqual([true, true, 'crafting']);
     s().enterMode('play');
     s().startPlacingBuilding('wooden_shelter');
-    expect([s().buildMode, s().zoneMode, s().openPanel]).toEqual([false, false, null]);
+    expect([s().planMode, s().zoneMode, s().openPanel]).toEqual([false, false, null]);
     s().togglePanel('inventory');
     expect(s().placingBuildingId).toBeNull();
   });
 
   test('Esc backs out one step at a time, then reports nothing left (pause)', () => {
-    s().enterMode('build');
-    s().togglePanel('inventory'); // a panel over build mode keeps the mode
+    s().enterMode('plan');
+    s().togglePanel('inventory'); // a panel over plan mode keeps the mode
     expect(s().backOut()).toBe(true); // closes the inventory
     expect(s().openPanel).toBeNull();
-    expect(s().buildMode).toBe(true);
-    expect(s().backOut()).toBe(true); // leaves build mode
-    expect(s().buildMode).toBe(false);
+    expect(s().planMode).toBe(true);
+    expect(s().backOut()).toBe(true); // leaves plan mode
+    expect(s().planMode).toBe(false);
     expect(s().backOut()).toBe(false); // nothing left: the caller pauses
 
     s().startPlacingBuilding('wooden_shelter');

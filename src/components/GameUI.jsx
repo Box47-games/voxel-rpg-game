@@ -5,8 +5,8 @@
  * HUD layout:
  *  - top left: level/XP and vitals (health, mana, stamina, hunger, rage)
  *  - top right: clock with a day-cycle strip, gold, potions, combat stats
- *  - top center: build/plan mode badge
- *  - bottom left: action bar (inventory, crafting, build, zones, settlement)
+ *  - top center: plan mode badge
+ *  - bottom left: action bar (desktop: Bag, Build, Plan, Settlement; touch: Tools)
  * Styles live in GameUI.css on top of the shared styles/voxel-ui.css.
  */
 
@@ -115,7 +115,6 @@ const GameUI = () => {
   const shelter = useGameStore((state) => state.shelter);
   const tool = useGameStore((state) => state.equipment.weapon);
   const worldTime = useGameStore((state) => state.worldTime);
-  const buildMode = useGameStore((state) => state.buildMode);
   const planMode = useGameStore((state) => state.planMode);
   const toolsOpen = useGameStore((state) => state.openPanel === 'tools');
   const bagOpen = useGameStore((state) => ['inventory', 'crafting', 'repair'].includes(state.openPanel));
@@ -140,7 +139,7 @@ const GameUI = () => {
   }
 
   const totalStats = getTotalStats(player, equipment);
-  const inMode = buildMode || planMode;
+  const inMode = planMode;
   const xpFraction = player.xpToNext > 0 ? Math.min(1, player.xp / player.xpToNext) : 0;
 
   const hudClass = [
@@ -155,12 +154,12 @@ const GameUI = () => {
 
   return (
     <div className={hudClass} data-testid="game-ui">
-      {/* Build / plan mode badge: names the mode and how to leave it */}
+      {/* Plan mode badge: names the mode and how to leave it */}
       {inMode && (
-        <div className="hud-mode-badge" style={{ '--chip': buildMode ? '#ffb02e' : '#ff8c1a' }}>
-          {buildMode ? <Pickaxe aria-hidden="true" /> : <MapPin aria-hidden="true" />}
-          {buildMode ? 'Build mode' : 'Plan mode'}
-          {!isTouch && <span className="hud-mode-badge__exit">{buildMode ? 'Tab' : 'P'} / Esc to leave</span>}
+        <div className="hud-mode-badge" style={{ '--chip': '#ff8c1a' }}>
+          <MapPin aria-hidden="true" />
+          Plan mode
+          {!isTouch && <span className="hud-mode-badge__exit">P / Esc to leave</span>}
         </div>
       )}
 

@@ -261,7 +261,6 @@ const useGameStore = create((rawSet, get, api) => {
   // Block interaction state (Phase 0.3)
   selectedBlockType: null, // null = empty hand (mine/fight; right-click places nothing)
   blockPlacementMode: false, // false = mining, true = placing
-  buildMode: false, // Toggle build mode (Tab key) — gates all block interaction
 
   // World time state (Phase 1) — start at 05:00 (dawn)
   worldTime: createInitialWorldTime(),
@@ -351,8 +350,6 @@ const useGameStore = create((rawSet, get, api) => {
   setSelectedBlockType: (blockType) => set({ selectedBlockType: blockType }),
   setBlockPlacementMode: (mode) => set({ blockPlacementMode: mode }),
   toggleBlockPlacementMode: () => set((state) => ({ blockPlacementMode: !state.blockPlacementMode })),
-  toggleBuildMode: () => set((state) => ({ buildMode: !state.buildMode })),
-  setBuildMode: (mode) => set({ buildMode: mode }),
 
   // World time actions (Phase 1) — called by TimeManager integration each frame
   updateWorldTime: (timeData) =>
@@ -1611,7 +1608,7 @@ const useGameStore = create((rawSet, get, api) => {
   })),
   setZoneMode: (active, zoneType = null) =>
     set(active
-      ? { zoneMode: true, planMode: true, buildMode: false, placingBuildingId: null, zoneTypeToPlace: zoneType, zoneDragStart: null }
+      ? { zoneMode: true, planMode: true, placingBuildingId: null, zoneTypeToPlace: zoneType, zoneDragStart: null }
       : { zoneMode: false, planMode: false, zoneTypeToPlace: null, zoneDragStart: null }),
   setZoneDragStart: (pos) => set({ zoneDragStart: pos }),
   clearZoneDrag: () => set({ zoneDragStart: null }),
@@ -1680,7 +1677,6 @@ const useGameStore = create((rawSet, get, api) => {
   startPlacingBuilding: (buildingId) => set({
     ...CLOSED_PANELS,
     placingBuildingId: buildingId,
-    buildMode: false,
     zoneMode: false,
     zoneDragStart: null,
   }),
@@ -1734,18 +1730,17 @@ const useGameStore = create((rawSet, get, api) => {
   pickBlock: (blockType) => set({ ...CLOSED_PANELS, selectedBlockType: blockType, blockPlacementMode: true }),
 
   /**
-   * Switch mode: 'play' (default), 'build' or 'zone'. Entering one leaves the
-   * others and closes any panel. Entering the current mode again returns to play.
+   * Switch mode: 'play' (default) or 'plan' ('zone' is accepted as plan).
+   * Entering one closes any panel; entering the current mode again returns to play.
    */
   enterMode: (mode) => set((s) => {
     const want = mode === 'zone' ? 'plan' : mode; // zone painting lives in plan mode
-    const current = s.planMode ? 'plan' : s.buildMode ? 'build' : 'play';
+    const current = s.planMode ? 'plan' : 'play';
     const next = want === current ? 'play' : want;
     const plan = next === 'plan';
     return {
       ...CLOSED_PANELS,
       placingBuildingId: null,
-      buildMode: next === 'build',
       planMode: plan,
       zoneMode: plan,
       zoneTypeToPlace: plan ? (s.zoneTypeToPlace || 'MINING') : null,
@@ -1770,8 +1765,8 @@ const useGameStore = create((rawSet, get, api) => {
       set({ activeNPCId: null, activeConstructionSiteId: null, activeStockpileZoneId: null });
       return true;
     }
-    if (s.buildMode || s.zoneMode || s.planMode) {
-      set({ buildMode: false, zoneMode: false, planMode: false, zoneDragStart: null });
+    if (s.zoneMode || s.planMode) {
+      set({ zoneMode: false, planMode: false, zoneDragStart: null });
       return true;
     }
     return false;
@@ -1980,7 +1975,7 @@ const useGameStore = create((rawSet, get, api) => {
       tutorialHints: { shownHints: [] },
       settlement: createInitialSettlement(),
       dialogue: { active: false, tree: null, onAction: null },
-      buildMode: false, selectedBlockType: null, catalogTab: 'blocks', touchAim: null,
+      selectedBlockType: null, catalogTab: 'blocks', touchAim: null,
       blockPlacementMode: false,
       zones: [], zoneMode: false, planMode: false, planCameraHeight: PLAN_CAMERA_DEFAULT_HEIGHT, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
       constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null, settlementDashboardOpen: false,

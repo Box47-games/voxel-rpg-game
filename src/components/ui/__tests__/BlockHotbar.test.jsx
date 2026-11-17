@@ -11,11 +11,17 @@ const press = (key) => act(() => { fireEvent.keyDown(window, { key }); });
 describe('BlockHotbar (modeless, desktop)', () => {
   beforeEach(() => {
     useGameStore.getState().reset();
+    useGameStore.setState({ gameState: 'playing' });
+  });
+
+  test('hidden on the title screen', () => {
+    useGameStore.setState({ gameState: 'intro' });
+    const { container } = render(<BlockHotbar />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   test('starts on the empty hand and shows in Play without build mode', () => {
     expect(useGameStore.getState().selectedBlockType).toBeNull();
-    expect(useGameStore.getState().buildMode).toBe(false);
     render(<BlockHotbar />);
     expect(screen.getByRole('button', { name: 'Empty hand' })).toHaveAttribute('aria-pressed', 'true');
   });
