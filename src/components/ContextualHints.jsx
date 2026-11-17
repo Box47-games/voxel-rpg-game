@@ -6,9 +6,14 @@ import { isTouchDevice } from '../utils/deviceDetection';
 import { findNearestNPC } from '../utils/npcQueries';
 import { NPC_INTERACT_RANGE, IMMIGRATION_MAX_NPCS } from '../data/tuning';
 import { getHomes, getPopulationCap } from '../modules/settlement/housing';
+import { getSpellById } from '../data/spells';
+import { pickHint } from '../systems/hints/hintScheduler';
+import { HINT_MIN_GAP_MS } from '../data/tuning';
 
 /**
- * ContextualHints - Shows context-sensitive control hints
+ * ContextualHints - Shows context-sensitive control hints, one at a time with
+ * a quiet gap between them (hintScheduler). Urgent ones (low health, hunger,
+ * nightfall) may cut in. Shown at the top of the screen, off the play area.
  */
 const ContextualHints = () => {
   const [currentHint, setCurrentHint] = useState(null);
@@ -16,6 +21,7 @@ const ContextualHints = () => {
   const hintCooldowns = useRef(new Map()); // id → timestamp of last show
   const currentHintRef = useRef(null); // Ref mirrors currentHint to avoid stale closures
   const hintTimeoutRef = useRef(null); // Active timeout handle
+  const lastEndedAtRef = useRef(-Infinity); // when the last hint went away
   const gameState = useGameStore((state) => state.gameState);
   const playerHealth = useGameStore((state) => state.player.health);
   const playerMaxHealth = useGameStore((state) => state.player.maxHealth);
@@ -48,16 +54,6 @@ const ContextualHints = () => {
       desktopOnly: true,
     },
     {
-      id: 'attack',
-      text: 'Click on enemies to attack',
-      condition: () => gameState === 'playing',
-      priority: 3,
-      delay: 15000,
-      duration: 4000,
-      showOnce: true,
-      desktopOnly: true,
-    },
-    {
       id: 'blocks',
       text: 'Hold left-click to mine blocks; pick a block (1-0) and right-click to place',
       condition: () => gameState === 'playing',
@@ -68,17 +64,8 @@ const ContextualHints = () => {
       desktopOnly: true,
     },
     {
-      id: 'sprint',
-      text: 'Hold SHIFT to sprint',
-      condition: () => gameState === 'playing',
-      priority: 5,
-      delay: 40000,
-      duration: 3000,
-      showOnce: true,
-      desktopOnly: true,
-    },
-    {
       id: 'lowHealth',
+      urgent: true,
       text: 'Low health! Press H to use a potion',
       desktopOnly: true,
       condition: () => playerHealth < playerMaxHealth * 0.3 && potions > 0,
@@ -89,26 +76,20 @@ const ContextualHints = () => {
     },
     {
       id: 'spells',
-      text: 'Hold Q to pick a spell, then click enemies to cast it. Attacks cost 5 mana.',
+      text: (() => {
+        const spell = getSpellById(useGameStore.getState().activeSpellId);
+        return `Click enemies to attack. Hold Q to pick a spell${spell ? ` (${spell.name}: ${spell.manaCost} mana)` : ''}.`;
+      })(),
       condition: () => gameState === 'playing',
-      priority: 5,
+      priority: 3,
       delay: 20000,
       duration: 5000,
       showOnce: true,
       desktopOnly: true,
     },
     {
-      id: 'firstPerson',
-      text: 'Press V to toggle first-person mode',
-      condition: () => gameState === 'playing',
-      priority: 6,
-      delay: 60000,
-      duration: 4000,
-      showOnce: true,
-      desktopOnly: true,
-    },
-    {
       id: 'hungerWarning',
+      urgent: true,
       text: 'You\'re getting hungry! Harvest berry bushes or craft food.',
       condition: () => hunger.current < 40 && hunger.current > 0,
       priority: 9,
@@ -118,6 +99,7 @@ const ContextualHints = () => {
     },
     {
       id: 'nightWarning',
+      urgent: true,
       text: 'Night is falling — monsters become more dangerous!',
       condition: () => worldTime.period === 'dusk',
       priority: 8,
@@ -134,18 +116,8 @@ const ContextualHints = () => {
       showOnce: true,
     },
     {
-      id: 'use-key',
-      text: 'Press E to pick up items or harvest bushes',
-      condition: () => gameState === 'playing',
-      priority: 5,
-      delay: 30000,
-      duration: 5000,
-      showOnce: true,
-      desktopOnly: true,
-    },
-    {
       id: 'berry-bush-nearby',
-      text: 'Press E to harvest berries',
+      text: isTouch ? 'Tap a berry bush to harvest it' : 'Press E to harvest berries',
       condition: () => {
         if (gameState !== 'playing') return false;
         const s = useGameStore.getState();
@@ -170,7 +142,7 @@ const ContextualHints = () => {
       priority: 11,
       duration: 4000,
       showOnce: false,
-      cooldown: 30000,
+      cooldown: 600000,
     },
     // ── Settlement hints ──────────────────────────────────
     {
@@ -227,7 +199,7 @@ const ContextualHints = () => {
     },
     {
       id: 'npc-inspect',
-      text: 'Press E next to a settler to see what they need.',
+      text: isTouch ? 'Tap a settler to see what they need.' : 'Press E next to a settler to see what they need.',
       condition: () => {
         if (gameState !== 'playing') return false;
         const s = useGameStore.getState();
@@ -316,45 +288,32 @@ const ContextualHints = () => {
     const startTime = Date.now();
 
     const checkHints = () => {
-      // Don't check while a hint is currently displayed (use ref for fresh value)
-      if (currentHintRef.current) return;
-
       const now = Date.now();
-      for (const hint of hints.sort((a, b) => a.priority - b.priority)) {
-        // Skip keyboard-specific hints on touch devices
-        if (hint.desktopOnly && isTouch) continue;
+      const visible = hints.filter((h) => !(h.desktopOnly && isTouch));
+      const hint = pickHint(visible, {
+        now,
+        startedAt: startTime,
+        current: currentHintRef.current,
+        lastEndedAt: lastEndedAtRef.current,
+        shown: shownHintsRef.current,
+        lastShown: hintCooldowns.current,
+        minGap: HINT_MIN_GAP_MS,
+      });
+      if (!hint) return;
 
-        // Skip if already shown and showOnce
-        if (hint.showOnce && shownHintsRef.current.has(hint.id)) continue;
+      hintCooldowns.current.set(hint.id, now);
+      currentHintRef.current = hint;
+      setCurrentHint(hint);
+      shownHintsRef.current.add(hint.id);
 
-        // Check cooldown for repeating hints
-        if (hint.cooldown) {
-          const lastShown = hintCooldowns.current.get(hint.id) || 0;
-          if (now - lastShown < hint.cooldown) continue;
-        }
-
-        // Check condition
-        if (!hint.condition()) continue;
-
-        // Check delay
-        if (hint.delay && now - startTime < hint.delay) continue;
-
-        // Show hint
-        hintCooldowns.current.set(hint.id, now);
-        currentHintRef.current = hint;
-        setCurrentHint(hint);
-        shownHintsRef.current.add(hint.id);
-
-        // Hide after duration
-        if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
-        hintTimeoutRef.current = setTimeout(() => {
-          currentHintRef.current = null;
-          setCurrentHint(null);
-          hintTimeoutRef.current = null;
-        }, hint.duration);
-
-        break;
-      }
+      // Hide after duration; the gap to the next ordinary hint starts then
+      if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = setTimeout(() => {
+        currentHintRef.current = null;
+        lastEndedAtRef.current = Date.now();
+        setCurrentHint(null);
+        hintTimeoutRef.current = null;
+      }, hint.duration);
     };
 
     const interval = setInterval(checkHints, 2000);
@@ -376,16 +335,15 @@ const ContextualHints = () => {
       role="status"
       style={{
         position: 'fixed',
-        // Portrait touch screens: clear the action bar above the joystick
-        bottom: isTouchDevice() && window.innerHeight > window.innerWidth
-          ? 'calc(264px + env(safe-area-inset-bottom, 0px))'
-          : 'calc(220px + env(safe-area-inset-bottom, 0px))',
+        // Top centre, between the stat panel and the clock: off the play area
+        top: 'calc(12px + env(safe-area-inset-top, 0px))',
         left: '50%',
         transform: 'translateX(-50%)',
-        maxWidth: 'calc(100vw - 32px)',
-        padding: '10px 20px',
-        borderLeft: '4px solid var(--vx-gold)',
-        fontSize: '15px',
+        width: 'max-content',
+        maxWidth: 'min(440px, calc(100vw - 32px))',
+        padding: '8px 16px',
+        borderLeft: `4px solid ${currentHint.urgent ? 'var(--vx-red, #e5484d)' : 'var(--vx-gold)'}`,
+        fontSize: '14px',
         fontWeight: 600,
         textAlign: 'center',
         zIndex: 100,
