@@ -524,3 +524,11 @@ export const NPC_PIECE_YIELD_TIER = 2;    // Settlers mine and chop as if with s
 // ── Hotbar ──
 export const HOTBAR_SLOTS = 4;            // Slots the player fills from the Bag (keys 1-4)
 export const HOTBAR_DEFAULT = ['wood', 'stone', 'dirt', null]; // A new game's slots (material keys)
+
+// ─── Navigation (monsters, animals, settlers) ───────────────
+// (Step up/down, headroom and the search cap: NAV_MAX_STEP_UP, NAV_MAX_STEP_DOWN,
+// NAV_PLAYER_HEIGHT_VOXELS and NAV_MAX_ITERATIONS above.)
+export const NAV_MAX_RANGE = 40;          // Columns from the start a search may go
+export const NAV_SEARCHES_PER_WINDOW = 4; // Path searches allowed across all agents...
+export const NAV_SEARCH_WINDOW_MS = 50;   // ...per this many ms
+export const NAV_HOP_VELOCITY = 10.5;     // Upward speed for a monster/animal hopping a 1-block step (gravity 20: clears ~2.7 units)

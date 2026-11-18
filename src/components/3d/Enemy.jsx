@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { VOXEL_SIZE, CHUNK_SIZE_Y } from '../../systems/chunks/coordinates';
 import { isSolid } from '../../systems/chunks/blockTypes';
+import { PathFollower, stepAhead, headingTo } from '../../systems/navigation/gridPath';
+import { NAV_HOP_VELOCITY } from '../../data/tuning';
 import {
   STATUS_TICK_INTERVAL,
   STATUS_FREEZE_SLOW,
@@ -110,6 +112,8 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
   const deathPosition = useRef(null); // Capture actual death position
   const attackCooldownRef = useRef(0); // Ref to avoid per-frame re-renders
   const hitFlashRef = useRef(0); // 1 when just hit, fades to 0
+  const followerRef = useRef(null); // path to the player / anchor
+  const lastHopRef = useRef(-1);
 
   const mDamage = monsterData?.damage || 5;
   const mSpeed = monsterData?.speed || 2;
@@ -134,7 +138,6 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
   const _playerPos = useRef(new THREE.Vector3());
   const _enemyPos = useRef(new THREE.Vector3());
   const _direction = useRef(new THREE.Vector3());
-  const _anchorPos = useRef(new THREE.Vector3());
 
   // Active status effects: [{ type, duration, value, tickTimer }]
   const statusEffectsRef = useRef([]);
@@ -302,6 +305,31 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
       }
     }
 
+    // Steer along a path to `goal` at `speed`; hop one-block steps in the way
+    function walkToward(goal, speed, now) {
+      const feet = [currentPos.x, currentPos.y, currentPos.z];
+      const cm = gameStore._chunkManager;
+      let target = goal;
+      if (cm) {
+        if (!followerRef.current) followerRef.current = new PathFollower();
+        followerRef.current.setGoal(goal);
+        target = followerRef.current.next(cm, feet, now) || goal;
+      }
+      const h = headingTo(feet, target);
+      const lv = body.linvel();
+      if (!h || speed <= 0) {
+        body.setLinvel({ x: 0, y: lv.y, z: 0 }, true);
+        return;
+      }
+      let vy = lv.y;
+      const onGround = Math.abs(lv.y) < 0.6;
+      if (cm && onGround && now - lastHopRef.current > 0.5 && stepAhead(cm, feet, h[0], h[1])) {
+        vy = NAV_HOP_VELOCITY;
+        lastHopRef.current = now;
+      }
+      body.setLinvel({ x: h[0] * speed, y: vy, z: h[1] * speed }, true);
+    }
+
     // AI behaviors
     const detectionRange = 20;
     const attackRange = 2;
@@ -319,25 +347,11 @@ const Enemy = ({ position = [0, 2, 0], type = 'slime', name = 'Slime', monsterDa
 
     if (chasingAnchor) {
       // Stop just inside attack range so the anchor check keeps registering hits
-      const goal = _anchorPos.current.set(anchor[0], enemyPos.y, anchor[2]);
       const moveMult = anchorDist > RIFT_ANCHOR_ATTACK_RANGE * 0.5 ? mSpeed * speedMult : 0;
-      const direction = _direction.current.subVectors(goal, enemyPos).normalize();
-      body.setLinvel({
-        x: direction.x * moveMult,
-        y: body.linvel().y,
-        z: direction.z * moveMult,
-      }, true);
+      walkToward([anchor[0], enemyPos.y, anchor[2]], moveMult, state.clock.elapsedTime);
     } else if (distance < detectionRange) {
-      // Move towards player
-      const direction = _direction.current.subVectors(playerPos, enemyPos).normalize();
-
-      const velocity = {
-        x: direction.x * mSpeed * speedMult,
-        y: body.linvel().y,
-        z: direction.z * mSpeed * speedMult,
-      };
-
-      body.setLinvel(velocity, true);
+      // Move towards the player: round walls, hopping one-block steps
+      walkToward([playerPos.x, playerPos.y, playerPos.z], mSpeed * speedMult, state.clock.elapsedTime);
 
       // Attack player if in range
       if (distance < attackRange && speedMult > 0 && gameStore.player.health > 0) {

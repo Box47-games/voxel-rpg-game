@@ -9,8 +9,7 @@ import {
   WILDLIFE_WANDER_INTERVAL_MIN,
   WILDLIFE_WANDER_INTERVAL_MAX,
 } from '../../data/tuning';
-import { VOXEL_SIZE, CHUNK_SIZE_Y } from '../../systems/chunks/coordinates';
-import { isSolid } from '../../systems/chunks/blockTypes';
+import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import {
   ANIMAL_MODELS,
   createAnimalInstance,
@@ -18,24 +17,15 @@ import {
   getColliderBox,
 } from './wildlife/animalModels';
 import { createAnimState, stepAnimation } from './wildlife/animalAnimation';
-
-function getTerrainHeight(chunkManager, wx, wz) {
-  if (!chunkManager) return null;
-  for (let vy = CHUNK_SIZE_Y - 1; vy >= 0; vy--) {
-    const worldY = vy * VOXEL_SIZE + VOXEL_SIZE / 2;
-    const block = chunkManager.getBlock(wx, worldY, wz);
-    if (isSolid(block)) {
-      return (vy + 1) * VOXEL_SIZE;
-    }
-  }
-  return null;
-}
+import { PathFollower, stepAhead, levelAt } from '../../systems/navigation/gridPath';
+import { NAV_HOP_VELOCITY } from '../../data/tuning';
 
 const _playerVec = new THREE.Vector3();
 const _animalVec = new THREE.Vector3();
 const _moveDir = new THREE.Vector3();
 
 const TURN_RATE = 8; // how quickly an animal turns to face where it's going
+const WANDER_GIVE_UP_SECONDS = 20; // can't get to a wander spot by then: pick another later
 
 /** Shortest signed angle from a to b. */
 function angleDelta(a, b) {
@@ -65,6 +55,9 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
   const stateRef = useRef('IDLE');
   const wanderTimerRef = useRef(Math.random() * WILDLIFE_WANDER_INTERVAL_MAX);
   const targetRef = useRef(null);
+  const followerRef = useRef(null); // path to the wander target
+  const lastHopRef = useRef(-1);
+  const wanderStartRef = useRef(0);
   const rotationRef = useRef(0);
   const yawRef = useRef(0);
   const flyPhase = useRef(Math.random() * Math.PI * 2);
@@ -94,6 +87,15 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
 
     const playerPos = store.player.position;
     if (!playerPos) return;
+    const now = state.clock.elapsedTime;
+    // Upward speed this frame: a hop over a one-block step just ahead, else unchanged
+    const hopY = (dx, dz, t) => {
+      const vy = body.linvel().y;
+      if (!typeDef.ground || !chunkManager || Math.abs(vy) > 0.6 || t - lastHopRef.current < 0.5) return vy;
+      if (!stepAhead(chunkManager, [pos.x, pos.y, pos.z], dx, dz, 0.8)) return vy;
+      lastHopRef.current = t;
+      return NAV_HOP_VELOCITY;
+    };
 
     _playerVec.set(playerPos[0], playerPos[1], playerPos[2]);
     _animalVec.set(pos.x, pos.y, pos.z);
@@ -105,7 +107,7 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
       _moveDir.set(pos.x - playerPos[0], 0, pos.z - playerPos[2]).normalize();
       const fleeSpeed = typeDef.speed * 1.5;
       body.setLinvel(
-        { x: _moveDir.x * fleeSpeed, y: body.linvel().y, z: _moveDir.z * fleeSpeed },
+        { x: _moveDir.x * fleeSpeed, y: hopY(_moveDir.x, _moveDir.z, now), z: _moveDir.z * fleeSpeed },
         true
       );
       rotationRef.current = Math.atan2(_moveDir.x, _moveDir.z);
@@ -126,16 +128,27 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
         const r = Math.random() * WILDLIFE_WANDER_RADIUS;
         targetRef.current = [sx + Math.cos(angle) * r, sz + Math.sin(angle) * r];
         stateRef.current = 'WANDERING';
+        wanderStartRef.current = now;
       }
     }
 
     if (stateRef.current === 'WANDERING' && targetRef.current) {
-      const [tx, tz] = targetRef.current;
+      const [gx, gz] = targetRef.current;
+      const gdist = Math.hypot(gx - pos.x, gz - pos.z);
+      // Ground animals walk a path round obstacles; birds fly straight
+      let [tx, tz] = [gx, gz];
+      if (typeDef.ground && chunkManager) {
+        if (!followerRef.current) followerRef.current = new PathFollower({ stuckSeconds: 2 });
+        followerRef.current.setGoal([gx, pos.y, gz]);
+        const p = followerRef.current.next(chunkManager, [pos.x, pos.y, pos.z], now);
+        if (p) [tx, , tz] = p;
+      }
       const dx = tx - pos.x;
       const dz = tz - pos.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
+      const dist = Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
 
-      if (dist < 1.5) {
+      // Arrived, or given up on a spot it can't reach: rest a while
+      if (gdist < 1.5 || now - wanderStartRef.current > WANDER_GIVE_UP_SECONDS) {
         stateRef.current = 'IDLE';
         wanderTimerRef.current =
           WILDLIFE_WANDER_INTERVAL_MIN +
@@ -147,20 +160,22 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
         const nx = dx / dist;
         const nz = dz / dist;
         body.setLinvel(
-          { x: nx * typeDef.speed, y: body.linvel().y, z: nz * typeDef.speed },
+          { x: nx * typeDef.speed, y: hopY(nx, nz, now), z: nz * typeDef.speed },
           true
         );
         rotationRef.current = Math.atan2(nx, nz);
       }
     }
 
-    // Ground clamping
+    // Ground clamping: only pull an animal that has sunk into the ground back
+    // up onto the floor it stands on (not the top of the column, which under a
+    // tree is the canopy). Falling and hopping are left to physics.
     if (typeDef.ground && chunkManager) {
-      const terrainY = getTerrainHeight(chunkManager, pos.x, pos.z);
-      if (terrainY != null) {
-        const targetY = terrainY; // the body's origin is at the animal's feet
-        if (pos.y < targetY - 1 || pos.y > targetY + 2) {
-          body.setTranslation({ x: pos.x, y: targetY, z: pos.z }, true);
+      const level = levelAt(chunkManager, pos.x, pos.y, pos.z);
+      if (level != null) {
+        const floorY = level * VOXEL_SIZE; // the body's origin is at the animal's feet
+        if (pos.y < floorY - 1) {
+          body.setTranslation({ x: pos.x, y: floorY, z: pos.z }, true);
           body.setLinvel({ x: body.linvel().x, y: 0, z: body.linvel().z }, true);
         }
       }
