@@ -1,6 +1,6 @@
 # Block pieces: blocks break into placeable pieces
 
-Status: phase 1 (pieces in the bag) and the hotbar merged; phase 2 (shaped cells in the world) built on branch `block-pieces-2`. Decisions from the user on 2026-11-18 are marked **[decided]**;
+Status: phases 1 and 2 merged; phase 3 (placing pieces) built on branch `block-pieces-3`. Decisions from the user on 2026-11-18 are marked **[decided]**;
 my proposals still to confirm are marked **[proposed]**.
 
 ## The idea
@@ -127,6 +127,16 @@ one plank; 8 = two). The rest is lost as rubble or splinters.
      cell (never fusing), one piece per placement. Desktop and touch.
    - Check: placing then mining a piece is never a net gain; two slabs in one cell stay two
      slabs; touch flow on 844×390 and 390×844.
+   - Built: no separate shape picker. A hotbar slot holding a piece (Bag drag, as before) puts
+     that piece in hand; a slot holding a block places blocks. Aiming runs on the 1-unit grid.
+     A slab lies against the face aimed at (floor on a top, wall slab on a side); a plank runs
+     the way you look, over this cell and the next on the side aimed at. R (desktop) or the
+     "Turn" button above Attack (touch) cycles three orientations; cubes have one. Placing
+     costs that exact piece (no breaking a block for change: "split blocks in Craft").
+     Desktop third-person shows the ghost under the mouse while something is in hand (blocks
+     too); touch places on tap as blocks do, without a ghost.
+   - Checked: unit tests for aiming, each kind and turn, what fits a cell, and place-then-mine
+     returning the same piece; in the browser on desktop, 844×390 and 390×844.
 4. **Settlers and blueprints.**
    - Changes: construction places and pays per piece; blueprint glyphs for slabs and planks;
      refresh a few buildings to use them; regenerate building art.

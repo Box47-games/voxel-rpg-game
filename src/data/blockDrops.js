@@ -162,7 +162,7 @@ export const MATERIAL_BLOCK = {
   ice: BlockTypes.ICE,
 };
 
-/** Block a hotbar slot holding `key` places, or null (pieces: not placeable yet). */
+/** Block a hotbar slot holding `key` places, or null (a piece key: see heldPiece in the store). */
 export const blockForMaterial = (key) => MATERIAL_BLOCK[key] ?? null;
 
 /** Can this material go in a hotbar slot? Blocks and pieces. */

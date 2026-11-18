@@ -7,11 +7,12 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Sword } from 'lucide-react';
+import { Sword, RotateCw } from 'lucide-react';
 import useGameStore from '../../stores/useGameStore';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import { meleeToward, findNearestEnemy } from '../../systems/combat/playerAttack';
 import { TOUCH_ATTACK_RANGE, TOUCH_ATTACK_REPEAT_MS } from '../../data/tuning';
+import { rotationCount } from '../../systems/chunks/piecePlacement';
 import './ContextButton.css';
 
 /** One melee swing: at the nearest enemy in range, else the way the player faces. */
@@ -59,6 +60,37 @@ export default function ContextButton() {
     >
       <Sword className="ctx-btn__icon" aria-hidden="true" />
       <span className="ctx-btn__label">Attack</span>
+    </button>
+  );
+}
+
+/**
+ * Touch: turns the piece in hand (slab or plank) to its next orientation.
+ * Shown above the attack button only while a piece that turns is in hand.
+ */
+export function RotatePieceButton() {
+  const [touch] = useState(isTouchDevice);
+  const heldPiece = useGameStore((s) => s.heldPiece);
+  const rotation = useGameStore((s) => s.pieceRotation);
+  const hidden = useGameStore(
+    (s) => s.gameState !== 'playing' || s.planMode || s.zoneMode || !!s.placingBuildingId
+  );
+  if (!touch || hidden || !heldPiece || rotationCount(heldPiece) < 2) return null;
+  return (
+    <button
+      type="button"
+      className="ctx-btn ctx-btn--small"
+      style={{ '--ctx': '#3b82c4' }}
+      aria-label={`Rotate piece (turn ${rotation + 1} of 3)`}
+      data-kind="rotate"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        useGameStore.getState().rotatePiece();
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <RotateCw className="ctx-btn__icon" aria-hidden="true" />
+      <span className="ctx-btn__label">Turn {rotation + 1}/3</span>
     </button>
   );
 }

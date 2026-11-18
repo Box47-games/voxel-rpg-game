@@ -13,6 +13,7 @@ import { isTouchDevice } from '../../utils/deviceDetection';
 import { getPlacementCost, countPlaceable, blockForMaterial } from '../../data/blockDrops';
 import { materialName, isPieceKey } from '../../data/pieces';
 import { artUrl, materialArt } from './art';
+import { rotationCount } from '../../systems/chunks/piecePlacement';
 import './BlockHotbar.css';
 
 const BLOCK_NAME = Object.fromEntries(Object.entries(BlockTypes).map(([name, id]) => [id, name]));
@@ -27,7 +28,7 @@ export function blockArt(blockType) {
 const costText = (blockType) =>
   Object.entries(getPlacementCost(blockType) || {}).map(([m, q]) => `${q} ${m}`).join(', ') || 'n/a';
 
-/** Keys 1-4 hold a hotbar slot (desktop and touch keyboards). */
+/** Keys 1-4 hold a hotbar slot, R turns a piece in hand (desktop and touch keyboards). */
 export function useHotbarKeys() {
   useEffect(() => {
     const onKey = (e) => {
@@ -36,6 +37,11 @@ export function useHotbarKeys() {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const st = useGameStore.getState();
       if (st.zoneMode || st.planMode || st.placingBuildingId) return; // number keys mean something else there
+      // R turns the piece in hand (slabs and planks)
+      if ((e.key === 'r' || e.key === 'R') && st.heldPiece && !e.repeat) {
+        if (rotationCount(st.heldPiece) > 1) st.rotatePiece();
+        return;
+      }
       const n = parseInt(e.key, 10);
       const slots = selectHotbar(st).length;
       if (Number.isNaN(n) || n < 1 || n > slots) return;
@@ -66,7 +72,7 @@ export function BlockHotbar() {
   const heldKey = heldSlot != null ? hotbar[heldSlot] : null;
   const hint =
     heldKey && isPieceKey(heldKey)
-      ? `${materialName(heldKey, 2)} can't be placed yet: combine them in Craft`
+      ? rotationCount(heldKey) > 1 ? 'Right-click to place · R to turn' : 'Right-click to place'
       : handHeld
         ? hotbar.some(Boolean) ? `Pick a slot (1-${hotbar.length}) to place` : 'Drag blocks into the hotbar in your Bag (I)'
         : 'Right-click to place';
@@ -109,7 +115,7 @@ export function BlockHotbar() {
               className={`hotbar__slot${held ? ' is-selected' : ''}${count > 0 ? '' : ' is-empty'}${block == null ? ' is-piece' : ''}`}
               aria-pressed={held}
               aria-label={`Slot ${i + 1}: ${materialName(key)}, ${count}`}
-              title={block != null ? `${materialName(key)} (${i + 1}): costs ${costText(block)}` : `${materialName(key)} (${i + 1}): can't be placed yet`}
+              title={block != null ? `${materialName(key)} (${i + 1}): costs ${costText(block)}` : `${materialName(key)} (${i + 1}): places one piece`}
               onClick={() => useGameStore.getState().holdSlot(i)}
             >
               <img src={materialArt(key)} alt="" />

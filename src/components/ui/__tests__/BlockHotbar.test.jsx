@@ -40,13 +40,28 @@ describe('BlockHotbar (modeless, desktop)', () => {
     expect(useGameStore.getState().heldSlot).toBeNull();
   });
 
-  test('a slot holding pieces is held but places nothing yet', () => {
+  test('a slot holding pieces puts that piece in hand; R turns it', () => {
     act(() => useGameStore.getState().setHotbarSlot(3, 'stone_slab'));
     render(<BlockHotbar />);
     press('4');
-    expect(useGameStore.getState().heldSlot).toBe(3);
-    expect(useGameStore.getState().selectedBlockType).toBeNull();
-    expect(screen.getByText(/can't be placed yet/)).toBeInTheDocument();
+    const st = useGameStore.getState();
+    expect(st.heldSlot).toBe(3);
+    expect(st.heldPiece).toBe('stone_slab');
+    expect(st.selectedBlockType).toBe(BlockTypes.STONE);
+    expect(screen.getByText(/R to turn/)).toBeInTheDocument();
+    press('r');
+    expect(useGameStore.getState().pieceRotation).toBe(1);
+    press('4'); // back to the hand
+    expect(useGameStore.getState().heldPiece).toBeNull();
+  });
+
+  test('cubes have one orientation: R does nothing', () => {
+    act(() => useGameStore.getState().setHotbarSlot(3, 'dirt_cube'));
+    render(<BlockHotbar />);
+    press('4');
+    press('r');
+    expect(useGameStore.getState().pieceRotation).toBe(0);
+    expect(screen.queryByText(/R to turn/)).toBeNull();
   });
 
   test('clicking the hand slot clears the block', () => {

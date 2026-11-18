@@ -44,7 +44,7 @@ import { getBuildingById, parseLayers } from '../data/buildings';
 import { getPlacedBlocks, getDemolishRefund, getUpgradeProblem } from '../modules/settlement/buildingInfo';
 import { isSettled } from '../modules/settlement/housing';
 import { buildingLock } from '../data/unlocks';
-import { spendByVolume, payVolume, addVolume, volumeOf, baseMaterial } from '../data/pieces';
+import { spendByVolume, payVolume, addVolume, volumeOf, baseMaterial, isPieceKey } from '../data/pieces';
 import { blockForMaterial, hotbarAllows } from '../data/blockDrops';
 import { HOTBAR_SLOTS, HOTBAR_DEFAULT } from '../data/tuning';
 
@@ -133,6 +133,13 @@ const createInitialEquipment = () => ({
 const DEFAULT_HOTBAR = Object.freeze([...HOTBAR_DEFAULT]);
 
 /** The hotbar's slots (older saves have none: the default). Stable reference for selectors. */
+/** What a hotbar slot holding `key` puts in hand: a block, or a piece (with its material's block). */
+const handFor = (key) => {
+  if (!key) return { selectedBlockType: null, heldPiece: null };
+  if (isPieceKey(key)) return { selectedBlockType: blockForMaterial(baseMaterial(key)), heldPiece: key };
+  return { selectedBlockType: blockForMaterial(key), heldPiece: null };
+};
+
 const getHotbar = (state) => {
   const h = state.inventory?.hotbar;
   return Array.isArray(h) && h.length === HOTBAR_SLOTS ? h : DEFAULT_HOTBAR;
@@ -364,16 +371,24 @@ const useGameStore = create((rawSet, get, api) => {
 
   // Block interaction actions
   setActiveSpellId: (spellId) => set({ activeSpellId: spellId }),
-  setSelectedBlockType: (blockType) => set({ selectedBlockType: blockType, heldSlot: null }),
+  setSelectedBlockType: (blockType) => set({ selectedBlockType: blockType, heldSlot: null, heldPiece: null }),
+
+  // A piece in hand (a hotbar slot holding e.g. 'stone_slab'): placing puts one
+  // piece; selectedBlockType is then its material's block. null = not a piece.
+  heldPiece: null,
+  // Orientation of the piece in hand (R / the rotate button), see piecePlacement.js
+  pieceRotation: 0,
+  /** Turn the piece in hand to its next orientation. */
+  rotatePiece: () => set((state) => ({ pieceRotation: (state.pieceRotation + 1) % 3 })),
 
   // ── Hotbar (keys 1-4; filled by dragging from the Bag) ──
   heldSlot: null, // index of the hotbar slot in hand, or null (empty hand / a catalog block)
 
-  /** Hold hotbar slot `i` (again = back to the empty hand). Pieces can't be placed yet. */
+  /** Hold hotbar slot `i` (again = back to the empty hand). A piece slot holds that piece. */
   holdSlot: (i) => set((state) => {
-    if (i == null || state.heldSlot === i) return { heldSlot: null, selectedBlockType: null };
+    if (i == null || state.heldSlot === i) return { heldSlot: null, selectedBlockType: null, heldPiece: null };
     const key = getHotbar(state)[i];
-    return { heldSlot: i, selectedBlockType: key ? blockForMaterial(key) : null };
+    return { heldSlot: i, ...handFor(key) };
   }),
 
   /** Put a material in hotbar slot `i` (null clears it). Only blocks and pieces go in. */
@@ -382,7 +397,7 @@ const useGameStore = create((rawSet, get, api) => {
     const hotbar = [...getHotbar(state)];
     if (i < 0 || i >= hotbar.length) return {};
     hotbar[i] = key;
-    const held = state.heldSlot === i ? { selectedBlockType: key ? blockForMaterial(key) : null } : {};
+    const held = state.heldSlot === i ? handFor(key) : {};
     return { inventory: { ...state.inventory, hotbar }, ...held };
   }),
 
@@ -1805,7 +1820,7 @@ const useGameStore = create((rawSet, get, api) => {
   // Picking a block a hotbar slot already holds holds that slot; anything else is an extra slot
   pickBlock: (blockType) => set((state) => {
     const slot = getHotbar(state).findIndex((key) => key && blockForMaterial(key) === blockType);
-    return { ...CLOSED_PANELS, selectedBlockType: blockType, heldSlot: slot >= 0 ? slot : null, blockPlacementMode: true };
+    return { ...CLOSED_PANELS, selectedBlockType: blockType, heldSlot: slot >= 0 ? slot : null, heldPiece: null, blockPlacementMode: true };
   }),
 
   /**
@@ -2070,7 +2085,7 @@ const useGameStore = create((rawSet, get, api) => {
       tutorialHints: { shownHints: [] },
       settlement: createInitialSettlement(),
       dialogue: { active: false, tree: null, onAction: null },
-      selectedBlockType: null, heldSlot: null, catalogTab: 'blocks',
+      selectedBlockType: null, heldSlot: null, heldPiece: null, pieceRotation: 0, catalogTab: 'blocks',
       blockPlacementMode: false,
       zones: [], zoneMode: false, planMode: false, planCameraHeight: PLAN_CAMERA_DEFAULT_HEIGHT, zoneTypeToPlace: null, zoneDragStart: null, activeStockpileZoneId: null,
       constructionSites: [], activeBuildingCatalog: false, placingBuildingId: null, activeConstructionSiteId: null, activeNPCId: null, settlementDashboardOpen: false,

@@ -25,6 +25,7 @@ import { getQuestManager } from '../../systems/QuestManager';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import { subCubeOf, subFilled } from '../../systems/chunks/cellShape';
 import { targetPiece, minePiece, pieceMiningFraction, cellCenter } from '../../systems/chunks/pieceMining';
+import { raycastUnits, planPiece, applyPiece, boxesOverlap } from '../../systems/chunks/piecePlacement';
 
 // Maximum reach distance for block interaction
 const REACH_DISTANCE = 12;
@@ -57,6 +58,11 @@ function aimKey(chunkManager, point) {
   const cell = `${Math.floor(point.x / VOXEL_SIZE)},${Math.floor(point.y / VOXEL_SIZE)},${Math.floor(point.z / VOXEL_SIZE)}`;
   const t = targetPiece(chunkManager, point);
   return t ? `${cell}:${t.piece.index}` : cell;
+}
+
+/** Aim on the half-block grid (which unit face): placing a piece follows it. */
+function unitAimKey(point) {
+  return point?.unit ? `${point.unit.join(',')}/${point.normal.join(',')}/${point.lookAxis}` : '';
 }
 
 // Mining progress geometry (flat bar above the block)
@@ -111,6 +117,59 @@ function wouldOverlapPlayer(bx, by, bz) {
          pMinZ < bMaxZ && pMaxZ > bMinZ;
 }
 
+/** The player's body as a box: [min, max] (capsule radius 0.6, 2.8 tall). */
+function playerBox() {
+  const [px, py, pz] = useGameStore.getState().player.position;
+  return [[px - 0.6, py, pz - 0.6], [px + 0.6, py + 2.8, pz + 0.6]];
+}
+
+/**
+ * Where the piece in hand would go for this aim, or null. The aim (`block`
+ * from raycastAlongRay) carries the unit hit on the half-block grid.
+ */
+export function planHeldPiece(chunkManager, block, store = useGameStore.getState()) {
+  if (!chunkManager || !block?.unit || !store.heldPiece) return null;
+  const plan = planPiece(chunkManager, store.heldPiece, block, {
+    rotation: store.pieceRotation || 0,
+    lookAxis: block.lookAxis,
+  });
+  if (plan?.ok && boxesOverlap(plan.boxes, ...playerBox())) {
+    return { ...plan, ok: false, reason: 'In the way' };
+  }
+  return plan;
+}
+
+/**
+ * Place one piece of the piece in hand (a slab, plank or cube), paying one of
+ * that piece. Mining it back gives the same piece.
+ * @returns {boolean} true if it was placed
+ */
+function tryPlacePiece(chunkManager, block) {
+  const store = useGameStore.getState();
+  const key = store.heldPiece;
+  const plan = planHeldPiece(chunkManager, block, store);
+  if (!plan) return false;
+  const warn = (text) => {
+    const now = Date.now();
+    if (now - _lastCostWarning > 1000) {
+      _lastCostWarning = now;
+      store.addPickupText(text, '#ff6666');
+    }
+  };
+  if ((store.inventory.materials[key] || 0) < 1) {
+    warn(`Need 1 ${materialName(key, 1)}: split blocks in Craft`);
+    return false;
+  }
+  if (!plan.ok) {
+    warn(plan.reason || "Doesn't fit there");
+    return false;
+  }
+  if (!applyPiece(chunkManager, plan)) return false;
+  notePlayerAction('place');
+  store.removeMaterial(key, 1);
+  return true;
+}
+
 /** World-space centre of the block adjacent to `block` across `face`, or null. */
 function getAdjacentBlockCenter(block, face) {
   const x = Math.floor(block.x / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
@@ -146,7 +205,10 @@ function needText(blockType, mat, qty, materials) {
 }
 
 function tryPlaceBlock(chunkManager, block, face, blockType) {
-  if (!chunkManager || !block || !face) return false;
+  if (!chunkManager || !block) return false;
+  // A piece in hand places one piece on the half-block grid
+  if (useGameStore.getState().heldPiece) return tryPlacePiece(chunkManager, block);
+  if (!face) return false;
   const target = getAdjacentBlockCenter(block, face);
   if (!target) return false;
   const [px, py, pz] = target;
@@ -268,13 +330,13 @@ function BlockHighlight({ position, visible, scale }) {
 /**
  * PlacementPreview - Ghost block showing where block will be placed
  */
-function PlacementPreview({ position, blockType, isValid }) {
+function PlacementPreview({ position, blockType, isValid, scale }) {
   if (!position) return null;
 
   const color = BLOCK_COLORS[blockType] || '#888888';
 
   return (
-    <group position={position}>
+    <group position={position} scale={scale || [1, 1, 1]}>
       {/* Semi-transparent preview block */}
       <mesh geometry={previewBoxGeometry}>
         <meshBasicMaterial
@@ -345,6 +407,8 @@ export function BlockInteraction({ chunkManager }) {
   const [targetFace, setTargetFace] = useState(null);
   const [previewPosition, setPreviewPosition] = useState(null);
   const [previewValid, setPreviewValid] = useState(true);
+  const [previewScale, setPreviewScale] = useState(null); // a piece's ghost size (null = a block)
+  const [hoverAim, setHoverAim] = useState(null); // desktop third-person: { block, face } under the mouse
   const [miningProgress, setMiningProgress] = useState(0);
   const lastRaycast = useRef(0);
 
@@ -364,6 +428,10 @@ export function BlockInteraction({ chunkManager }) {
   const firstPerson = useGameStore((state) => state.camera.firstPerson);
   // Touch with a block in hand: the context button places, so show the ghost block
   const touchPlacing = isMobile.current && selectedBlockType != null;
+  const heldPiece = useGameStore((state) => state.heldPiece);
+  const pieceRotation = useGameStore((state) => state.pieceRotation);
+  // Re-check the ghost after placing (the world changed under it)
+  const materialsVersion = useGameStore((state) => state.inventory.materials);
   const placingBuildingId = useGameStore((state) => state.placingBuildingId);
 
   // Raycaster for screen-space raycasting (mobile + desktop third-person)
@@ -407,42 +475,47 @@ export function BlockInteraction({ chunkManager }) {
   }, [targetBlock, chunkManager]);
 
   // Calculate placement preview position (where block will be placed)
-  // Show in placement mode OR in first-person (where right-click always places)
+  // First-person and touch follow the target; desktop third-person follows the
+  // mouse while something is in hand.
   useEffect(() => {
-    const showPreview = touchPlacing || firstPerson;
-    if (!showPreview || !targetBlock || !targetFace || !chunkManager) {
+    const thirdPersonDesktop = !isMobile.current && !firstPerson;
+    const showPreview = touchPlacing || firstPerson || (thirdPersonDesktop && selectedBlockType != null);
+    const aim = thirdPersonDesktop ? hoverAim : { block: targetBlock, face: targetFace };
+    if (!showPreview || !aim?.block || !chunkManager) {
       setPreviewPosition(null);
       return;
     }
 
-    const blockX = Math.floor(targetBlock.x / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
-    const blockY = Math.floor(targetBlock.y / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
-    const blockZ = Math.floor(targetBlock.z / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
-
-    let placeX = blockX;
-    let placeY = blockY;
-    let placeZ = blockZ;
-
-    // Offset based on face
-    switch (targetFace) {
-      case 'top': placeY += VOXEL_SIZE; break;
-      case 'bottom': placeY -= VOXEL_SIZE; break;
-      case 'north': placeZ += VOXEL_SIZE; break;
-      case 'south': placeZ -= VOXEL_SIZE; break;
-      case 'east': placeX += VOXEL_SIZE; break;
-      case 'west': placeX -= VOXEL_SIZE; break;
-      default:
+    // A piece: its own box on the half-block grid
+    if (heldPiece) {
+      const plan = planHeldPiece(chunkManager, aim.block);
+      if (!plan) {
         setPreviewPosition(null);
         return;
+      }
+      const min = [0, 1, 2].map((k) => Math.min(...plan.boxes.map((bx) => bx.min[k])));
+      const max = [0, 1, 2].map((k) => Math.max(...plan.boxes.map((bx) => bx.max[k])));
+      setPreviewPosition(min.map((v, k) => (v + max[k]) / 2));
+      setPreviewScale(min.map((v, k) => (max[k] - v) / VOXEL_SIZE));
+      setPreviewValid(plan.ok);
+      return;
     }
+
+    const target = aim.face ? getAdjacentBlockCenter(aim.block, aim.face) : null;
+    if (!target) {
+      setPreviewPosition(null);
+      return;
+    }
+    const [placeX, placeY, placeZ] = target;
 
     // Check if placement is valid (position is empty and doesn't overlap player)
     const existingBlock = chunkManager.getBlock(placeX, placeY, placeZ);
     const isValid = !isSolid(existingBlock) && !wouldOverlapPlayer(placeX, placeY, placeZ);
 
     setPreviewPosition([placeX, placeY, placeZ]);
+    setPreviewScale(null);
     setPreviewValid(isValid);
-  }, [touchPlacing, firstPerson, targetBlock, targetFace, chunkManager]);
+  }, [touchPlacing, firstPerson, targetBlock, targetFace, hoverAim, chunkManager, heldPiece, pieceRotation, selectedBlockType, materialsVersion]);
 
   // Reusable vectors for raycast (avoid allocations)
   const rayDirection = useRef(new THREE.Vector3());
@@ -527,8 +600,19 @@ export function BlockInteraction({ chunkManager }) {
           }
         }
 
+        // The same ray on the half-block grid, for placing pieces
+        const unitHit = raycastUnits(
+          (x, y, z) => hitsSolid(chunkManager, x, y, z, chunkManager.getBlock(x, y, z)),
+          origin, dir, maxDistance
+        );
+        const block = { x: cx, y: cy, z: cz };
+        if (unitHit) {
+          block.unit = unitHit.unit;
+          block.normal = unitHit.normal;
+          block.lookAxis = Math.abs(dir.x) >= Math.abs(dir.z) ? 0 : 2;
+        }
         return {
-          block: { x: cx, y: cy, z: cz },
+          block,
           face,
           adjacentPos: hasLastAir ? { x: lastAirX, y: lastAirY, z: lastAirZ } : null,
         };
@@ -608,7 +692,8 @@ export function BlockInteraction({ chunkManager }) {
 
     // Only update state if target actually changed (avoid re-renders)
     // (another piece in the same cell counts as a new target)
-    const blockChanged = aimKey(chunkManager, result.block) !== aimKey(chunkManager, prev.block);
+    const blockChanged = aimKey(chunkManager, result.block) !== aimKey(chunkManager, prev.block) ||
+      (useGameStore.getState().heldPiece != null && unitAimKey(result.block) !== unitAimKey(prev.block));
 
     if (blockChanged || result.face !== prev.face) {
       setTargetBlock(result.block);
@@ -1022,6 +1107,18 @@ export function BlockInteraction({ chunkManager }) {
 
     const canvas = gl.domElement;
 
+    // Desktop third-person: what's under the mouse, for the placement ghost (20 per second at most)
+    const lastMouse = { x: 0, y: 0 };
+    let lastHover = 0;
+    const hoverAt = (clientX, clientY, force = false) => {
+      const now = performance.now();
+      if (!force && now - lastHover < 50) return;
+      lastHover = now;
+      const rect = canvas.getBoundingClientRect();
+      const hit = raycastFromScreen(clientX - rect.left, clientY - rect.top);
+      setHoverAim(hit.block ? { block: hit.block, face: hit.face } : null);
+    };
+
     // Track right-click for block placement (without drag)
     const rightClickStart = { x: 0, y: 0 };
     let rightClickPending = false;
@@ -1090,10 +1187,7 @@ export function BlockInteraction({ chunkManager }) {
         isHoldingMine.current = true;
         miningAccum.current = 0;
         // Set miningBlockKey immediately so mining progress can find the block
-        const mbx = Math.floor(result.block.x / VOXEL_SIZE);
-        const mby = Math.floor(result.block.y / VOXEL_SIZE);
-        const mbz = Math.floor(result.block.z / VOXEL_SIZE);
-        miningBlockKey.current = `${mbx},${mby},${mbz}`;
+        miningBlockKey.current = aimKey(chunkManager, result.block);
       }
     };
 
@@ -1108,7 +1202,14 @@ export function BlockInteraction({ chunkManager }) {
         }
       }
 
-      if (!isHoldingMine.current) return;
+      lastMouse.x = event.clientX;
+      lastMouse.y = event.clientY;
+      if (!isHoldingMine.current) {
+        // Something in hand: the ghost follows the mouse
+        const st = useGameStore.getState();
+        if (st.selectedBlockType != null && !document.pointerLockElement) hoverAt(event.clientX, event.clientY);
+        return;
+      }
 
       // Re-raycast from current mouse position to check if still on the same block
       const rect = canvas.getBoundingClientRect();
@@ -1117,10 +1218,8 @@ export function BlockInteraction({ chunkManager }) {
       const moveResult = raycastFromScreen(mx, my);
 
       if (moveResult.block && miningBlockKey.current) {
-        const mbx = Math.floor(moveResult.block.x / VOXEL_SIZE);
-        const mby = Math.floor(moveResult.block.y / VOXEL_SIZE);
-        const mbz = Math.floor(moveResult.block.z / VOXEL_SIZE);
-        const newKey = `${mbx},${mby},${mbz}`;
+        // Same block, or the same piece of a shaped cell
+        const newKey = aimKey(chunkManager, moveResult.block);
         if (newKey === miningBlockKey.current) {
           // Still on the same block — continue mining, update face highlight
           setTargetBlock(moveResult.block);
@@ -1147,7 +1246,9 @@ export function BlockInteraction({ chunkManager }) {
         const face = result.face;
         if (block && face && chunkManager) {
           const store = useGameStore.getState();
-          if (store.selectedBlockType != null) tryPlaceBlock(chunkManager, block, face, store.selectedBlockType);
+          if (store.selectedBlockType != null && tryPlaceBlock(chunkManager, block, face, store.selectedBlockType)) {
+            hoverAt(lastMouse.x, lastMouse.y, true); // the ghost moves on
+          }
         }
         rightClickPending = false;
         rightClickResult = null;
@@ -1334,9 +1435,10 @@ export function BlockInteraction({ chunkManager }) {
       )}
 
       {/* Placement preview ghost block — show in placement mode or first-person (right-click places) */}
-      {(touchPlacing || firstPerson) && previewPosition && (
+      {previewPosition && (
         <PlacementPreview
           position={previewPosition}
+          scale={previewScale}
           blockType={selectedBlockType}
           isValid={previewValid}
         />
