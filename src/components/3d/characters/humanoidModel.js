@@ -56,7 +56,8 @@ export function rgbToHex([r, g, b]) {
 
 /**
  * The player: an adventurer in a green shirt under a laced brown leather
- * jerkin, with bracers, a red cape, satchel and a sword at the hip.
+ * jerkin, with bracers, a satchel and a sword at the hip. No cape yet: a
+ * cape is something the player earns.
  */
 export const PLAYER_LOOK = {
   skin: '#f0c39a',
@@ -72,7 +73,7 @@ export const PLAYER_LOOK = {
   boots: '#3a2a1e',
   belt: '#5b3a22',
   gloves: '#5a4232',
-  cape: '#a8342e',
+  cape: null, // earned later in the game
   satchel: true,
   sheathedSword: true,
   hat: null,

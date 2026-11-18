@@ -38,13 +38,15 @@ const get = (pose, bone, key, d = 0) => pose.bones[bone]?.[key] ?? d;
 const shown = (pose, tool) => get(pose, tool, 'sx', 1) > 0;
 
 describe('looks', () => {
-  test('the player is a caped adventurer about as tall as the collider (2.8)', () => {
+  test('the player is an adventurer about as tall as the collider (2.8), capeless until one is earned', () => {
     const model = buildHumanoidModel(PLAYER_LOOK);
     const { min, max } = getModelBounds(model, null, (b) => !TOOL_BONES.includes(b));
     expect(min[1]).toBeCloseTo(0, 5);
     expect(max[1]).toBeGreaterThan(2.5);
     expect(max[1]).toBeLessThan(2.9);
-    expect(model.parts.some(([bone]) => bone === 'cape')).toBe(true);
+    expect(model.parts.some(([bone]) => bone === 'cape')).toBe(false);
+    const caped = buildHumanoidModel({ ...PLAYER_LOOK, cape: '#a8342e' });
+    expect(caped.parts.some(([bone]) => bone === 'cape')).toBe(true);
   });
 
   test('the player wears a leather jerkin and bracers over a green shirt; settlers do not', () => {
