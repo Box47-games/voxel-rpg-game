@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Icon set</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Pixelify+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ui{font-family:'Pixelify Sans',monospace;color:#f1e6cc}
+.h{font-family:'Silkscreen',monospace;font-size:20px;font-weight:400;color:#ffd977;text-shadow:2px 2px 0 #07080b;margin:0 0 12px}
+.sheet{display:block;width:1240px;height:auto;border:3px solid #07080b;box-sizing:border-box}
+</style>
+</helmet>
+<div class="ui" style="width:1280px;height:3960px;box-sizing:border-box;padding:28px 20px;background:#0d1016;display:flex;flex-direction:column;gap:30px">
+<header>
+<h1 class="px" style="margin:0;font-family:'Silkscreen',monospace;font-size:30px;color:#ffe08a;text-shadow:3px 3px 0 #07080b">Icon set</h1>
+<p style="margin:6px 0 0;font-size:18px;color:#d8ccb0">130 icons from <strong>npm run art</strong>. Each one is a 16×16 pixel drawing pushed out into blocks; UI symbols are single-colour so menus can tint them.</p>
+</header>
+<section><h2 class="h">Items</h2><img class="sheet" src="/_blob/aa7b764077d32f65331debccd13130c2" alt="Item icons: weapons, tools, armour, rings, shield, potions and food"></section>
+<section><h2 class="h">Materials</h2><img class="sheet" src="/_blob/cf3d31fcff5432e4cfef1694fb69cb87" alt="Material icons plus campfire and rift"></section>
+<section><h2 class="h">Blocks and buildings</h2><img class="sheet" src="/_blob/4720f5dbbf30bfee8a6e2924f5678208" alt="Block icons and building pictures"></section>
+<section><h2 class="h">Spells, status effects and HUD</h2><img class="sheet" src="/_blob/a00c1311a6762b42251d27f86d8c9b22" alt="Spell, status effect and HUD icons"></section>
+<section><h2 class="h">UI symbols</h2><img class="sheet" src="/_blob/44e6060edae59f4b464d61236ca7f621" alt="UI symbols"></section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":3960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
