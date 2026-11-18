@@ -20,6 +20,7 @@ import ToolWheel from './components/ui/ToolWheel';
 import MobileTouchTutorial from './components/ui/MobileTouchTutorial';
 import VirtualJoystick from './components/ui/VirtualJoystick';
 import NotificationSystem from './components/notifications/NotificationSystem';
+import UnlockWatcher from './components/ui/UnlockWatcher';
 import { DEBUG_TOOLS_ENABLED } from './utils/debugFlags';
 import useGameStore from './stores/useGameStore';
 
@@ -79,6 +80,7 @@ function App3D() {
 
       {/* Toast notifications (window.addNotification) */}
       <NotificationSystem />
+      <UnlockWatcher />
 
       {/* Spell selection wheel */}
       <SpellWheel />

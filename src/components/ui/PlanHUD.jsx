@@ -13,6 +13,7 @@ import useGameStore from '../../stores/useGameStore';
 import { ZoneType, ZONE_COLORS } from '../../data/zoneTypes';
 import { ZONE_MAX_COUNT } from '../../data/tuning';
 import { BUILDINGS } from '../../data/buildings';
+import { buildingLock } from '../../data/unlocks';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import {
   summarizePopulation,
@@ -20,6 +21,7 @@ import {
   summarizeBuildings,
   getAlerts,
 } from '../../modules/settlement/settlementSummary';
+import useBuildingLocks from '../../hooks/useBuildingLocks';
 import './PlanHUD.css';
 
 export const DELETE_TOOL = '__DELETE__';
@@ -49,8 +51,23 @@ function selectTool(type) {
   st.setZoneMode(true, type);
 }
 
+/** Why a building is locked, with progress, e.g. "Have 3 settlers (1/3 settlers)". */
+export const lockText = (lock) => `${lock.reason}${lock.progress ? ` (${lock.progress})` : ''}`;
+
 function selectBlueprint(id) {
   const st = useGameStore.getState();
+  const lock = buildingLock(id, st);
+  if (lock) {
+    const name = BLUEPRINTS.find((b) => b.id === id)?.name || 'That building';
+    window.addNotification?.({
+      type: 'warning',
+      icon: '🔒',
+      title: `${name} is locked`,
+      description: `To unlock: ${lockText(lock)}`,
+      duration: 3500,
+    });
+    return;
+  }
   if (st.placingBuildingId === id) st.cancelPlacingBuilding();
   else st.startPlacingBuilding(id);
 }
@@ -178,6 +195,7 @@ export default function PlanHUD() {
   const placingId = useGameStore((s) => s.placingBuildingId);
   const zoneCount = useGameStore((s) => s.zones.length);
   const materials = useGameStore((s) => s.inventory?.materials);
+  const locks = useBuildingLocks(planMode);
   const [touch] = useState(isTouchDevice);
 
   // Number keys pick tools while planning
@@ -257,6 +275,28 @@ export default function PlanHUD() {
               {BLUEPRINTS.map((b, i) => {
                 const active = placingId === b.id;
                 const ok = canAfford(b, materials);
+                const lock = locks[b.id];
+                if (lock) {
+                  const why = lockText(lock);
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      className="plan-tool plan-tool--building plan-tool--locked"
+                      aria-disabled="true"
+                      aria-label={`${b.name}, locked: ${why}`}
+                      onClick={() => selectBlueprint(b.id)}
+                      title={`${b.name} — locked: ${why}`}
+                    >
+                      <span className="plan-tool__label">🔒 {b.name}</span>
+                      {!touch && i + ZONE_TOOLS.length + 1 <= 9 && (
+                        <kbd className="plan-tool__key">
+                          {i + ZONE_TOOLS.length + 1}
+                        </kbd>
+                      )}
+                    </button>
+                  );
+                }
                 return (
                   <button
                     key={b.id}

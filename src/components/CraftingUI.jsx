@@ -3,6 +3,7 @@ import { X, Hammer, Package, Sword, Shield, Zap, Pickaxe } from 'lucide-react';
 import useGameStore from '../stores/useGameStore';
 import BagTabs from './ui/BagTabs';
 import { CRAFTING_RECIPES, ITEM_TYPES, canCraft } from '../data/craftingRecipes';
+import { recipeLock } from '../data/unlocks';
 import { MaterialCraftingSystem, QUALITY_TIERS } from '../modules/crafting/MaterialCraftingSystem';
 
 /**
@@ -28,6 +29,10 @@ const CraftingUI = () => {
 
   const inventory = useGameStore((state) => state.inventory);
   const equipment = useGameStore((state) => state.equipment);
+  const level = useGameStore((state) => state.player.level);
+  // Level-locked (data/unlocks.js) vs short of materials
+  const lockOf = (recipe) => recipeLock(recipe, { player: { level } });
+  const ready = (recipe) => !lockOf(recipe) && canCraft(recipe, inventory);
 
   // Initialize MaterialCraftingSystem
   useEffect(() => {
@@ -69,13 +74,13 @@ const CraftingUI = () => {
     { id: ITEM_TYPES.CONSUMABLE, name: 'Potions', icon: Zap },
   ];
 
-  const filteredRecipes = Object.values(CRAFTING_RECIPES).filter((recipe) => {
-    if (selectedCategory === 'all') return true;
-    return recipe.type === selectedCategory;
-  });
+  // Unlocked recipes first, then by the level that unlocks them
+  const filteredRecipes = Object.values(CRAFTING_RECIPES)
+    .filter((recipe) => selectedCategory === 'all' || recipe.type === selectedCategory)
+    .sort((a, b) => (lockOf(a)?.level || 0) - (lockOf(b)?.level || 0));
 
   const handleCraft = (recipe) => {
-    if (!craftingSystemRef.current || !canCraft(recipe, inventory)) return;
+    if (!craftingSystemRef.current || !ready(recipe)) return;
 
     setCraftingAnimation(true);
 
@@ -300,7 +305,8 @@ const CraftingUI = () => {
                 Recipes ({filteredRecipes.length})
               </h3>
               {filteredRecipes.map((recipe) => {
-                const craftable = canCraft(recipe, inventory);
+                const lock = lockOf(recipe);
+                const craftable = !lock && canCraft(recipe, inventory);
                 return (
                   <div
                     key={recipe.id}
@@ -344,7 +350,21 @@ const CraftingUI = () => {
                           {recipe.rarity.name}
                         </div>
                       </div>
-                      {!craftable && (
+                      {lock ? (
+                        <div
+                          title={lock.reason}
+                          style={{
+                            color: '#ffd166',
+                            fontSize: '0.8rem',
+                            background: 'rgba(255, 209, 102, 0.15)',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          🔒 Lv {lock.level}
+                        </div>
+                      ) : !craftable && (
                         <div
                           style={{
                             color: '#ff6b6b',
@@ -352,9 +372,10 @@ const CraftingUI = () => {
                             background: 'rgba(255, 107, 107, 0.2)',
                             padding: '2px 8px',
                             borderRadius: '4px',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          Locked
+                          Need materials
                         </div>
                       )}
                     </div>
@@ -489,30 +510,30 @@ const CraftingUI = () => {
                 {/* Craft Button */}
                 <button
                   onClick={() => handleCraft(selectedRecipe)}
-                  disabled={!canCraft(selectedRecipe, inventory) || craftingAnimation}
+                  disabled={!ready(selectedRecipe) || craftingAnimation}
                   style={{
                     width: '100%',
                     padding: '15px',
                     fontSize: '1.2rem',
                     fontWeight: 'bold',
-                    background: canCraft(selectedRecipe, inventory)
+                    background: ready(selectedRecipe)
                       ? 'linear-gradient(90deg, #ffd700, #ffed4e)'
                       : '#4a5568',
-                    color: canCraft(selectedRecipe, inventory) ? '#000' : '#a0aec0',
+                    color: ready(selectedRecipe) ? '#000' : '#a0aec0',
                     border: 'none',
                     borderRadius: '10px',
-                    cursor: canCraft(selectedRecipe, inventory) ? 'pointer' : 'not-allowed',
+                    cursor: ready(selectedRecipe) ? 'pointer' : 'not-allowed',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '10px',
                     transition: 'all 0.2s',
-                    boxShadow: canCraft(selectedRecipe, inventory)
+                    boxShadow: ready(selectedRecipe)
                       ? '0 4px 15px rgba(255, 215, 0, 0.3)'
                       : 'none',
                   }}
                   onMouseEnter={(e) => {
-                    if (canCraft(selectedRecipe, inventory)) {
+                    if (ready(selectedRecipe)) {
                       e.target.style.transform = 'scale(1.05)';
                     }
                   }}
@@ -521,7 +542,11 @@ const CraftingUI = () => {
                   }}
                 >
                   <Hammer size={24} />
-                  {craftingAnimation ? 'Crafting...' : 'Craft Item'}
+                  {craftingAnimation
+                    ? 'Crafting...'
+                    : lockOf(selectedRecipe)
+                      ? `🔒 ${lockOf(selectedRecipe).reason}`
+                      : canCraft(selectedRecipe, inventory) ? 'Craft Item' : 'Need materials'}
                 </button>
 
                 {/* Quality System Info */}

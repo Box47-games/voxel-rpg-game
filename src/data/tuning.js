@@ -376,11 +376,15 @@ export const CONSTRUCTION_INTERACT_RANGE = 8;      // World units — E key rang
 export const BUILDING_INTERACT_RANGE = 5;          // World units — E key range for a completed building's panel
 export const BUILDING_DEMOLISH_REFUND = 0.5;       // Fraction of a building's cost returned when demolished
 
+// ─── Unlocks (data/unlocks.js): buildings open up at settlement milestones ───
+export const UNLOCK_STONE_HOUSE_SETTLERS = 3;      // Settlers before the Stone House can be built (or upgraded into)
+export const UNLOCK_MANOR_SETTLERS = 6;             // Settlers before the Manor can be upgraded into
+
 // ─── Building Upgrades (in place: the bigger blueprint grows from the same corner) ───
 export const UPGRADE_SHELTER_TO_HOUSE_COST = { wood: 40, stone: 30 };
-export const UPGRADE_SHELTER_TO_HOUSE_SETTLERS = 1;  // Settlers the settlement needs before it can upgrade
+export const UPGRADE_SHELTER_TO_HOUSE_SETTLERS = UNLOCK_STONE_HOUSE_SETTLERS;  // Same milestone as building one outright
 export const UPGRADE_HOUSE_TO_MANOR_COST = { stone: 80, iron: 20 };
-export const UPGRADE_HOUSE_TO_MANOR_SETTLERS = 2;
+export const UPGRADE_HOUSE_TO_MANOR_SETTLERS = UNLOCK_MANOR_SETTLERS;
 export const NPC_INTERACT_RANGE = 4;               // World units — E key range to inspect a settler (a closer stockpile/site wins)
 export const ATTRACT_BUILDING_SCORE = 5;            // Per completed building attractiveness
 export const ATTRACT_HOUSING_BONUS = 10;            // Per housing slot attractiveness

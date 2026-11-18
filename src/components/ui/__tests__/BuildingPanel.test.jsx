@@ -68,16 +68,16 @@ describe('BuildingPanel', () => {
     expect(screen.getByText('Builder: Bria')).toBeInTheDocument();
   });
 
-  test('a Shelter offers its upgrade, blocked until there is a settler', () => {
+  test('a Shelter offers its upgrade, blocked until the Stone House milestone', () => {
     open([{ id: 'h1', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [0, 0, 0], ...DONE }]);
     expect(screen.getByText('Upgrade to Stone House')).toBeInTheDocument();
     expect(screen.getByText(/Beds 1 → 2/)).toBeInTheDocument();
-    expect(screen.getByText(/Costs 40 wood, 30 stone; needs 1 settler/)).toBeInTheDocument();
+    expect(screen.getByText(/Costs 40 wood, 30 stone; needs 3 settlers/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Upgrade' })).toBeDisabled();
-    expect(screen.getByText(/Needs 1 settler/)).toBeInTheDocument();
+    expect(screen.getByText(/Needs 3 settlers/)).toBeInTheDocument();
 
     const s = useGameStore.getState();
-    act(() => useGameStore.setState({ settlement: { ...s.settlement, npcs: [npc('a', 'Aldric')] } }));
+    act(() => useGameStore.setState({ settlement: { ...s.settlement, npcs: [npc('a', 'Aldric'), npc('b', 'Bria'), npc('c', 'Cole')] } }));
     fireEvent.click(screen.getByRole('button', { name: 'Upgrade' }));
     const [site] = useGameStore.getState().constructionSites;
     expect(site).toMatchObject({ buildingId: 'stone_house', upgradeFrom: 'wooden_shelter', status: 'PLACED' });

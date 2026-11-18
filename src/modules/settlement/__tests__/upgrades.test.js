@@ -16,6 +16,7 @@ import { VOXEL_SIZE } from '../../../systems/chunks/coordinates';
 import {
   UPGRADE_SHELTER_TO_HOUSE_COST,
   UPGRADE_HOUSE_TO_MANOR_SETTLERS,
+  UPGRADE_SHELTER_TO_HOUSE_SETTLERS,
 } from '../../../data/tuning';
 import useGameStore from '../../../stores/useGameStore';
 import { makeFakeChunkManager } from './helpers/fakeWorld';
@@ -64,7 +65,7 @@ describe('getUpgradeProblem', () => {
     expect(getUpgradeProblem({ ...shelterSite(), buildingId: 'farm_plot' }, env(cm))).toMatch(/no upgrade/);
     expect(getUpgradeProblem(shelterSite({ status: 'BUILDING' }), env(cm))).toMatch(/Finish/);
     const house = shelterSite({ buildingId: 'stone_house' });
-    expect(getUpgradeProblem(house, env(cm, { settledCount: UPGRADE_HOUSE_TO_MANOR_SETTLERS - 1 }))).toMatch(/Needs 2 settlers/);
+    expect(getUpgradeProblem(house, env(cm, { settledCount: UPGRADE_HOUSE_TO_MANOR_SETTLERS - 1 }))).toMatch(new RegExp(`Needs ${UPGRADE_HOUSE_TO_MANOR_SETTLERS} settlers`));
 
     const neighbour = { id: 'n', buildingId: 'farm_plot', status: 'COMPLETE', position: [3 * VOXEL_SIZE, GROUND_Y, 0] };
     expect(getUpgradeProblem(shelterSite(), env(cm, { constructionSites: [shelterSite(), neighbour] })))
@@ -133,7 +134,10 @@ describe('store: upgradeBuilding and cancelling', () => {
     useGameStore.setState({
       _chunkManager: world([shelterSite()]),
       constructionSites: [shelterSite()],
-      settlement: { ...s.settlement, npcs: [{ id: 'a', state: 'IDLE', homeId: 'home' }] },
+      settlement: {
+        ...s.settlement,
+        npcs: Array.from({ length: UPGRADE_SHELTER_TO_HOUSE_SETTLERS }, (_, i) => ({ id: `n${i}`, state: 'IDLE', homeId: 'home' })),
+      },
       inventory: { ...s.inventory, materials: { wood: 100, stone: 100 } },
     });
   });
@@ -156,7 +160,7 @@ describe('store: upgradeBuilding and cancelling', () => {
   test('reports why it cannot start', () => {
     const s = useGameStore.getState();
     useGameStore.setState({ settlement: { ...s.settlement, npcs: [] } });
-    expect(useGameStore.getState().upgradeBuilding('home')).toMatch(/Needs 1 settler/);
+    expect(useGameStore.getState().upgradeBuilding('home')).toMatch(/Needs 3 settlers/);
     expect(useGameStore.getState().constructionSites[0].status).toBe('COMPLETE');
   });
 

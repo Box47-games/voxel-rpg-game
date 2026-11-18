@@ -61,6 +61,21 @@ describe('BuildCatalog (B)', () => {
     expect(s().activeBuildingCatalog).toBe(false);
   });
 
+  test('Buildings tab: locked buildings say how to unlock instead of offering Place', () => {
+    vi.useFakeTimers();
+    render(<BuildCatalog />);
+    act(() => s().openCatalog('buildings'));
+    expect(screen.getByText('Have 3 settlers', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('(0/3 settlers)', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Close a rift', { exact: false })).toBeInTheDocument();
+    // Open from the start: Shelter and Farm Plot; Storage Shed needs a campfire
+    expect(screen.getAllByRole('button', { name: /^Place/ })).toHaveLength(2);
+    act(() => useGameStore.setState({ settlement: { ...s().settlement, settlementCenter: [0, 0, 0] } }));
+    act(() => { vi.advanceTimersByTime(1100); });
+    expect(screen.getAllByRole('button', { name: /^Place/ })).toHaveLength(3);
+    vi.useRealTimers();
+  });
+
   test('it opens over plan mode; the tab is remembered', () => {
     act(() => s().enterMode('plan'));
     act(() => s().openCatalog('buildings'));

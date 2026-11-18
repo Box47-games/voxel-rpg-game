@@ -16,6 +16,7 @@ import {
   getPlacementCost,
   countPlaceable,
 } from '../../data/blockDrops';
+import useBuildingLocks from '../../hooks/useBuildingLocks';
 import './BuildCatalog.css';
 
 const TABS = [
@@ -91,14 +92,17 @@ function BlocksTab({ materials, selected, onPick }) {
   );
 }
 
-function BuildingCard({ building, materials, onPlace }) {
+function BuildingCard({ building, materials, onPlace, lock }) {
   const canAfford = Object.entries(building.cost).every(
     ([mat, qty]) => (materials?.[mat] || 0) >= qty
   );
   const { housing = 0, attractiveness = 0 } = building.effects || {};
   return (
-    <div className="bc-card">
-      <div className="bc-card__name">{building.name}</div>
+    <div className={`bc-card${lock ? ' bc-card--locked' : ''}`}>
+      <div className="bc-card__name">
+        {lock && <span aria-hidden="true">🔒 </span>}
+        {building.name}
+      </div>
       <div className="bc-card__desc">{building.description}</div>
       <Cost cost={building.cost} materials={materials} />
       <div className="bc-card__meta">
@@ -108,6 +112,12 @@ function BuildingCard({ building, materials, onPlace }) {
           {building.size.width}×{building.size.depth}×{building.size.height}
         </span>
       </div>
+      {lock ? (
+        <div className="bc-card__lock" role="note">
+          <strong>Locked:</strong> {lock.reason}
+          {lock.progress && <span className="bc-card__progress"> ({lock.progress})</span>}
+        </div>
+      ) : (
       <button
         type="button"
         className={`vx-btn vx-btn--block${canAfford ? ' vx-btn--primary' : ''}`}
@@ -120,6 +130,7 @@ function BuildingCard({ building, materials, onPlace }) {
       >
         {canAfford ? 'Place' : 'Place (short)'}
       </button>
+      )}
     </div>
   );
 }
@@ -138,6 +149,7 @@ export default function BuildCatalog() {
   const isOpen = useGameStore((s) => s.activeBuildingCatalog);
   const tab = useGameStore((s) => s.catalogTab);
   const materials = useGameStore((s) => s.inventory?.materials);
+  const locks = useBuildingLocks(isOpen);
   const selected = useGameStore((s) => s.selectedBlockType);
 
   // B toggles the catalog; 1/2 switch tabs while it is open
@@ -206,11 +218,14 @@ export default function BuildCatalog() {
         <div className="bc-body" role="tabpanel">
           {tab === 'buildings' ? (
             <div className="bc-grid">
-              {BUILDINGS.filter((b) => !b.upgradeOnly).map((b) => (
+              {BUILDINGS.filter((b) => !b.upgradeOnly)
+                .sort((a, b) => !!locks[a.id] - !!locks[b.id]) // open ones first
+                .map((b) => (
                 <BuildingCard
                   key={b.id}
                   building={b}
                   materials={materials}
+                  lock={locks[b.id]}
                   onPlace={placeFromCatalog}
                 />
               ))}

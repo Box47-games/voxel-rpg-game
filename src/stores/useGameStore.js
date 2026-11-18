@@ -43,6 +43,7 @@ import {
 import { getBuildingById, parseLayers } from '../data/buildings';
 import { getPlacedBlocks, getDemolishRefund, getUpgradeProblem } from '../modules/settlement/buildingInfo';
 import { isSettled } from '../modules/settlement/housing';
+import { buildingLock } from '../data/unlocks';
 
 // Action history for replay/rollback/debugging
 export const actionHistory = new ActionHistory(1000);
@@ -1674,12 +1675,13 @@ const useGameStore = create((rawSet, get, api) => {
   // Construction system actions (Phase 2.4)
   toggleBuildingCatalog: () => get().togglePanel('buildings'),
   closeBuildingCatalog: () => set({ activeBuildingCatalog: false }),
-  startPlacingBuilding: (buildingId) => set({
+  // Locked buildings (settlement milestones, data/unlocks.js) can't be placed
+  startPlacingBuilding: (buildingId) => set((s) => (buildingLock(buildingId, s) ? {} : {
     ...CLOSED_PANELS,
     placingBuildingId: buildingId,
     zoneMode: false,
     zoneDragStart: null,
-  }),
+  })),
   // In plan mode, finishing or cancelling a placement goes back to the zone tool
   cancelPlacingBuilding: () => set((s) => ({ placingBuildingId: null, ...backToPlanTool(s) })),
 
@@ -1910,6 +1912,8 @@ const useGameStore = create((rawSet, get, api) => {
     });
     if (problem) return problem;
     const { upgrade } = getBuildingById(site.buildingId);
+    const lock = buildingLock(upgrade.to, state);
+    if (lock) return `${getBuildingById(upgrade.to).name} is locked: ${lock.reason.toLowerCase()}`;
     set({
       constructionSites: state.constructionSites.map((s) => (s.id === siteId ? {
         ...s,

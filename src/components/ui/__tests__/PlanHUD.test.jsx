@@ -41,7 +41,22 @@ describe('PlanHUD', () => {
     expect([s().placingBuildingId, s().zoneMode]).toEqual([null, true]);
   });
 
+  test('a locked blueprint says how to unlock it and cannot be placed', () => {
+    const notes = [];
+    window.addNotification = (n) => notes.push(n);
+    render(<PlanHUD />);
+    act(() => s().enterMode('plan'));
+    const house = screen.getByRole('button', { name: /Stone House, locked: Have 3 settlers \(0\/3 settlers\)/ });
+    fireEvent.click(house);
+    expect(s().placingBuildingId).toBeNull();
+    expect(notes[0]).toMatchObject({ title: 'Stone House is locked', description: 'To unlock: Have 3 settlers (0/3 settlers)' });
+    expect(screen.getByRole('button', { name: /Watchtower, locked: Close a rift/ })).toBeInTheDocument();
+    delete window.addNotification;
+  });
+
   test('blueprints you are short for can still be placed, and the hint says what is missing', () => {
+    const settler = (id) => ({ id, name: id, state: 'IDLE' });
+    act(() => useGameStore.setState({ settlement: { ...s().settlement, npcs: ['a', 'b', 'c'].map(settler) } }));
     render(<PlanHUD />);
     act(() => s().enterMode('plan'));
     const house = screen.getByRole('button', { name: /Stone House/ });
