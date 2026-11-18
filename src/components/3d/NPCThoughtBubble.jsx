@@ -102,6 +102,8 @@ const ICON_COMPONENTS = {
   hauling: BoxIcon,
   building: HammerIcon,
   farming: SproutIcon,
+  chopping: PickaxeIcon,
+  foraging: SproutIcon,
   hungry: DrumstickIcon,
   sleeping: SleepIcon,
   socializing: ChatIcon,

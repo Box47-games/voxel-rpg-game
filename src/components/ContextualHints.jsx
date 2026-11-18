@@ -174,6 +174,21 @@ const ContextualHints = () => {
       cooldown: 120000,
     },
     {
+      id: 'farm-needs-seeds',
+      text: 'Your farm needs seeds. Berry bushes drop them: pick some (settlers forage too) and keep them in a stockpile.',
+      condition: () => {
+        if (gameState !== 'playing') return false;
+        const s = useGameStore.getState();
+        const empty = s.zones.some((z) => z.type === 'FARMING' && z.farmTiles?.some((t) => t.plantedAt == null));
+        const seeds = (s.inventory.materials.seed || 0) + s.zones.reduce((n, z) => n + (z.storage?.items?.seed || 0), 0);
+        return empty && seeds === 0;
+      },
+      priority: 13,
+      duration: 6000,
+      showOnce: false,
+      cooldown: 300000,
+    },
+    {
       id: 'npc-hungry',
       text: 'A settler is hungry! Ensure your food supply.',
       condition: () => {

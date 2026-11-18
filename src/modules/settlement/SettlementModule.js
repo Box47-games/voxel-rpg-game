@@ -25,6 +25,8 @@ import {
   IMMIGRATION_SPAWN_MAX_DIST,
   NPC_NEEDS_TICK_INTERVAL,
   WORK_SCAN_INTERVAL,
+  GATHER_RADIUS,
+  GATHER_SCAN_INTERVAL,
   SETTLEMENT_CAMPFIRE_SCAN_INTERVAL,
   NPC_INITIAL_HUNGER,
   NPC_INITIAL_REST,
@@ -52,6 +54,8 @@ import { generateNPCIdentity } from '../../data/npcIdentity.js';
 import { scanForTasks, isZoneBeingFarmed } from '../../systems/settlement/TaskAssignmentEngine.js';
 import { getActiveFarms, collectUnattended } from './farming.js';
 import { depositDrops } from './NPCWorkBehavior.js';
+import { scanGatherTargets } from '../../systems/settlement/GatherScanner.js';
+import { assessGather } from './gathering.js';
 
 class SettlementModule {
   /**
@@ -99,6 +103,8 @@ class SettlementModule {
     this._immigrationAccum = 0;
     this._needsAccum = 0;
     this._workScanAccum = 0;
+    this._gatherAccum = GATHER_SCAN_INTERVAL; // scan on the first tick
+    this._gatherScan = null; // latest trees/bushes near camp
     // Reused every frame so the per-frame tick allocates nothing.
     this._results = {
       campfireCenter: null,
@@ -378,9 +384,14 @@ class SettlementModule {
 
     // ── 3b. Work task scan ──
     this._workScanAccum += deltaSeconds;
+    this._gatherAccum += deltaSeconds;
+    if (center && this._gatherAccum >= GATHER_SCAN_INTERVAL) {
+      this._gatherAccum = 0;
+      this._gatherScan = scanGatherTargets(this.chunkAdapter, center, GATHER_RADIUS, state.constructionSites);
+    }
     if (this._workScanAccum >= WORK_SCAN_INTERVAL) {
       this._workScanAccum = 0;
-      scanForTasks(state.zones, state.constructionSites, this.chunkAdapter, state.worldTime.elapsed);
+      this._scanTasks(state.zones, state.constructionSites, state);
     }
 
     // ── 4. NPC needs + state machines ──
@@ -414,6 +425,14 @@ class SettlementModule {
       }
     }
     return null;
+  }
+
+  /** Rebuild the task list, with felling/foraging near camp once there is a settlement. */
+  _scanTasks(zones, constructionSites, state) {
+    const gather = this._gatherScan
+      ? assessGather({ zones, constructionSites, inventory: state.inventory, scan: this._gatherScan })
+      : null;
+    scanForTasks(zones, constructionSites, this.chunkAdapter, state.worldTime.elapsed, gather);
   }
 
   /** @returns {Object|null} A new APPROACHING NPC if one is attracted this check */
@@ -502,7 +521,7 @@ class SettlementModule {
     // work on the next tick instead of waiting for WORK_SCAN_INTERVAL. Uses
     // fresh zones/sites: they were changed through the host during this tick.
     if (anyTaskCompleted) {
-      scanForTasks(this.host.getZones(), this.host.getConstructionSites(), this.chunkAdapter, state.worldTime.elapsed);
+      this._scanTasks(this.host.getZones(), this.host.getConstructionSites(), state);
       this._workScanAccum = 0;
     }
 

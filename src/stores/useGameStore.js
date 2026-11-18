@@ -132,7 +132,7 @@ const createInitialInventory = () => ({
   crystals: 3,
   potions: 3,
   items: [],
-  materials: { wood: 10, stone: 0, iron: 5, coal: 0, dirt: 0, sand: 0, clay: 0, gold_ore: 0, leather: 8, crystal: 2, berry: 0, meat: 0, bone: 0, fiber: 0 },
+  materials: { wood: 10, stone: 0, iron: 5, coal: 0, dirt: 0, sand: 0, clay: 0, gold_ore: 0, leather: 8, crystal: 2, berry: 0, meat: 0, bone: 0, fiber: 0, seed: 3 },
 });
 
 const createInitialWorldTime = () => ({

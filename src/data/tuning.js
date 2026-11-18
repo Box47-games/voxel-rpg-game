@@ -340,6 +340,20 @@ export const MAX_FARMERS_PER_ZONE = 2;               // Max NPCs farming one zon
 export const FARM_MAX_TILES = 64;                    // Largest farm zone (ground tiles), e.g. 8x8
 export const FARM_PLOT_RANGE = 16;                   // World units from a farm zone's edge to a completed Farm Plot
 export const FARM_CROP_MATERIAL = 'vegetable';       // What harvests yield (an NPC and player food)
+export const SEED_MATERIAL = 'seed';                 // Planting a farm tile uses one
+export const FARM_HARVEST_SEEDS = [1, 2];            // Seeds back per harvested tile (min, max), so a farm keeps itself going
+
+// ─── Gathering (settlers fell trees and forage near camp) ───
+export const GATHER_RADIUS = 32;                     // World units from the settlement centre
+export const GATHER_SCAN_INTERVAL = 10;              // Seconds between scans for trees and bushes
+export const GATHER_WOOD_TARGET = 30;                // Settlers fell trees while stockpiled wood is below this (or a site needs more)
+export const GATHER_FOOD_TARGET = 20;                // ...and forage while stockpiled food is below this
+export const GATHER_MAX_TREES = 2;                   // Trees marked for felling at once (so not everyone chops)
+export const GATHER_MAX_BUSHES = 3;                  // Bushes marked for picking at once
+export const NPC_CHOP_DURATION = 6;                  // Seconds to fell a tree (divided by skill)
+export const NPC_FORAGE_DURATION = 2;                // Seconds to pick a bush (divided by skill)
+export const GATHER_GIVE_UP_SECONDS = 40;            // A tree or bush not reached/finished by then is out of reach...
+export const GATHER_AVOID_SECONDS = 300;             // ...and left alone this long
 
 // ─── Stockpile ──────────────────────────────────────────────
 export const STOCKPILE_STACK_LIMIT = 64;             // Max quantity per slot
@@ -352,7 +366,7 @@ export const ZONE_MIN_SIDE_VOXELS = 2;      // Min voxels per side (4 world unit
 
 // ─── Stockpile System ────────────────────────────────────────
 export const STOCKPILE_CAPACITY_PER_VOXEL = 10;    // Items per ground voxel in zone
-export const STOCKPILE_INTERACT_RANGE = 6;          // World units — E key range to open panel
+export const STOCKPILE_INTERACT_RANGE = 3;          // World units beyond a stockpile's edge where E opens it (anywhere inside works)
 export const ATTRACT_STOCKPILE_FOOD_SCORE = 3;      // Per food item in stockpile
 export const ATTRACT_STOCKPILE_FOOD_CAP = 30;       // Max food items counted for attractiveness
 

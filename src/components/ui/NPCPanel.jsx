@@ -28,6 +28,8 @@ const ACTIVITY_LABELS = {
   WORKING_MINE: 'Mining',
   WORKING_BUILD: 'Building',
   WORKING_FARM: 'Tending the farm',
+  WORKING_CHOP: 'Felling a tree',
+  WORKING_FORAGE: 'Picking berries',
   LEAVING: 'Leaving the settlement',
 };
 

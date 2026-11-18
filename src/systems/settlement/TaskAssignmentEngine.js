@@ -4,7 +4,8 @@
  * Module-level singleton Map<taskId, Task> — NOT stored in Zustand.
  * Rebuilt from zone/construction state every WORK_SCAN_INTERVAL.
  *
- * Task types: MINE, HAUL, BUILD, FARM (plant or harvest one farm tile)
+ * Task types: MINE, HAUL, BUILD, FARM (plant or harvest one farm tile),
+ * CHOP (fell a tree near camp) and FORAGE (pick a berry bush near camp)
  */
 
 import {
@@ -18,6 +19,8 @@ import { getActiveFarms, getTileStage, TileStage } from '../../modules/settlemen
 
 // ── Task Registry (module-level singleton) ──
 const _tasks = new Map();
+// Trees/bushes a settler couldn't reach: key → world time until which they're skipped
+const _avoid = new Map();
 let _nextTaskId = 0;
 
 function makeTaskId() {
@@ -30,6 +33,8 @@ const TASK_SKILL = {
   HAUL: 'gathering',
   BUILD: 'building',
   FARM: 'gathering',
+  CHOP: 'gathering',
+  FORAGE: 'gathering',
 };
 
 const TASK_JOB = {
@@ -37,13 +42,19 @@ const TASK_JOB = {
   HAUL: 'gatherer',
   BUILD: 'builder',
   FARM: 'farmer',
+  CHOP: 'gatherer',
+  FORAGE: 'gatherer',
 };
 
 /**
  * Rebuild the task list from current zone + construction state.
  * Farm tasks need the world time (crop growth); without it they are skipped.
+ * `gather` (from SettlementModule) adds felling and foraging near camp and
+ * says how many seeds there are to plant:
+ *   { trees, bushes, needWood, needFood, seeds }
+ * Without it planting is free (older callers and tests).
  */
-export function scanForTasks(zones, constructionSites, chunkManager, worldTimeElapsed) {
+export function scanForTasks(zones, constructionSites, chunkManager, worldTimeElapsed, gather = null) {
   // Keep track of existing claimed tasks so we don't lose assignments
   const claimedTasks = new Map();
   for (const [id, task] of _tasks) {
@@ -128,11 +139,17 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
 
   // ── FARM tasks: plant empty tiles, harvest ripe ones ──
   if (worldTimeElapsed != null) {
+    // Each planting uses a seed: no more PLANT tasks than seeds to hand
+    let seedsLeft = gather ? gather.seeds : Infinity;
     for (const zone of getActiveFarms(zones, constructionSites)) {
       zone.farmTiles.forEach((tile, i) => {
         const stage = getTileStage(tile, worldTimeElapsed);
         if (stage === TileStage.GROWING) return;
         const farmAction = stage === TileStage.READY ? 'HARVEST' : 'PLANT';
+        if (farmAction === 'PLANT') {
+          if (seedsLeft <= 0) return;
+          seedsLeft--;
+        }
         const key = `FARM:${zone.id}:${i}:${farmAction}`;
         const existing = claimedTasks.get(key);
         const id = existing ? existing.id : makeTaskId();
@@ -175,6 +192,33 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
       priority: 3,
     });
   }
+
+  // ── CHOP / FORAGE: trees and berry bushes near camp, while stocks are low ──
+  if (gather) {
+    const add = (type, t, priority) => {
+      const key = `${type}:${t.x},${t.y},${t.z}`;
+      if ((_avoid.get(key) ?? -Infinity) > (worldTimeElapsed ?? 0)) return;
+      const existing = claimedTasks.get(key);
+      const id = existing ? existing.id : makeTaskId();
+      _tasks.set(id, {
+        id,
+        type,
+        zoneId: null,
+        siteId: null,
+        position: [t.x, t.y, t.z],
+        blockType: null,
+        material: null,
+        amount: 0,
+        claimedBy: existing ? existing.claimedBy : null,
+        priority,
+      });
+    };
+    // Wood a site is waiting on outranks mining; topping up stock doesn't
+    if (gather.needWood) gather.trees.forEach((t) => add('CHOP', t, gather.needWood === 'site' ? 2 : 1.5));
+    // Food (or seeds) running short: just behind harvesting crops
+    // Food or seeds running short: after planting (2), before topping up wood
+    if (gather.needFood) gather.bushes.forEach((b) => add('FORAGE', b, 1.8));
+  }
 }
 
 /** Generate a dedup key for preserving claims across scans */
@@ -183,6 +227,7 @@ function taskKey(task) {
   if (task.type === 'HAUL') return `HAUL:${task.siteId}:${task.material}`;
   if (task.type === 'BUILD') return `BUILD:${task.siteId}`;
   if (task.type === 'FARM') return `FARM:${task.zoneId}:${task._tileIndex}:${task.farmAction}`;
+  if (task.type === 'CHOP' || task.type === 'FORAGE') return `${task.type}:${task.position[0]},${task.position[1]},${task.position[2]}`;
   return task.id;
 }
 
@@ -275,7 +320,14 @@ export function getTask(taskId) {
 /**
  * Drop every task and claim (on load, and in tests). The next scanForTasks rebuilds the list.
  */
+/** A settler couldn't reach this tree or bush: leave it alone until `until` (world time). */
+export function avoidGatherTarget(task, until) {
+  if (!task) return;
+  _avoid.set(`${task.type}:${task.position[0]},${task.position[1]},${task.position[2]}`, until);
+}
+
 export function clearTasks() {
+  _avoid.clear();
   _tasks.clear();
 }
 

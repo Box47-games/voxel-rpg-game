@@ -25,6 +25,7 @@ const MATERIAL_INFO = {
   meat: { icon: '🍖', name: 'Meat', color: '#DC143C' },
   berry: { icon: '🫐', name: 'Berries', color: '#9370DB' },
   vegetable: { icon: '🥕', name: 'Vegetables', color: '#FF8C00' },
+  seed: { icon: '🌱', name: 'Seeds', color: '#C8B560' },
   mushroom: { icon: '🍄', name: 'Mushrooms', color: '#FF6347' },
 };
 

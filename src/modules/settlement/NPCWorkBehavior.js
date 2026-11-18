@@ -24,6 +24,7 @@ import {
   releaseTask,
   completeTask,
   getTask,
+  avoidGatherTarget,
 } from '../../systems/settlement/TaskAssignmentEngine';
 import {
   NPC_HUNGER_CRITICAL,
@@ -42,7 +43,15 @@ import {
   FARM_HARVEST_YIELD,
   FARM_CROP_MATERIAL,
   SCAFFOLD_REACH_LEVELS,
+  SEED_MATERIAL,
+  FARM_HARVEST_SEEDS,
+  NPC_CHOP_DURATION,
+  NPC_FORAGE_DURATION,
+  GATHER_GIVE_UP_SECONDS,
+  GATHER_AVOID_SECONDS,
 } from '../../data/tuning';
+import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
+import { fellTree } from '../../systems/settlement/GatherScanner';
 import { getTileStage, TileStage, withTile } from './farming';
 import { placeNextBlock, getNextBlock } from './buildingInfo';
 import {
@@ -63,6 +72,8 @@ const WORK_STATE_BY_TASK_TYPE = {
   HAUL: 'WORKING_HAUL',
   BUILD: 'WORKING_BUILD',
   FARM: 'WORKING_FARM',
+  CHOP: 'WORKING_CHOP',
+  FORAGE: 'WORKING_FORAGE',
 };
 
 const THOUGHT_BY_TASK_TYPE = {
@@ -70,6 +81,8 @@ const THOUGHT_BY_TASK_TYPE = {
   HAUL: 'hauling',
   BUILD: 'building',
   FARM: 'farming',
+  CHOP: 'chopping',
+  FORAGE: 'foraging',
 };
 
 function workStateFor(task) {
@@ -120,6 +133,25 @@ export function takeFood(ctx) {
     }
   }
   return null;
+}
+
+/**
+ * Take one of `material` from a stockpile, else from the player's bag (as
+ * with food). @returns {boolean} whether there was one
+ */
+export function takeMaterial(ctx, material) {
+  for (const zone of ctx.zones) {
+    if (zone.type !== 'STOCKPILE' || !zone.storage) continue;
+    if ((zone.storage.items[material] || 0) > 0) {
+      ctx.host.consumeFromStockpile(zone.id, material, 1);
+      return true;
+    }
+  }
+  if ((ctx.inventory?.materials?.[material] || 0) >= 1) {
+    ctx.host.removeMaterial(material, 1);
+    return true;
+  }
+  return false;
 }
 
 /** Park the NPC's current task so tryResumeTask can pick it up again. */
@@ -526,8 +558,14 @@ function tickFarm(npc, tickDelta, updates, ctx) {
       ctx.host.updateZone(zone.id, {
         farmTiles: withTile(zone.farmTiles, task._tileIndex, { plantedAt: null, collectedAt: null }),
       });
-      depositDrops([{ material: FARM_CROP_MATERIAL, amount: FARM_HARVEST_YIELD }], ctx);
-    } else if (!harvesting && stage === TileStage.EMPTY) {
+      const [sMin, sMax] = FARM_HARVEST_SEEDS;
+      const seeds = sMin + Math.floor(Math.random() * (sMax - sMin + 1));
+      depositDrops([
+        { material: FARM_CROP_MATERIAL, amount: FARM_HARVEST_YIELD },
+        ...(seeds > 0 ? [{ material: SEED_MATERIAL, amount: seeds }] : []),
+      ], ctx);
+    } else if (!harvesting && stage === TileStage.EMPTY && takeMaterial(ctx, SEED_MATERIAL)) {
+      // Planting uses a seed (none left: the tile stays empty)
       ctx.host.updateZone(zone.id, {
         farmTiles: withTile(zone.farmTiles, task._tileIndex, { plantedAt: elapsed, collectedAt: null }),
       });
@@ -540,11 +578,76 @@ function tickFarm(npc, tickDelta, updates, ctx) {
   return true;
 }
 
+/** Walk to a gather target; once there, work for `duration`. @returns {boolean|null} true when done, null to keep going */
+function gatherStep(npc, tickDelta, updates, task, duration, ctx) {
+  if ((npc.stateTimer || 0) > GATHER_GIVE_UP_SECONDS) {
+    // Can't get there (a ledge, a wall): leave it for a while and do something else
+    avoidGatherTarget(task, (ctx.worldTimeElapsed ?? 0) + GATHER_AVOID_SECONDS);
+    releaseTask(npc.currentTaskId);
+    goIdle(updates);
+    return false;
+  }
+  if (distanceTo(npc, task.position) > NPC_WORK_RANGE) {
+    updates.targetPosition = [...task.position];
+    return null;
+  }
+  const wt = (npc.workTimer || 0) + tickDelta;
+  updates.workTimer = wt;
+  return wt >= duration / (npc.skills?.gathering || NPC_WORK_SKILL_FALLBACK) ? true : null;
+}
+
+/** Fell a tree near camp; its wood goes to the stockpile. @returns {boolean} task completed */
+function tickChop(npc, tickDelta, updates, ctx) {
+  const task = getTask(npc.currentTaskId);
+  if (!task) {
+    goIdle(updates);
+    return false;
+  }
+  if (!gatherStep(npc, tickDelta, updates, task, NPC_CHOP_DURATION, ctx)) return false;
+  const [x, y, z] = task.position;
+  const trunk = fellTree(ctx.chunkAdapter, x, y, z);
+  const drops = [];
+  for (let i = 0; i < trunk; i++) drops.push(...calculateDrops(BlockTypes.WOOD, NPC_MINE_TOOL_TIER));
+  if (drops.length) depositDrops(drops, ctx);
+  completeTask(npc.currentTaskId);
+  growSkill(npc, updates, 'gathering');
+  goIdle(updates);
+  return true;
+}
+
+/** Pick a berry bush near camp: berries (and maybe seeds) to the stockpile. @returns {boolean} task completed */
+function tickForage(npc, tickDelta, updates, ctx) {
+  const task = getTask(npc.currentTaskId);
+  if (!task) {
+    goIdle(updates);
+    return false;
+  }
+  if (!gatherStep(npc, tickDelta, updates, task, NPC_FORAGE_DURATION, ctx)) return false;
+  const [x, y, z] = task.position;
+  const type = ctx.chunkAdapter.getBlock(x, y, z);
+  const action = BLOCK_USE_ACTIONS[type];
+  if (action?.action === 'harvest') {
+    const drops = [];
+    for (const d of action.drops) {
+      const amount = d.min + Math.floor(Math.random() * (d.max - d.min + 1));
+      if (amount > 0) drops.push({ material: d.material, amount });
+    }
+    if (action.destroyBlock) ctx.chunkAdapter.setBlock(x, y, z, BlockTypes.AIR);
+    if (drops.length) depositDrops(drops, ctx);
+  }
+  completeTask(npc.currentTaskId);
+  growSkill(npc, updates, 'gathering');
+  goIdle(updates);
+  return true;
+}
+
 const WORK_STATE_TICKERS = {
   WORKING_MINE: tickMine,
   WORKING_HAUL: tickHaul,
   WORKING_BUILD: tickBuild,
   WORKING_FARM: tickFarm,
+  WORKING_CHOP: tickChop,
+  WORKING_FORAGE: tickForage,
 };
 
 /** @returns {boolean} Whether `state` is a work state handled by tickWorkState */

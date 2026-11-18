@@ -148,9 +148,9 @@ describe('farm tasks', () => {
 });
 
 describe('settlers farming', () => {
-  function setup(tiles, { stockpile = true } = {}) {
+  function setup(tiles, { stockpile = true, seeds = 2 } = {}) {
     const zones = [farmZone(tiles)];
-    if (stockpile) zones.push(makeStockpile({ storage: { items: {}, capacity: 100, usedCapacity: 0 } }));
+    if (stockpile) zones.push(makeStockpile({ storage: { items: { seed: seeds }, capacity: 100, usedCapacity: seeds } }));
     const host = makeFakeHost({ zones, constructionSites: [plot()] });
     const ctx = makeContext({ host, zones: host.getZones(), constructionSites: [plot()], worldTimeElapsed: T0 });
     scanForTasks(host.getZones(), [plot()], null, T0);
@@ -167,7 +167,23 @@ describe('settlers farming', () => {
     const done = work(npc, ctx);
     expect(done.state).toBe('IDLE');
     expect(host.getZones()[0].farmTiles[0].plantedAt).toBe(T0);
+    expect(host.getZones()[1].storage.items.seed).toBe(1); // a seed went in the ground
     expect(done.skills.gathering).toBeGreaterThan(npc.skills.gathering);
+  });
+
+  test('no seeds anywhere: the tile stays empty', () => {
+    const { host, ctx } = setup([tileAt(null)], { seeds: 0 });
+    ctx.inventory = { materials: {} };
+    work(work(makeNPC({ position: [1, 2, 1] }), ctx), ctx);
+    expect(host.getZones()[0].farmTiles[0].plantedAt).toBeNull();
+  });
+
+  test('no more planting jobs than seeds to plant', () => {
+    scanForTasks([farmZone([tileAt(null), tileAt(null), tileAt(null)])], [plot()], null, T0,
+      { trees: [], bushes: [], needWood: false, needFood: false, seeds: 1 });
+    const t = findBestTask(makeNPC({ id: 'a', position: [1, 2, 1] }));
+    expect(claimTask(t.id, 'a')).toBe(true);
+    expect(findBestTask(makeNPC({ id: 'b', position: [1, 2, 1] }))).toBeNull();
   });
 
   test('harvesting empties the tile and puts the crop in a stockpile', () => {
@@ -176,6 +192,7 @@ describe('settlers farming', () => {
     const [farm, stockpile] = host.getZones();
     expect(farm.farmTiles[0].plantedAt).toBeNull();
     expect(stockpile.storage.items[FARM_CROP_MATERIAL]).toBe(FARM_HARVEST_YIELD);
+    expect(stockpile.storage.items.seed).toBeGreaterThan(2); // seeds back from the harvest
   });
 
   test('with no stockpile space the crop goes to the player', () => {

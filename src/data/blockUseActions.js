@@ -8,7 +8,8 @@ import { BlockTypes } from '../systems/chunks/blockTypes';
 export const BLOCK_USE_ACTIONS = {
   [BlockTypes.BERRY_BUSH]: {
     action: 'harvest',
-    drops: [{ material: 'berry', min: 1, max: 3 }],
+    // Seeds plant farm tiles (one each)
+    drops: [{ material: 'berry', min: 1, max: 3 }, { material: 'seed', min: 0, max: 2 }],
     destroyBlock: true,
   },
   [BlockTypes.CAMPFIRE]: {

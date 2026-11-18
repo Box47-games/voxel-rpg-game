@@ -9,14 +9,14 @@ import useGameStore from '../../stores/useGameStore';
 // Ordered list of materials to display
 const MATERIAL_ORDER = [
   'wood', 'stone', 'iron', 'coal', 'dirt', 'sand', 'clay',
-  'gold_ore', 'leather', 'crystal', 'berry', 'vegetable', 'meat', 'bone', 'fiber',
+  'gold_ore', 'leather', 'crystal', 'berry', 'vegetable', 'seed', 'meat', 'bone', 'fiber',
 ];
 
 const MATERIAL_COLORS = {
   wood: '#8B4513', stone: '#808080', iron: '#C0C0C0', coal: '#333333',
   dirt: '#654321', sand: '#F4A460', clay: '#CC7744', gold_ore: '#FFD700',
   leather: '#8B6914', crystal: '#88CCFF', berry: '#CC2244', meat: '#E8967A',
-  bone: '#F5F5DC', fiber: '#98FB98',
+  bone: '#F5F5DC', fiber: '#98FB98', vegetable: '#FF8C00', seed: '#C8B560',
 };
 
 function MaterialRow({ material, stockpileQty, playerQty, zoneId }) {

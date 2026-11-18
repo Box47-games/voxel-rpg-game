@@ -41,10 +41,12 @@ export function getSettlerActivity(npc, moving) {
   if ((npc.state === 'WORKING_HAUL' && npc.carryingItem) || npc.state === 'HAULING') return 'carry';
   if (moving) return null;
   switch (npc.state) {
-    case 'WORKING_MINE': return 'mine';
+    case 'WORKING_MINE':
+    case 'WORKING_CHOP': return 'mine'; // a swing either way
     case 'WORKING_BUILD':
     case 'BUILDING': return 'build';
-    case 'WORKING_FARM': return 'farm';
+    case 'WORKING_FARM':
+    case 'WORKING_FORAGE': return 'farm';
     case 'EATING': return 'eat';
     case 'SOCIALIZING': return 'wave';
     default: return null;
@@ -65,6 +67,8 @@ const STATUS_COLORS = {
   WORKING_HAUL: '#ffcc00',
   WORKING_BUILD: '#4488ff',
   WORKING_FARM: '#44cc44',
+  WORKING_CHOP: '#a0522d',
+  WORKING_FORAGE: '#cc2244',
   EVALUATING: '#00ccff',
   SOCIALIZING: '#ff88ff',
   LEAVING: '#ff4444',
