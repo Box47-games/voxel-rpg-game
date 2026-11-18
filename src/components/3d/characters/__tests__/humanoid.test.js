@@ -47,6 +47,17 @@ describe('looks', () => {
     expect(model.parts.some(([bone]) => bone === 'cape')).toBe(true);
   });
 
+  test('the player wears a leather jerkin and bracers over a green shirt; settlers do not', () => {
+    const player = buildHumanoidModel(PLAYER_LOOK);
+    const uses = (model, color) => model.parts.some(([, c]) => c === color);
+    expect(uses(player, 'jerkin')).toBe(true);
+    expect(uses(player, 'jerkinDark')).toBe(true);
+    expect(player.colors.shirt).toBe('#4a8a3a');
+    const settlerModel = buildHumanoidModel(getSettlerLook({ id: 's1', preferredJob: 'miner' }));
+    expect(uses(settlerModel, 'jerkin')).toBe(false);
+    expect(uses(settlerModel, 'bootSole')).toBe(false);
+  });
+
   test('settlers wear their job: straw hats for farmers, helmets for guards', () => {
     expect(getSettlerLook(settler('farmer')).hat).toBe('straw');
     expect(getSettlerLook(settler('guard')).hat).toBe('helmet');

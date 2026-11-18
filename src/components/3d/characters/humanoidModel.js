@@ -54,14 +54,20 @@ export function rgbToHex([r, g, b]) {
   return `#${to(r)}${to(g)}${to(b)}`;
 }
 
-/** The player: a blue-tunic adventurer with a red cape, satchel and a sword at the hip. */
+/**
+ * The player: an adventurer in a green shirt under a laced brown leather
+ * jerkin, with bracers, a red cape, satchel and a sword at the hip.
+ */
 export const PLAYER_LOOK = {
   skin: '#f0c39a',
   hair: '#6b4226',
   hairStyle: 'swept',
   eye: '#2a3a5a',
-  shirt: '#3f6fd8',
-  trim: '#e2b955',
+  shirt: '#4a8a3a',
+  trim: '#d2ad52',
+  jerkin: '#7a4e2c',
+  bracers: true,
+  detailed: true,
   pants: '#4a3b2f',
   boots: '#3a2a1e',
   belt: '#5b3a22',
@@ -148,6 +154,11 @@ export function buildHumanoidModel(look, unit = 0.1) {
     apron: look.apron || '#000000',
     crate: '#a8743f',
     crateDark: '#7a5230',
+    jerkin: look.jerkin || '#000000',
+    jerkinDark: look.jerkin ? shade(look.jerkin, 0.72) : '#000000',
+    jerkinLight: look.jerkin ? shade(look.jerkin, 1.35) : '#000000',
+    pantsDark: shade(look.pants, 0.78),
+    bootSole: shade(look.boots, 0.6),
   };
 
   const parts = [
@@ -295,9 +306,47 @@ export function buildHumanoidModel(look, unit = 0.1) {
       ['body', 'apron', [3.2, 2, 0.4], [0, 16.6, 2.25]],
     );
   }
+  if (look.jerkin) {
+    // Leather jerkin over the shirt: laced open front, stitched hem, shoulder pieces
+    parts.push(
+      ['body', 'jerkin', [7.4, 6.6, 4.4], [0, 15.3, 0]],
+      ['body', 'shirt', [1.6, 5.4, 0.2], [0, 15.8, 2.25]],
+      ...sym('body', 'jerkinDark', [0.4, 6.2, 0.15], [1, 15.5, 2.3]),
+      ['body', 'jerkinDark', [5.8, 0.8, 4.7], [0, 18.8, 0]],
+      ['body', 'jerkinDark', [7.5, 0.5, 4.5], [0, 12.25, 0]],
+      ...pair('arm', 'jerkin', [2.9, 1.8, 3], [4.6, 17.9, 0]),
+      ...pair('arm', 'jerkinDark', [3, 0.5, 3.1], [4.6, 17, 0]),
+    );
+    for (const y of [17.6, 16.2, 14.8]) {
+      parts.push(['body', 'jerkinLight', [2, 0.3, 0.15], [0, y, 2.42]]);
+    }
+    for (let x = -3; x <= 3; x += 1.5) {
+      if (Math.abs(x) > 1) parts.push(['body', 'jerkinLight', [0.4, 0.3, 0.1], [x, 13, 2.25]]);
+    }
+  }
+  if (look.bracers) {
+    parts.push(
+      ...pair('arm', 'leather', [2.3, 2.4, 2.5], [4.6, 12, 0]),
+      ...pair('arm', 'jerkinDark', [2.35, 0.4, 2.55], [4.6, 12.6, 0]),
+      ...pair('arm', 'jerkinDark', [2.35, 0.4, 2.55], [4.6, 11.4, 0]),
+    );
+  }
+  if (look.detailed) {
+    parts.push(
+      ...pair('leg', 'bootSole', [3.2, 0.6, 3.8], [1.6, 0.3, 0.3]),
+      ...pair('leg', 'pantsDark', [2.2, 1.4, 0.2], [1.6, 6.8, 1.55]),
+      ['body', 'leather', [1.6, 1.8, 1], [2.2, 10.8, 2.6]],
+      ['body', 'buckle', [0.5, 0.4, 0.2], [2.2, 11.3, 3.15]],
+      ['head', 'hairDark', [1, 0.4, 5], [-1.2, 27.05, 0]],
+      ['head', 'hairDark', [1, 0.4, 5], [1.6, 27.05, -0.4]],
+    );
+  }
   if (look.satchel) {
-    // Strap from the left shoulder to the bag on the right hip
-    for (let i = 0; i < 6; i++) parts.push(['body', 'belt', [1, 1, 0.3], [2.4 - i, 18 - i, 2.1]]);
+    // Strap from the left shoulder to the bag on the right hip; with a jerkin
+    // the bag hangs from the belt instead, keeping the laced front clear
+    if (!look.jerkin) {
+      for (let i = 0; i < 6; i++) parts.push(['body', 'belt', [1, 1, 0.3], [2.4 - i, 18 - i, 2.1]]);
+    }
     parts.push(['body', 'leather', [1.4, 2.8, 2.8], [-4.2, 11.2, 0.6]]);
     parts.push(['body', 'buckle', [0.3, 0.6, 0.6], [-4.95, 11.6, 0.8]]);
   }
