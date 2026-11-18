@@ -9,6 +9,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import useGameStore from '../../stores/useGameStore';
+import './settlementPanels.css';
+import { isTouchDevice } from '../../utils/deviceDetection';
 import { describeActivity } from './NPCPanel';
 import {
   summarizePopulation,
@@ -97,7 +99,8 @@ function PopulationTab({ data, onSelectNPC, compact }) {
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 12 }}>
-        <Stat label="Settlers" value={`${pop.count} / ${pop.cap}`} />
+        {/* Before a campfire founds the settlement there's no cap to count against */}
+        <Stat label="Settlers" value={data.settlement?.settlementCenter ? `${pop.count} / ${pop.cap}` : '—'} />
         <Stat label="Beds" value={`${pop.beds}${pop.homeless ? ` (${pop.homeless} homeless)` : ''}`} />
         <Stat label="Happiness" value={pop.avgHappiness == null ? '—' : <HappinessBar value={pop.avgHappiness} />} />
       </div>
@@ -283,6 +286,7 @@ export default function SettlementDashboard() {
         role="dialog"
         aria-label="Settlement dashboard"
         onClick={(e) => e.stopPropagation()}
+        className="sp-panel"
         style={{
           background: C.panel, color: C.text, fontFamily: 'monospace',
           border: isMobile ? 'none' : `2px solid ${C.border}`, borderRadius: isMobile ? 0 : 8,
@@ -292,8 +296,8 @@ export default function SettlementDashboard() {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #333' }}>
-          <span style={{ fontSize: 18, fontWeight: 'bold', color: C.border }}>Settlement</span>
-          <button
+          <span className="sp-title" style={{ fontSize: 18, fontWeight: 'bold', color: C.border }}>Settlement</span>
+          <button className="sp-btn"
             onClick={close}
             aria-label="Close"
             style={{ background: '#333', color: '#fff', border: '1px solid #555', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 14 }}
@@ -346,7 +350,7 @@ export default function SettlementDashboard() {
         </div>
 
         <div style={{ padding: '8px 16px', borderTop: '1px solid #333', fontSize: 12, color: C.dim }}>
-          {alerts[0]?.text ? `Tip: ${alerts[0].text}` : 'Press N to close'}
+          {alerts[0]?.text ? `Tip: ${alerts[0].text}` : isTouchDevice() ? 'Tap ✕ to close' : 'Press N or Esc to close'}
         </div>
       </div>
     </div>

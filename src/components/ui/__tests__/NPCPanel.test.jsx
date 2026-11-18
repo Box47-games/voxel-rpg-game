@@ -75,14 +75,14 @@ describe('NPCPanel', () => {
     expect(commits).toBe(afterMount + 1);
   });
 
-  test('closes with the X button and with Escape', () => {
+  test('closes with the X button and with Esc (the store backs out)', () => {
     setNPCs([settler()]);
     render(<NPCPanel />);
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(useGameStore.getState().activeNPCId).toBeNull();
 
     act(() => setNPCs([settler()]));
-    fireEvent.keyDown(window, { key: 'Escape' });
+    act(() => { expect(useGameStore.getState().backOut()).toBe(true); });
     expect(useGameStore.getState().activeNPCId).toBeNull();
   });
 

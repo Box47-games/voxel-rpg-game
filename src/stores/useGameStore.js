@@ -202,6 +202,7 @@ const CLOSED_PANELS = {
   openPanel: null,
   settlementDashboardOpen: false,
   activeBuildingCatalog: false,
+  helpOpen: false,
 };
 
 /** In plan mode, leaving a placement (or opening a panel) keeps the zone tool selected. */
@@ -324,6 +325,8 @@ const useGameStore = create((rawSet, get, api) => {
   activeConstructionSiteId: null, // Site ID of open construction panel
   activeNPCId: null,            // Settler shown in the NPC detail panel (or null)
   settlementDashboardOpen: false, // Settlement dashboard (N key)
+  helpOpen: false, // the key assignments screen (?)
+  setHelpOpen: (open) => set({ helpOpen: !!open }),
   openPanel: null, // Store-owned screens: 'inventory' | 'crafting' | 'repair' (the Bag tabs) | 'tools' (touch wheel); at most one panel of any kind is open
 
   // Actions
@@ -1853,6 +1856,7 @@ const useGameStore = create((rawSet, get, api) => {
   backOut: () => {
     const s = get();
     if (s.placingBuildingId) { set({ placingBuildingId: null, ...backToPlanTool(s) }); return true; }
+    if (s.helpOpen) { set({ helpOpen: false }); return true; }
     if (s.openPanel || s.settlementDashboardOpen || s.activeBuildingCatalog) { set(CLOSED_PANELS); return true; }
     if (s.activeNPCId || s.activeConstructionSiteId || s.activeStockpileZoneId) {
       set({ activeNPCId: null, activeConstructionSiteId: null, activeStockpileZoneId: null });

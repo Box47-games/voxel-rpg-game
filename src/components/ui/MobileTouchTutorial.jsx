@@ -31,6 +31,19 @@ function alreadySeen() {
   }
 }
 
+// A landscape phone is short: two columns of tips, tighter spacing, and the
+// card scrolls rather than running off the screen.
+const SHORT_SCREEN_CSS = `
+.touch-tutorial__card { max-height: 100%; overflow-y: auto; }
+@media (max-height: 500px) {
+  .touch-tutorial__card { width: min(640px, 100%) !important; padding: 12px 16px 10px !important; }
+  .touch-tutorial__card h2 { margin-bottom: 8px !important; }
+  .touch-tutorial__list { display: grid !important; grid-template-columns: 1fr 1fr; gap: 6px 16px !important; }
+  .touch-tutorial__list li { font-size: 13px !important; }
+  .touch-tutorial__dismiss { margin-top: 8px !important; }
+}
+`;
+
 const styles = {
   overlay: {
     position: 'fixed',
@@ -112,11 +125,12 @@ const MobileTouchTutorial = () => {
       onClick={dismiss}
       onTouchStart={(e) => { e.preventDefault(); dismiss(); }}
     >
-      <div className="vx-panel" style={styles.card}>
+      <style>{SHORT_SCREEN_CSS}</style>
+      <div className="vx-panel touch-tutorial__card" style={styles.card}>
         <h2 id="touch-tutorial-title" className="vx-heading" style={styles.title}>
           Touch controls
         </h2>
-        <ul style={styles.list}>
+        <ul className="touch-tutorial__list" style={styles.list}>
           {TIPS.map((tip) => (
             <li key={tip.text} style={styles.item}>
               <span style={styles.icon} aria-hidden="true">{tip.icon}</span>
@@ -124,7 +138,7 @@ const MobileTouchTutorial = () => {
             </li>
           ))}
         </ul>
-        <div style={styles.dismiss}>Tap anywhere to start playing</div>
+        <div className="touch-tutorial__dismiss" style={styles.dismiss}>Tap anywhere to start playing</div>
       </div>
     </div>
   );

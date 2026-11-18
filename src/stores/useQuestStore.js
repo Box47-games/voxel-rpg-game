@@ -38,8 +38,6 @@ const useQuestStore = create((set, get) => ({
   initializeQuests: (questConfigs) => {
     const quests = questConfigs.map(config => new Quest(config));
     set({ availableQuests: quests });
-    // eslint-disable-next-line no-console
-    console.log(`📜 QuestStore: Initialized ${quests.length} quests`);
   },
 
   /**
@@ -51,8 +49,6 @@ const useQuestStore = create((set, get) => ({
     set((state) => ({
       availableQuests: [...state.availableQuests, ...quests]
     }));
-    // eslint-disable-next-line no-console
-    console.log(`📜 QuestStore: Loaded ${quests.length} built-in quests (${settlementQuests.length} settlement, ${explorationQuests.length} exploration, ${storyQuests.length} story)`);
   },
 
   /**
@@ -68,8 +64,6 @@ const useQuestStore = create((set, get) => ({
       availableQuests: [...state.availableQuests, quest]
     }));
 
-    // eslint-disable-next-line no-console
-    console.log(`📜 New quest available: ${quest.title}`);
   },
 
   /**
@@ -200,10 +194,6 @@ const useQuestStore = create((set, get) => ({
     });
 
     // Log completion
-    // eslint-disable-next-line no-console
-    console.log(`🎉 Quest completed: ${quest.title}`);
-    // eslint-disable-next-line no-console
-    console.log(`   Rewards: ${quest.rewards.xp} XP, ${quest.rewards.gold} gold, ${quest.rewards.items.length} items`);
 
     // Show notification (if NotificationSystem is mounted)
     if (window.addNotification) {
@@ -237,15 +227,7 @@ const useQuestStore = create((set, get) => ({
       ]
     }));
 
-    // Unlock new quests if any
-    if (quest.rewards.unlockQuests && quest.rewards.unlockQuests.length > 0) {
-      quest.rewards.unlockQuests.forEach(unlockedQuestId => {
-        // This would require quest definitions to be loaded
-        // For now, just log it
-        // eslint-disable-next-line no-console
-        console.log(`🔓 Unlocked new quest: ${unlockedQuestId}`);
-      });
-    }
+    // quest.rewards.unlockQuests: unlocking needs the quest definitions loaded (not yet)
 
     // If repeatable, make available again
     if (quest.repeatable) {
@@ -346,8 +328,6 @@ const useQuestStore = create((set, get) => ({
       completedQuestIds: [],
       questHistory: []
     });
-    // eslint-disable-next-line no-console
-    console.log('🧹 Cleared all quest data');
   },
 
   /**
@@ -356,8 +336,6 @@ const useQuestStore = create((set, get) => ({
    */
   setDebugMode: (enabled) => {
     set({ debugMode: enabled });
-    // eslint-disable-next-line no-console
-    console.log(`🐛 Quest debug mode: ${enabled ? 'ON' : 'OFF'}`);
   }
 }));
 

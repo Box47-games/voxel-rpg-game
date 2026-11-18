@@ -45,8 +45,6 @@ export function getSlotForItemType(itemType) {
  */
 export class EquipmentManager {
   constructor() {
-    // eslint-disable-next-line no-console
-    console.log('⚔️ EquipmentManager: Initialized');
   }
 
   /**

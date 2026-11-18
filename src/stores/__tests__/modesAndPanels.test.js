@@ -101,3 +101,20 @@ describe('modes and panels', () => {
     expect(s().camera.firstPerson).toBe(false);
   });
 });
+
+describe('help screen', () => {
+  beforeEach(reset);
+
+  test('Esc closes help before anything else, and does not pause', () => {
+    useGameStore.setState({ helpOpen: true, planMode: true });
+    expect(s().backOut()).toBe(true);
+    expect(s().helpOpen).toBe(false);
+    expect(s().planMode).toBe(true); // one step at a time
+  });
+
+  test('opening a panel closes help', () => {
+    s().setHelpOpen(true);
+    s().togglePanel('inventory');
+    expect(s().helpOpen).toBe(false);
+  });
+});

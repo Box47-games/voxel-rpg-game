@@ -8,7 +8,8 @@
  * - Scrollable grid layout
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import useGameStore from '../stores/useGameStore';
 import './KeyboardShortcutsPanel.css';
 
 // Only keys that are actually bound (see useKeyboard.js and the components named)
@@ -72,46 +73,25 @@ const shortcuts = {
   },
 };
 
-function KeyboardShortcutsPanel({ isOpen, onClose }) {
-  const [internalOpen, setInternalOpen] = useState(isOpen || false);
+function KeyboardShortcutsPanel() {
+  const open = useGameStore((s) => s.helpOpen);
 
-  useEffect(() => {
-    setInternalOpen(isOpen);
-  }, [isOpen]);
-
-  // Listen for ? key to toggle
+  // ? toggles; Esc closes it through the store's backOut (PauseMenu handles Esc)
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.key === '?' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
         e.preventDefault();
-        const newState = !internalOpen;
-        setInternalOpen(newState);
-        if (onClose && newState === false) {
-          onClose();
-        }
-      }
-      if (e.key === 'Escape' && internalOpen) {
-        setInternalOpen(false);
-        if (onClose) {
-          onClose();
-        }
+        const s = useGameStore.getState();
+        s.setHelpOpen(!s.helpOpen);
       }
     };
-
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [internalOpen, onClose]);
+  }, []);
 
-  if (!internalOpen) {
-    return null;
-  }
+  if (!open) return null;
 
-  const handleClose = () => {
-    setInternalOpen(false);
-    if (onClose) {
-      onClose();
-    }
-  };
+  const handleClose = () => useGameStore.getState().setHelpOpen(false);
 
   return (
     <div className="keyboard-shortcuts-panel-overlay" onClick={handleClose}>

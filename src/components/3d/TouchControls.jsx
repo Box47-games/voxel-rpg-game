@@ -3,6 +3,8 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { attackToward, tryCastSpellAt as tryCastSpellAt_ } from '../../systems/combat/playerAttack';
+import { enemyNearScreenPoint } from '../../systems/combat/enemyHits';
+import { ENEMY_CLICK_ASSIST_PX } from '../../data/tuning';
 
 /**
  * TouchControls — Handles click/tap for attacking and spell casting.
@@ -67,6 +69,21 @@ const TouchControls = () => {
         }
         if (enemyHit) break;
         if (!groundHit) groundHit = hit;
+      }
+
+      // Missed the model but clicked right beside an enemy: count it
+      if (!enemyHit) {
+        const near = enemyNearScreenPoint(
+          store, camera,
+          { x: event.clientX - rect.left, y: event.clientY - rect.top },
+          { width: rect.width, height: rect.height },
+          ENEMY_CLICK_ASSIST_PX,
+          (p) => new THREE.Vector3(p[0], p[1], p[2])
+        );
+        if (near) {
+          enemyHit = { point: near.point };
+          enemyData = { takeDamage: true };
+        }
       }
 
       const tryCastSpellAt = (targetPoint) => tryCastSpellAt_(useGameStore.getState(), targetPoint);

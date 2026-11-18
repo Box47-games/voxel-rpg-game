@@ -3,8 +3,9 @@
  * Renders as an HTML overlay when activeStockpileZoneId is set.
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import useGameStore from '../../stores/useGameStore';
+import './settlementPanels.css';
 import { materialName } from '../../data/pieces';
 
 // Ordered list of materials to display
@@ -59,7 +60,7 @@ function MaterialRow({ material, stockpileQty, playerQty, zoneId }) {
       <button style={btnStyle(playerQty >= 10)} onClick={() => deposit(zoneId, material, 10)} disabled={playerQty < 10}>+10</button>
       <button style={btnStyle(playerQty >= 1)} onClick={() => deposit(zoneId, material, playerQty)} disabled={playerQty < 1}>All&rarr;</button>
 
-      <div style={{ width: 45, textAlign: 'center', color: '#4488ff', fontWeight: 'bold', fontSize: 13 }}>
+      <div style={{ width: 45, textAlign: 'center', color: '#f2c14e', fontWeight: 'bold', fontSize: 13 }}>
         {stockpileQty}
       </div>
 
@@ -85,18 +86,7 @@ export default function StockpilePanel() {
   const capacity = storage?.capacity || 0;
   const usedCapacity = storage?.usedCapacity || 0;
 
-  // Close on Escape key
-  useEffect(() => {
-    if (!activeZoneId) return;
-    const handleKey = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        closePanel();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [activeZoneId, closePanel]);
+  // Esc closes this panel through the store's backOut (PauseMenu)
 
   // Deposit all
   const handleDepositAll = useCallback(() => {
@@ -136,6 +126,7 @@ export default function StockpilePanel() {
       }}
     >
       <div
+        className="sp-panel"
         style={{
           background: 'rgba(10, 10, 20, 0.92)',
           border: '2px solid #4488ff',
@@ -154,8 +145,8 @@ export default function StockpilePanel() {
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: 18, fontWeight: 'bold', color: '#4488ff' }}>Stockpile</span>
-          <button
+          <span className="sp-title" style={{ fontSize: 18, fontWeight: 'bold', color: '#4488ff' }}>Stockpile</span>
+          <button className="sp-btn"
             onClick={closePanel}
             style={{
               background: '#333', color: '#fff', border: '1px solid #555',

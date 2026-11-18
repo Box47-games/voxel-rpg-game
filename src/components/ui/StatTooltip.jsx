@@ -6,8 +6,14 @@
 import React from 'react';
 import './StatTooltip.css';
 
+// Only the non-zero entries of a bonus map (an all-zero section is left out)
+const nonZero = (map) =>
+  Object.entries(map || {}).filter(([, bonus]) => bonus !== 0 && bonus != null);
+
 const StatTooltip = ({ stat, value, breakdown, position = 'right' }) => {
   if (!breakdown) return null;
+  const attributes = nonZero(breakdown.attributes);
+  const equipment = nonZero(breakdown.equipment);
 
   const getStatIcon = (statName) => {
     const icons = {
@@ -49,42 +55,40 @@ const StatTooltip = ({ stat, value, breakdown, position = 'right' }) => {
         {breakdown.base !== undefined && (
           <div className="stat-tooltip-row">
             <span className="stat-tooltip-label">Base</span>
-            <span className="stat-tooltip-value">+{Math.round(breakdown.base)}</span>
+            <span className="stat-tooltip-value">
+              +{Math.round(breakdown.base)}
+            </span>
           </div>
         )}
 
         {/* Attribute bonuses */}
-        {breakdown.attributes && Object.keys(breakdown.attributes).length > 0 && (
+        {attributes.length > 0 && (
           <>
             <div className="stat-tooltip-section-header">From Attributes:</div>
-            {Object.entries(breakdown.attributes).map(([attr, bonus]) => (
-              bonus !== 0 && (
-                <div key={attr} className="stat-tooltip-row attribute-bonus">
-                  <span className="stat-tooltip-label">
-                    {getAttributeIcon(attr)} {attr}
-                  </span>
-                  <span className="stat-tooltip-value positive">
-                    +{typeof bonus === 'number' ? Math.round(bonus) : bonus}
-                  </span>
-                </div>
-              )
+            {attributes.map(([attr, bonus]) => (
+              <div key={attr} className="stat-tooltip-row attribute-bonus">
+                <span className="stat-tooltip-label">
+                  {getAttributeIcon(attr)} {attr}
+                </span>
+                <span className="stat-tooltip-value positive">
+                  +{typeof bonus === 'number' ? Math.round(bonus) : bonus}
+                </span>
+              </div>
             ))}
           </>
         )}
 
         {/* Equipment bonuses */}
-        {breakdown.equipment && Object.keys(breakdown.equipment).length > 0 && (
+        {equipment.length > 0 && (
           <>
             <div className="stat-tooltip-section-header">From Equipment:</div>
-            {Object.entries(breakdown.equipment).map(([item, bonus]) => (
-              bonus !== 0 && (
-                <div key={item} className="stat-tooltip-row equipment-bonus">
-                  <span className="stat-tooltip-label">{item}</span>
-                  <span className="stat-tooltip-value positive">
-                    +{Math.round(bonus)}
-                  </span>
-                </div>
-              )
+            {equipment.map(([item, bonus]) => (
+              <div key={item} className="stat-tooltip-row equipment-bonus">
+                <span className="stat-tooltip-label">{item}</span>
+                <span className="stat-tooltip-value positive">
+                  +{Math.round(bonus)}
+                </span>
+              </div>
             ))}
           </>
         )}
@@ -116,11 +120,6 @@ const StatTooltip = ({ stat, value, breakdown, position = 'right' }) => {
           ⚠️ Soft cap reached - reduced effectiveness
         </div>
       )}
-
-      {/* Tip */}
-      <div className="stat-tooltip-tip">
-        Press <kbd>C</kbd> to open Character Sheet
-      </div>
     </div>
   );
 };

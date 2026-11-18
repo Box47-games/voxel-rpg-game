@@ -4,9 +4,10 @@
  * building, see what it does and who lives there, and demolish it.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
+import './settlementPanels.css';
 import { getBuildingById } from '../../data/buildings';
 import { getTask } from '../../systems/settlement/TaskAssignmentEngine';
 import {
@@ -118,7 +119,7 @@ function UpgradeSection({ site, building }) {
   const from = building.effects || {};
   const to = target.effects || {};
   return (
-    <div style={{ marginTop: 12, padding: 8, border: '1px solid #345', borderRadius: 4, fontSize: 13 }}>
+    <div style={{ marginTop: 12, padding: 8, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 4, fontSize: 13 }}>
       <div style={{ color: '#88aaff', marginBottom: 4 }}>Upgrade to {target.name}</div>
       <div style={{ color: '#aaa', fontSize: 12 }}>
         Beds {from.housing || 0} → {to.housing || 0}, attractiveness +{from.attractiveness || 0} → +{to.attractiveness || 0}
@@ -218,7 +219,7 @@ function CompletedBuilding({ site, building, onDemolished }) {
             >
               Demolish
             </button>
-            <button
+            <button className="sp-btn"
               onClick={() => setConfirming(false)}
               style={{ flex: 1, padding: '6px 0', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace' }}
             >
@@ -244,18 +245,7 @@ export default function BuildingPanel() {
   const building = site ? getBuildingById(site.buildingId) : null;
   const builder = useGameStore(selectBuilder(activeSiteId));
 
-  // Close on Escape key
-  useEffect(() => {
-    if (!activeSiteId) return;
-    const handleKey = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        closePanel();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [activeSiteId, closePanel]);
+  // Esc closes this panel through the store's backOut (PauseMenu)
 
   const handleDemolished = useCallback((refund) => {
     if (!refund) return;
@@ -311,6 +301,7 @@ export default function BuildingPanel() {
       <div
         role="dialog"
         aria-label={building.name}
+        className="sp-panel"
         style={{
           background: 'rgba(10, 10, 20, 0.92)',
           border: '2px solid #4488ff',
@@ -332,7 +323,7 @@ export default function BuildingPanel() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div>
-            <span style={{ fontSize: 16, fontWeight: 'bold', color: '#4488ff' }}>{building.name}</span>
+            <span className="sp-title" style={{ fontSize: 16, fontWeight: 'bold', color: '#4488ff' }}>{building.name}</span>
             {site.upgradeFrom && site.status !== 'COMPLETE' && (
               <span style={{ marginLeft: 6, fontSize: 11, color: '#aaa' }}>
                 upgrading the {getBuildingById(site.upgradeFrom)?.name}
@@ -350,7 +341,7 @@ export default function BuildingPanel() {
               {badge.text}
             </span>
           </div>
-          <button
+          <button className="sp-btn"
             onClick={closePanel}
             style={{
               background: '#333', color: '#fff', border: '1px solid #555',

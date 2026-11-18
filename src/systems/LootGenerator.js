@@ -19,8 +19,6 @@ import ITEM_TEMPLATES from '../config/loot/item-templates.json';
  */
 export class LootGenerator {
   constructor() {
-    // eslint-disable-next-line no-console
-    console.log('🎲 LootGenerator: Initialized');
   }
 
   /**

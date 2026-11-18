@@ -49,3 +49,22 @@ describe('combat against rift enemies', () => {
     expect(behind.takeDamage).not.toHaveBeenCalled();
   });
 });
+
+describe('clicking beside an enemy', () => {
+  // A flat "camera": projects world x/z straight onto NDC (-50..50 → -1..1)
+  const camera = {};
+  const toVector = ([x, , z]) => ({ project: () => ({ x: x / 50, y: -z / 50, z: 0 }) });
+  const size = { width: 1000, height: 1000 };
+
+  beforeEach(() => useGameStore.getState().reset());
+
+  test('finds the nearest enemy within the radius in screen pixels', async () => {
+    const { enemyNearScreenPoint } = await import('../enemyHits');
+    spawnRiftEnemy('a', [0, 0, 0]); // screen (500, 500)
+    spawnRiftEnemy('b', [2, 0, 0]); // screen (520, 500)
+    const s = useGameStore.getState();
+    expect(enemyNearScreenPoint(s, camera, { x: 525, y: 500 }, size, 36, toVector).enemy.id).toBe('b');
+    expect(enemyNearScreenPoint(s, camera, { x: 470, y: 500 }, size, 36, toVector).enemy.id).toBe('a');
+    expect(enemyNearScreenPoint(s, camera, { x: 600, y: 600 }, size, 36, toVector)).toBeNull();
+  });
+});

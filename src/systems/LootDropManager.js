@@ -81,8 +81,6 @@ export class LootDropManager {
     this.lootTable = new LootTable();
     this.drops = [];
     this.pickupRadius = 2; // Default pickup radius in tiles
-    // eslint-disable-next-line no-console
-    console.log('💰 LootDropManager: Initialized');
   }
 
   /**
@@ -120,10 +118,6 @@ export class LootDropManager {
       this.drops.push(itemDrop);
     });
 
-    if (drops.length > 0) {
-      // eslint-disable-next-line no-console
-      console.log(`💎 ${monster.name} dropped ${loot.gold} gold and ${loot.items.length} items`);
-    }
 
     return drops;
   }
@@ -162,8 +156,6 @@ export class LootDropManager {
     this.drops = this.drops.filter(drop => {
       // Remove expired drops
       if (drop.isExpired()) {
-        // eslint-disable-next-line no-console
-        console.log(`⏰ Loot expired: ${drop.type} at (${drop.position.x}, ${drop.position.z})`);
         return false;
       }
 
@@ -229,8 +221,6 @@ export class LootDropManager {
    */
   clearAll() {
     this.drops = [];
-    // eslint-disable-next-line no-console
-    console.log('🧹 Cleared all loot drops');
   }
 
   /**

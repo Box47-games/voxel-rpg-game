@@ -487,11 +487,7 @@ class Game3DSaveManager {
     }
 
     this.autoSaveTimer = setInterval(async () => {
-      const result = await this.saveGame(store, chunkManager, slot);
-      if (result.success) {
-        // eslint-disable-next-line no-console
-        console.log('[AutoSave] Game saved automatically');
-      }
+      await this.saveGame(store, chunkManager, slot);
     }, AUTO_SAVE_INTERVAL);
   }
 

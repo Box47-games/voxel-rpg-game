@@ -22,7 +22,6 @@ export class QuestManager {
     this.initialized = false;
     this.eventListeners = new Map();
 
-    console.log('📜 QuestManager: Initialized');
   }
 
   /**
@@ -42,7 +41,6 @@ export class QuestManager {
     this.setupEventListeners();
 
     this.initialized = true;
-    console.log(`✅ QuestManager: Loaded ${questDefinitions.length} quest definitions`);
   }
 
   /**
@@ -274,7 +272,6 @@ export class QuestManager {
     useQuestStore.getState().clearAllQuests();
     this.eventListeners.clear();
     this.initialized = false;
-    console.log('🔄 QuestManager: Reset complete');
   }
 
   /**
@@ -296,7 +293,6 @@ export class QuestManager {
 
     // Complete quest
     useQuestStore.getState().completeQuest(questId);
-    console.log(`🐛 Debug: Completed quest ${quest.title}`);
   }
 
   /**
@@ -307,7 +303,6 @@ export class QuestManager {
     available.forEach(quest => {
       this.acceptQuest(quest.id);
     });
-    console.log(`🐛 Debug: Accepted ${available.length} quests`);
   }
 }
 

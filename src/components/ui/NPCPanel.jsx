@@ -5,6 +5,7 @@
 import React, { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
+import './settlementPanels.css';
 import { getBuildingById } from '../../data/buildings';
 import { isSettled } from '../../modules/settlement/housing';
 import { getScheduleBlock, getTimeOfDay } from '../../modules/settlement/schedule';
@@ -133,17 +134,7 @@ export default function NPCPanel() {
     if (data.missing) closePanel();
   }, [data.missing, closePanel]);
 
-  useEffect(() => {
-    if (!data.id) return;
-    const handleKey = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        closePanel();
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [data.id, closePanel]);
+  // Esc closes this panel through the store's backOut (PauseMenu)
 
   if (!data.id || data.missing) return null;
 
@@ -168,6 +159,7 @@ export default function NPCPanel() {
       <div
         role="dialog"
         aria-label={`Settler ${data.name}`}
+        className="sp-panel"
         style={{
           background: 'rgba(10, 10, 20, 0.92)',
           border: '2px solid #4488ff',
@@ -186,10 +178,10 @@ export default function NPCPanel() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 'bold', color: '#4488ff' }}>{data.name}</div>
+            <div className="sp-title" style={{ fontSize: 18, fontWeight: 'bold', color: '#4488ff' }}>{data.name}</div>
             {traits && <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>{traits}</div>}
           </div>
-          <button
+          <button className="sp-btn"
             onClick={closePanel}
             aria-label="Close"
             style={{

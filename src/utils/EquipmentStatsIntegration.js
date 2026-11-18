@@ -45,9 +45,6 @@ export function recalculateStatsAfterEquipmentChange(gameStore) {
       speed: derivedStats.speed,
     },
   });
-
-  // eslint-disable-next-line no-console
-  console.log('[EquipmentStatsIntegration] Stats recalculated after equipment change');
 }
 
 /**
@@ -70,9 +67,6 @@ export function createEnhancedEquipmentActions(gameStore) {
 
       // Then recalculate stats
       recalculateStatsAfterEquipmentChange(gameStore);
-
-      // eslint-disable-next-line no-console
-      console.log(`[EquipmentStatsIntegration] Equipped ${item.name} to ${slot}`);
     },
 
     /**
@@ -89,9 +83,6 @@ export function createEnhancedEquipmentActions(gameStore) {
 
       // Then recalculate stats
       recalculateStatsAfterEquipmentChange(gameStore);
-
-      // eslint-disable-next-line no-console
-      console.log(`[EquipmentStatsIntegration] Unequipped from ${slot}`);
 
       return unequippedItem;
     },
@@ -120,8 +111,6 @@ export function setupEquipmentStatsWatcher(gameStore) {
     const currentEquipment = JSON.stringify(state.equipment);
 
     if (currentEquipment !== lastEquipment) {
-      // eslint-disable-next-line no-console
-      console.log('[EquipmentStatsIntegration] Equipment changed, recalculating stats...');
       recalculateStatsAfterEquipmentChange(gameStore);
       lastEquipment = currentEquipment;
     }

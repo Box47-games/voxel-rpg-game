@@ -229,11 +229,16 @@ export const PLAN_CAMERA_TILT = 0.3;            // Horizontal offset = height ×
 // Gesture disambiguation
 export const TAP_MAX_DURATION_MS = 200;
 export const TAP_MAX_DISTANCE_PX = 10;
+// A click or tap this close (pixels) to an enemy on screen attacks it, even if it misses the model
+export const ENEMY_CLICK_ASSIST_PX = 36;
 // Touch attack button: swings at enemies this close (world units)
 export const TOUCH_ATTACK_RANGE = 14;
 // Touch blocks: hold a block on screen this long to start mining it; reach in blocks (both mining and tap-to-place)
 export const TOUCH_MINE_HOLD_MS = 250;
 export const TOUCH_BLOCK_REACH = 4;
+// Desktop third-person: blocks under the mouse further than this (in blocks
+// from the player) can't be mined or placed; a left-click there casts instead.
+export const MOUSE_BLOCK_REACH = 6;
 // Contextual hints: quiet time between ordinary hints (urgent ones may cut in)
 export const HINT_MIN_GAP_MS = 25000;
 // Desktop block: holding the right mouse button still this long (empty hand) raises the guard

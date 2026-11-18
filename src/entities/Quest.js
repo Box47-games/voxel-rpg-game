@@ -180,8 +180,6 @@ export class Quest {
       this.objectives.forEach(obj => obj.reset());
     }
 
-    // eslint-disable-next-line no-console
-    console.log(`✅ Quest accepted: ${this.title}`);
     return true;
   }
 
@@ -260,8 +258,6 @@ export class Quest {
     this.completedAt = Date.now();
     this.timesCompleted++;
 
-    // eslint-disable-next-line no-console
-    console.log(`🎉 Quest completed: ${this.title}`);
 
     // If repeatable, make available again
     if (this.repeatable) {
@@ -283,8 +279,6 @@ export class Quest {
     }
 
     this.state = 'FAILED';
-    // eslint-disable-next-line no-console
-    console.log(`❌ Quest failed: ${this.title}`);
     return true;
   }
 
@@ -300,8 +294,6 @@ export class Quest {
     this.acceptedAt = null;
     this.objectives.forEach(obj => obj.reset());
 
-    // eslint-disable-next-line no-console
-    console.log(`🚫 Quest abandoned: ${this.title}`);
     return true;
   }
 

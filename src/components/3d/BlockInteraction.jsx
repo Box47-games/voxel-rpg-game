@@ -15,7 +15,7 @@ import { calculateDrops, getPlacementCost, canAffordPlacement, payPlacement, pla
 import { pieceTiers, materialName, PIECES, blocksAvailable, baseMaterial } from '../../data/pieces';
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
 import { usableTool } from '../../systems/tools/toolDurability';
-import { TOUCH_MINE_HOLD_MS, TOUCH_BLOCK_REACH, TAP_MAX_DISTANCE_PX, HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN } from '../../data/tuning';
+import { TOUCH_MINE_HOLD_MS, TOUCH_BLOCK_REACH, MOUSE_BLOCK_REACH, ENEMY_CLICK_ASSIST_PX, TAP_MAX_DISTANCE_PX, HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN } from '../../data/tuning';
 import { findInteractTarget } from '../../systems/interaction/interactTarget';
 import { notePlayerAction } from '../../systems/playerActions';
 import { getSpellById, executeSpell } from '../../data/spells';
@@ -26,6 +26,7 @@ import { isTouchDevice } from '../../utils/deviceDetection';
 import { subCubeOf, subFilled } from '../../systems/chunks/cellShape';
 import { targetPiece, minePiece, pieceMiningFraction, cellCenter } from '../../systems/chunks/pieceMining';
 import { raycastUnits, planPiece, applyPiece, boxesOverlap } from '../../systems/chunks/piecePlacement';
+import { enemyNearScreenPoint } from '../../systems/combat/enemyHits';
 
 // Maximum reach distance for block interaction
 const REACH_DISTANCE = 12;
@@ -280,13 +281,13 @@ export function findUsableBlock(chunkManager, playerPos, { harvestOnly = false }
  * counted on the voxel grid (sideways, and up or down from the feet; the
  * player is two blocks tall, so one more upward)?
  */
-export function withinTouchReach(playerPos, block) {
+export function withinTouchReach(playerPos, block, reach = TOUCH_BLOCK_REACH) {
   if (!playerPos || !block) return false;
   const v = (n) => Math.floor(n / VOXEL_SIZE);
   const dx = Math.abs(v(block.x) - v(playerPos[0]));
   const dz = Math.abs(v(block.z) - v(playerPos[2]));
   const dy = v(block.y) - v(playerPos[1]);
-  return dx <= TOUCH_BLOCK_REACH && dz <= TOUCH_BLOCK_REACH && dy >= -TOUCH_BLOCK_REACH && dy <= TOUCH_BLOCK_REACH + 1;
+  return dx <= reach && dz <= reach && dy >= -reach && dy <= reach + 1;
 }
 
 /**
@@ -1107,6 +1108,16 @@ export function BlockInteraction({ chunkManager }) {
 
     const canvas = gl.domElement;
 
+    // The block under the mouse, if it's within MOUSE_BLOCK_REACH of the player
+    // (further away, a left-click casts the spell instead)
+    const raycastFromMouse = (x, y) => {
+      const hit = raycastFromScreen(x, y);
+      if (hit.block && !withinTouchReach(useGameStore.getState().player.position, hit.block, MOUSE_BLOCK_REACH)) {
+        return { block: null, face: null, adjacentPos: null };
+      }
+      return hit;
+    };
+
     // Desktop third-person: what's under the mouse, for the placement ghost (20 per second at most)
     const lastMouse = { x: 0, y: 0 };
     let lastHover = 0;
@@ -1115,7 +1126,7 @@ export function BlockInteraction({ chunkManager }) {
       if (!force && now - lastHover < 50) return;
       lastHover = now;
       const rect = canvas.getBoundingClientRect();
-      const hit = raycastFromScreen(clientX - rect.left, clientY - rect.top);
+      const hit = raycastFromMouse(clientX - rect.left, clientY - rect.top);
       setHoverAim(hit.block ? { block: hit.block, face: hit.face } : null);
     };
 
@@ -1142,7 +1153,7 @@ export function BlockInteraction({ chunkManager }) {
         rightClickStart.x = event.clientX;
         rightClickStart.y = event.clientY;
         rightClickPending = true;
-        rightClickResult = raycastFromScreen(x, y);
+        rightClickResult = raycastFromMouse(x, y);
         return;
       }
 
@@ -1166,8 +1177,14 @@ export function BlockInteraction({ chunkManager }) {
         }
       }
 
+      // Just beside an enemy on screen counts as clicking it (TouchControls attacks)
+      if (enemyNearScreenPoint(
+        useGameStore.getState(), camera, { x, y }, { width: rect.width, height: rect.height },
+        ENEMY_CLICK_ASSIST_PX, (p) => new THREE.Vector3(p[0], p[1], p[2])
+      )) return;
+
       // Raycast from mouse position to find block
-      const result = raycastFromScreen(x, y);
+      const result = raycastFromMouse(x, y);
 
       if (result.block) {
         // Block found — set store flag to suppress TouchControls movement
@@ -1215,7 +1232,7 @@ export function BlockInteraction({ chunkManager }) {
       const rect = canvas.getBoundingClientRect();
       const mx = event.clientX - rect.left;
       const my = event.clientY - rect.top;
-      const moveResult = raycastFromScreen(mx, my);
+      const moveResult = raycastFromMouse(mx, my);
 
       if (moveResult.block && miningBlockKey.current) {
         // Same block, or the same piece of a shaped cell
