@@ -19,35 +19,51 @@ block removes the whole block and gives its 8 units as pieces in the material's 
 - **[decided]** One hit removes one block (cell) and gives pieces; no chipping a block apart.
 - **[decided]** Tools matter.
 - **[decided]** Settlers haul and build with pieces.
-- **[decided]** Units are interchangeable for costs: a blueprint asking for one stone block accepts
-  8 stone units in any mix (8 cubes, 2 slabs, 1 block, ...).
+- **[decided]** Blueprints (and settlers building them) pay by volume: a blueprint asking for one
+  stone block accepts a block, 2 slabs or 8 cubes, in any mix.
+- **[decided]** Placed pieces never merge in the world. Two slabs in one cell stay two slabs.
+  Pieces combine only in crafting (2 slabs → 1 block).
+- **[decided]** Tool yields below are the starting point; materials shown as pieces; one material
+  per cell; leaves, berry bushes, campfires and ores stay whole.
 
 ## Core model
 
-### Inventory: units, shown as pieces **[proposed]**
-- `inventory.materials.<m>` counts **units** for the building materials (wood, stone, dirt, sand,
-  snow, clay). Ores, food, leather, etc. stay plain counts.
-- The UI shows each material in its natural piece: "Stone: 3 slabs + 2" (14 units),
-  "Wood: 5 planks", "Dirt: 23 cubes". Costs are shown the same way.
-- Because units are interchangeable, the player can place any shape from any units of that
-  material (a slab from 4 stone cubes' worth), matching the blueprint rule above.
+### Inventory: real pieces by shape **[decided]**
+- Building materials are held as pieces by shape: `inventory.pieces.<material>.<shape>` with shapes
+  `block`, `slab`, `plank`, `cube` (only the ones that make sense per material: wood has block +
+  plank, stone block + slab, dirt/sand/snow/clay block + cube).
+- The player places the shape they hold. A full block is placeable only if you have a block.
+- **Crafting converts** (new "Pieces" category in the Craft tab, no station needed):
+  2 slabs → 1 stone block, 2 planks → 1 wood block, 8 cubes → 1 block of that material, and the
+  reverse splits (1 block → 2 slabs / 2 planks / 8 cubes).
+- **Costs by volume** for blueprints, settler construction and hauling: each shape has a unit
+  value (block 8, slab 4, plank 4, cube 1). Paying takes whole pieces, smallest first, and never
+  breaks pieces implicitly. If only larger pieces are left, it spends one larger piece and returns
+  the leftover as smaller pieces of the same material (a slab paid for 1 cube's worth gives 3
+  cubes back) **[proposed]**.
+- The old `materials.wood / stone / dirt / ...` counts migrate to blocks (1 old unit = 1 block).
 
-### World: an 8-bit shape mask per cell
-- `Chunk` gets `masks: Uint8Array(CHUNK_SIZE_CUBED)` next to `blocks`. Bit i = sub-cube i of the
-  cell (x, y, z each 0/1). `0xFF` = full block (all terrain), `0` = empty.
-- A cell still has exactly one block type, so pieces in one cell are one material **[proposed]**.
-- Shapes are just masks: bottom slab `0x0F`, top slab `0xF0`, side slabs, one cube, a bar. A 4-long
-  plank is a 2-unit bar in two neighbouring cells; no linking needed, since mining either half
-  gives its 2 units back.
-- Placing a piece into a cell that already holds the same material merges the masks (two slabs
-  become a full block, which is stored as `0xFF` again).
-- Cost of anything = the number of bits it sets. Mining a cell gives back the number of bits in it
-  (times the tool's yield).
-- `ChunkManager.getBlock` keeps returning the type; add `getMask` / `setCell(type, mask)`.
-  `setBlock` keeps meaning "full block" so existing callers keep working.
+### World: shape mask plus piece layout per cell
+- `Chunk` gets two more `Uint8Array(CHUNK_SIZE_CUBED)`:
+  - `masks`: bit i = sub-cube i is filled.
+  - `layout`: piece kind (block / slab / plank / cubes) and axis.
+- Terrain cells are `block` with mask `0xFF`. They mine as one whole block.
+- Kind and axis cut a cell's mask into separate pieces: each bit is a cube; each half along the axis
+  is a slab; each 2-unit bar along the axis is half a plank.
+- One material and one piece kind per cell. A second piece goes into a cell only if it is the same
+  material, kind and axis and the space is free (for example, a top slab over a bottom slab).
+  Pieces are never fused.
+- Rendering draws a seam between pieces, so two slabs never look like a block.
+- Mining finds the piece you hit (sub-cube ray test) and removes only that piece. A 4-long plank is
+  two 2-unit halves in neighbouring cells; mining either half gives half a plank's worth.
+  **[proposed]**: drop it as 2 cubes' worth? Wood has no cube shape, so the hit removes both halves
+  of that plank (the neighbour cell's matching bar) and returns 1 plank.
+- `ChunkManager.getBlock` keeps returning the type. Add `getCell` and `setCell(type, mask, layout)`.
+  `setBlock` keeps meaning "full block", so existing callers keep working.
 
 ### Tools **[proposed numbers, to tune in tuning.js]**
-Yield = the share of a block's 8 units you keep; the rest is lost as rubble or splinters.
+Yield = how many units of a mined block you get back, as that material's pieces (4 = one slab or
+one plank; 8 = two). The rest is lost as rubble or splinters.
 
 | Material | Bare hand | Stone tool | Iron | Steel+ |
 |---|---|---|---|---|
@@ -63,38 +79,42 @@ Yield = the share of a block's 8 units you keep; the rest is lost as rubble or s
 
 | System | Change |
 |---|---|
-| `data/blockDrops.js` | Drops in units by tool yield; `BLOCK_PLACEMENT_COSTS` becomes units per bit; natural-piece table |
-| `stores/useGameStore.js` | Material counts in units; helpers to show as pieces |
-| `data/craftingRecipes.js`, `data/buildings.js` | Costs in units (current numbers ×8 as a start, then rebalance) |
-| `systems/chunks/Chunk.js`, `ChunkManager.js` | `masks` array, `getMask`/`setCell`, modified-chunk cache keeps masks |
+| `data/blockDrops.js` | Drops as pieces by tool yield; placement costs one piece of the chosen shape; shape table per material |
+| `stores/useGameStore.js` | `inventory.pieces`; add/spend helpers (spend by volume for blueprints) |
+| Crafting | "Pieces" category: combine and split recipes |
+| `data/craftingRecipes.js`, `data/buildings.js` | Gear recipes keep costs in blocks (paid by volume); blueprint requirements in units from their cells |
+| `systems/chunks/Chunk.js`, `ChunkManager.js` | `masks` + `layout` arrays, `getCell`/`setCell`, modified-chunk cache keeps both |
 | `workers/chunkWorker.js` | Mesh partial cells as sub-cubes (cull sub-faces against neighbour masks); full cells unchanged; LOD treats any non-empty cell as full |
 | Collision | Trimesh comes from the mesh, so shapes collide for free. The player gets a half-block step-up so slabs are steps, not jumps |
 | Navigation / settlers | "Standing height" of a cell comes from its mask; a bottom slab is a half step |
 | Shelter / campfire / mining scanners | Treat a cell as solid when it is full or a full layer (decide per check) |
-| `persistence/Game3DSaveManager.js` | Schema v7: chunk saves carry masks (old saves: every non-air cell `0xFF`); inventory building materials ×8 |
-| Block interaction | Mining gives units; placement picks a shape and orientation, previews it on the sub-grid, merges into same-material cells |
+| `persistence/Game3DSaveManager.js` | Schema v7: chunk saves carry masks + layout (old saves: every non-air cell a full block); old material counts become blocks |
+| Block interaction | Mining removes the hit piece; placement picks a shape and direction, previews it on the sub-grid, fills free space in a matching cell, never fuses |
 | Hotbar / touch wheel | A shape picker (block, slab, plank, cube) next to the block; R rotates on desktop, a rotate button on touch |
-| Settlement | Hauling and stockpiles count units; construction consumes units per placed piece (smoother progress) |
+| Settlement | Stockpiles hold pieces; hauling and construction pay by volume per placed piece (smoother progress) |
 | Blueprints (`parseLayers`) | New glyphs for slabs and planks, so buildings can have slab roofs, plank floors and beams |
 | Art | Piece icons per material (plank, slab, cube); loot pieces in 3D (ties in with the art-pass "loot chunk per material" gap) |
 
 ## Phases and checkpoints
 
-1. **Units economy (no world change).**
-   - Changes: building materials counted in units, drops by tool yield, pieces shown in the UI,
-     recipe and blueprint costs in units, stockpile and hauling in units, save v7 for inventory.
-   - Check: tests updated; mine and craft in the browser; old save loads with ×8 materials.
+1. **Pieces in the inventory (no world change).**
+   - Changes: `inventory.pieces`, drops as pieces by tool yield, the Pieces craft category
+     (combine and split), pay-by-volume for blueprints and settlers, stockpiles hold pieces,
+     the Bag shows pieces, save v7 for the inventory.
+   - Placing still uses full blocks, paid with a block.
+   - Check: tests updated; mine, split and combine in the browser; old save loads with its
+     materials as blocks.
 2. **Shaped cells in the world.**
-   - Changes: chunk masks, worker meshing of partial cells, saves carry masks, mining a partial
-     cell gives its bits, standing height and step-up.
+   - Changes: chunk masks and layout, worker meshing of partial cells with seams between pieces,
+     saves carry both, mining removes the hit piece, standing height and step-up.
    - Placement is still full blocks; a dev-overlay tool places test shapes.
    - Check: mesher unit tests per mask; walk on and mine test shapes; frame time on a phone
      profile stays inside budget.
 3. **Placing pieces.**
-   - Changes: shape picker, rotation, sub-grid ghost preview, merging, cost per bit.
-     Desktop and touch.
-   - Check: place, merge and mine round-trips are never a net gain; touch flow on 844×390 and
-     390×844.
+   - Changes: shape picker, rotation, sub-grid ghost preview, filling free space in a matching
+     cell (never fusing), one piece per placement. Desktop and touch.
+   - Check: placing then mining a piece is never a net gain; two slabs in one cell stay two
+     slabs; touch flow on 844×390 and 390×844.
 4. **Settlers and blueprints.**
    - Changes: construction places and pays per piece; blueprint glyphs for slabs and planks;
      refresh a few buildings to use them; regenerate building art.
@@ -105,9 +125,6 @@ Yield = the share of a block's 8 units you keep; the rest is lost as rubble or s
 Each phase is its own branch, playable on its own, merged only with the user's go-ahead.
 
 ## Open questions
-- Tool yield numbers above: OK as a start?
-- Show materials as pieces ("3 slabs + 2") or as plain units ("14")? Proposal: pieces.
-- One material per cell: OK? (Mixing materials in one cell would need per-sub-cube types: 8×
-  memory for edited cells.)
-- Should grass placed as dirt stay dirt (as today)? Proposal: yes.
-- Leaves, berry bushes, campfires and ores stay whole and are not split. OK?
+- When a blueprint takes 1 cube's worth and only a slab is left: break the slab and return 3 cubes
+  (proposed), or require exact pieces?
+- Wood has no cube: mining one half of a placed plank removes the whole plank (proposed). OK?
