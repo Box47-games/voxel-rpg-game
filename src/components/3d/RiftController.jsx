@@ -167,7 +167,8 @@ const RiftController = ({ chunkManager }) => {
           window.addNotification({
             type: 'success',
             title: 'Rift Closed!',
-            message: 'A rift has been permanently sealed!',
+            description: 'A rift has been permanently sealed!',
+            art: { group: 'misc', id: 'rift' },
           });
         }
       }
@@ -207,7 +208,7 @@ const RiftController = ({ chunkManager }) => {
               window.addNotification({
                 type: 'error',
                 title: 'Anchor Destroyed!',
-                message: 'The purification anchor was destroyed. The rift is wounded but not lost.',
+                description: 'The purification anchor was destroyed. The rift is wounded but not lost.',
               });
             }
           }

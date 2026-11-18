@@ -14,7 +14,8 @@ describe('CraftingUI unlocks', () => {
   test('level-locked recipes show the level and cannot be crafted', () => {
     render(<CraftingUI />);
     act(() => s().togglePanel('crafting'));
-    expect(screen.getAllByText('🔒 Lv 3').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Lv 3').length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle('Reach level 3').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Need materials').length).toBeGreaterThan(0);
     expect(screen.queryByText('Locked')).toBeNull();
 

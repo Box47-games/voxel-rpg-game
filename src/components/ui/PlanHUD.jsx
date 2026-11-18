@@ -62,6 +62,7 @@ function selectBlueprint(id) {
     window.addNotification?.({
       type: 'warning',
       icon: '🔒',
+      art: { group: 'ui', id: 'lock' },
       title: `${name} is locked`,
       description: `To unlock: ${lockText(lock)}`,
       duration: 3500,

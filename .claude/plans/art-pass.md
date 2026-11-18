@@ -56,11 +56,11 @@ npm run art:portraits   # player + settler portraits from the real models (needs
 - [x] Portraits: player, one settler per job (rendered from the models)
 
 ### To do: wire the art into the game (screens to restyle in the new look)
-- [ ] Style kit in `src/styles/voxel-ui.css`: frame, sign title, sign tabs, slot, parchment
+- [x] Style kit in `src/styles/voxel-ui.css`: frame, sign title, sign tabs, slot, parchment
       card, notched bar, tags, key caps, pixel buttons; load Pixelify Sans; retire the slate/blue
-      tokens in `tokens.css`
-- [ ] Bag: Inventory (paper-doll with live 3D player), Craft, Repair
-- [ ] Toasts / notifications, E prompts, hints, tooltips
+      tokens in `tokens.css` (still to do: other screens use them)
+- [x] Bag: Inventory (paper-doll with rendered portrait), Craft, Repair — live 3D player is a later 3D-gap item
+- [x] Toasts / notifications (E prompts, hints, tooltips still to do)
 - [ ] Settlement dashboard (4 tabs), Stockpile, Settler and Building panels
 - [ ] Build catalog, Plan bar + overview
 - [ ] Spell wheel, touch tool wheel, Dialogue

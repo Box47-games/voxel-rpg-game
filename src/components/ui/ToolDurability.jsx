@@ -11,7 +11,7 @@ import {
   canAffordRepair,
 } from '../../systems/tools/toolDurability';
 
-const barColor = (frac) => (frac <= 0 ? '#ff6b6b' : frac < 0.25 ? '#f59f00' : '#51cf66');
+const barColor = (frac) => (frac <= 0 ? '#d9473f' : frac < 0.25 ? '#e0913a' : '#e8b443');
 
 /**
  * @param {Object} props
@@ -30,41 +30,29 @@ export default function ToolDurability({ item, target, compact = false }) {
   const costText = cost ? Object.entries(cost).map(([m, n]) => `${n} ${m}`).join(', ') : '';
 
   return (
-    <div className="tool-durability" style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: isBroken(item) ? '#ff6b6b' : '#a0aec0' }}>
-        <span>{isBroken(item) ? 'Broken' : 'Durability'}</span>
+    <div className="tool-durability" onClick={(e) => e.stopPropagation()}>
+      <div className="tool-durability__label">
+        <span className={isBroken(item) ? 'bad' : undefined}>{isBroken(item) ? 'Broken' : 'Durability'}</span>
         <span>{left} / {item.maxDurability}</span>
       </div>
       <div
+        className="vx-nbar"
         role="meter"
         aria-label="Durability"
         aria-valuemin={0}
         aria-valuemax={item.maxDurability}
         aria-valuenow={left}
-        style={{ height: 5, background: '#1a202c', borderRadius: 3, overflow: 'hidden', marginTop: 2 }}
+        style={{ '--c': barColor(frac) }}
       >
-        <div style={{ width: `${frac * 100}%`, height: '100%', background: barColor(frac) }} />
+        <i style={{ width: `${frac * 100}%` }} />
       </div>
       {!compact && cost && (
         <button
           type="button"
+          className="vx-pbtn vx-pbtn--sm vx-pbtn--block"
           disabled={!affordable}
           title={affordable ? `Costs ${costText}` : `Needs ${costText}`}
           onClick={() => useGameStore.getState().repairTool(target)}
-          style={{
-            marginTop: 6,
-            width: '100%',
-            padding: '6px 8px',
-            minHeight: 32,
-            fontSize: '0.8rem',
-            background: affordable ? '#f2c14e' : '#4a5568',
-            color: affordable ? '#171c27' : '#a0aec0',
-            border: 'none',
-            borderRadius: 4,
-            cursor: affordable ? 'pointer' : 'not-allowed',
-            fontWeight: 'bold',
-            touchAction: 'manipulation',
-          }}
         >
           Repair ({costText})
         </button>

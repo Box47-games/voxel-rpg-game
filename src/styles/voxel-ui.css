@@ -244,3 +244,245 @@
   .vx-bar--low .vx-bar__fill { animation: none; }
   .vx-btn { transition: none; }
 }
+
+/* ══ Art pass kit: "carved from the world" ═════════════════════════════
+ * Wood/stone framed panels on a stone-brick wall, wooden sign titles and
+ * tabs, recessed stone slots, parchment cards, pixel buttons and tags.
+ * Textures come from src/assets/art (npm run art). See
+ * .claude/plans/art-pass.md for the look.
+ */
+
+:root {
+  --vx-font-pixel: 'Pixelify Sans', 'Silkscreen', monospace;
+  --vx-ink: #3a2410;
+  --vx-ink-dim: #6b5236;
+  --vx-ink-good: #2d6a1c;
+  --vx-ink-bad: #9e2a22;
+  --vx-cream: #f1e6cc;
+  --vx-cream-dim: #d8ccb0;
+}
+
+/* Full-screen backdrop for a framed screen */
+.vx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px 24px;
+  background: rgba(4, 5, 8, 0.72);
+}
+
+/* Framed panel: 9-slice frame, stone-brick body */
+.vx-frame {
+  position: relative;
+  box-sizing: border-box;
+  color: var(--vx-cream);
+  font-family: var(--vx-font-pixel);
+  border: 24px solid transparent;
+  border-image: url('../assets/art/textures/frame-wood.svg') 8 / 24px round;
+  background: url('../assets/art/textures/stonewall.svg') 0 0 / 64px 64px;
+  background-clip: padding-box;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 10px 0 rgba(0, 0, 0, 0.55));
+}
+.vx-frame--stone { border-image-source: url('../assets/art/textures/frame-stone.svg'); }
+.vx-frame--thin { border-width: 15px; border-image-width: 15px; }
+
+/* Wooden sign hung over a frame's top edge */
+.vx-sign-title {
+  position: absolute;
+  left: 50%;
+  top: -52px;
+  transform: translateX(-50%);
+  z-index: 1;
+  margin: 0;
+  padding: 8px 30px 10px;
+  font-family: var(--vx-font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #ffe08a;
+  text-shadow: 3px 3px 0 #07080b;
+  white-space: nowrap;
+  background: url('../assets/art/textures/planks.svg') 0 0 / 64px 32px;
+  border: 3px solid #07080b;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18), inset 0 -4px 0 rgba(0, 0, 0, 0.45), 0 5px 0 #07080b;
+}
+
+/* Sign tabs: planks; the selected one is parchment */
+.vx-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 14px 8px;
+  font-family: var(--vx-font-display);
+  font-size: 14px;
+  color: #f6e7c8;
+  text-shadow: 2px 2px 0 #07080b;
+  background: url('../assets/art/textures/planks.svg') 0 0 / 64px 32px;
+  border: 3px solid #07080b;
+  border-radius: 0;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.15), inset 0 -4px 0 rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.vx-tab:hover { filter: brightness(1.12); }
+.vx-tab[aria-selected='true'],
+.vx-tab.is-on {
+  color: var(--vx-ink);
+  text-shadow: 1px 1px 0 #f3e6c6;
+  background: url('../assets/art/textures/parchment.svg') 0 0 / 96px 96px;
+  box-shadow: inset 0 3px 0 #f3e6c6, inset 0 -4px 0 #a88a58;
+  cursor: default;
+  filter: none;
+}
+.vx-tab:focus-visible { outline: 3px solid #ffe08a; outline-offset: 2px; }
+.vx-tab .vx-key { font-size: 10px; }
+
+/* Recessed stone slot; --r = rarity border */
+.vx-slot {
+  --size: 60px;
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size);
+  height: var(--size);
+  padding: 0;
+  box-sizing: border-box;
+  background: #121419;
+  border: 3px solid var(--r, #07080b);
+  border-radius: 0;
+  box-shadow: 0 0 0 2px #07080b, inset 4px 4px 0 rgba(0, 0, 0, 0.6), inset -3px -3px 0 rgba(255, 255, 255, 0.07);
+  color: inherit;
+  font: inherit;
+}
+button.vx-slot { cursor: pointer; touch-action: manipulation; }
+button.vx-slot:hover { filter: brightness(1.25); }
+.vx-slot img { width: 78%; height: 78%; image-rendering: auto; pointer-events: none; }
+.vx-slot.is-selected { outline: 3px solid #ffe08a; outline-offset: 3px; }
+.vx-slot.is-ghost img { opacity: 0.2; filter: grayscale(1); }
+.vx-slot__qty {
+  position: absolute;
+  right: 3px;
+  bottom: 0;
+  font-family: var(--vx-font-display);
+  font-size: 12px;
+  color: #fff;
+  text-shadow: 2px 2px 0 #07080b;
+}
+.vx-slot__emoji { font-size: calc(var(--size) * 0.5); line-height: 1; }
+.r-uncommon { --r: #4f9a3a; }
+.r-rare { --r: #3d6fd0; }
+.r-epic { --r: #8a55d8; }
+.r-legendary { --r: #d9a43a; }
+
+/* Gold section heading on stone */
+.vx-h {
+  margin: 0;
+  font-family: var(--vx-font-display);
+  font-size: 15px;
+  font-weight: 400;
+  color: #ffd977;
+  text-shadow: 2px 2px 0 #07080b;
+}
+
+/* Parchment card with dark ink */
+.vx-parch {
+  box-sizing: border-box;
+  color: var(--vx-ink);
+  font-family: var(--vx-font-pixel);
+  background: url('../assets/art/textures/parchment.svg') 0 0 / 128px 128px;
+  image-rendering: pixelated;
+  border: 3px solid #07080b;
+  box-shadow: inset 4px 4px 0 #f1e2bf, inset -4px -4px 0 #a88a58, 0 6px 0 rgba(0, 0, 0, 0.5);
+}
+.vx-parch .vx-h { color: #6b4a1c; text-shadow: none; }
+
+/* Pixel buttons */
+.vx-pbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px 11px;
+  font-family: var(--vx-font-display);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  border: 3px solid #07080b;
+  border-radius: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  color: #2a1806;
+  background: #e8b443;
+  box-shadow: inset 4px 4px 0 #ffe08a, inset -4px -5px 0 #a8711f, 0 4px 0 #07080b;
+}
+.vx-pbtn:hover:not(:disabled) { filter: brightness(1.1); }
+.vx-pbtn:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 4px 4px 0 #ffe08a, inset -4px -5px 0 #a8711f, 0 2px 0 #07080b; }
+.vx-pbtn:focus-visible { outline: 3px solid #ffe08a; outline-offset: 2px; }
+.vx-pbtn--stone {
+  color: #fff;
+  text-shadow: 2px 2px 0 #07080b;
+  background: #6f747d;
+  box-shadow: inset 4px 4px 0 #9ca1a9, inset -4px -5px 0 #44484f, 0 4px 0 #07080b;
+}
+.vx-pbtn--green {
+  color: #fff;
+  text-shadow: 2px 2px 0 #07080b;
+  background: #4f9a3a;
+  box-shadow: inset 4px 4px 0 #7fcb62, inset -4px -5px 0 #2f6b22, 0 4px 0 #07080b;
+}
+.vx-pbtn:disabled {
+  cursor: not-allowed;
+  color: #e9dfc6;
+  text-shadow: 2px 2px 0 #07080b;
+  background: #4b4f57;
+  box-shadow: inset 4px 4px 0 #6d717a, inset -4px -5px 0 #33363c, 0 4px 0 #07080b;
+}
+.vx-pbtn--block { width: 100%; }
+.vx-pbtn--sm { min-height: 32px; padding: 4px 10px 6px; font-size: 12px; }
+
+/* Stat row with dotted leader: "Attack ······ 18" */
+.vx-stat { display: flex; align-items: baseline; gap: 8px; font-size: 17px; line-height: 1.3; }
+.vx-stat__dots { flex: 1; min-width: 12px; border-bottom: 3px dotted currentColor; opacity: 0.35; }
+.vx-stat__label { color: inherit; opacity: 0.85; }
+
+/* Notched bar: <div class="vx-nbar" style="--c:…"><i style="width:70%"></i></div> */
+.vx-nbar { height: 16px; box-sizing: border-box; border: 3px solid #07080b; background: #2b1d10; }
+.vx-nbar > i {
+  display: block;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, var(--c, #e8b443) 0 10px, rgba(0, 0, 0, 0.35) 10px 12px);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Metal-plate tags */
+.vx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 5px;
+  font-family: var(--vx-font-display);
+  font-size: 12px;
+  white-space: nowrap;
+  border: 3px solid #07080b;
+  text-shadow: 2px 2px 0 #07080b;
+}
+.vx-tag--lock { background: #5a4314; color: #ffe08a; box-shadow: inset 0 3px 0 #8a6a24; }
+.vx-tag--ready { background: #24501a; color: #c4f2a6; box-shadow: inset 0 3px 0 #3d7a2c; }
+.vx-tag--need { background: #5a1c1c; color: #ffb3a8; box-shadow: inset 0 3px 0 #873030; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-pbtn:active:not(:disabled) { transform: none; }
+}
+
+/* Icons inside tabs, tags and buttons (mono UI art is cream; tags take the tag's ink) */
+.vx-tab img, .vx-pbtn img { width: 20px; height: 20px; flex: none; }
+.vx-tag img { width: 14px; height: 14px; flex: none; vertical-align: -2px; }
+.vx-tab, .vx-pbtn, .vx-tag { gap: 8px; }

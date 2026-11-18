@@ -1,0 +1,135 @@
+/* Bag (Inventory, Craft, Repair): layout on top of the voxel-ui.css kit */
+
+.bag {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(1140px, 100%);
+  height: min(680px, calc(100vh - 90px));
+  padding: 14px 20px;
+}
+
+.bag__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bag__tabs { display: flex; gap: 10px; }
+.bag__spacer { flex: 1; }
+.bag__close { padding: 6px 10px 8px; }
+.bag__body { flex: 1; min-height: 0; overflow: auto; }
+.bag__foot { display: flex; gap: 18px; align-items: center; font-size: 15px; color: var(--vx-cream-dim); }
+.bag__empty { margin: 0; font-size: 17px; color: var(--vx-cream-dim); }
+.bag__note { margin: 14px 0 0; font-size: 15px; color: #bfb293; }
+
+/* Phones: full screen, title inline, thinner frame */
+.bag-overlay:has(.bag--mobile) { padding: 0; }
+.bag--mobile { width: 100%; height: 100%; padding: 8px 10px; gap: 10px; }
+.bag--mobile .bag__title { position: static; transform: none; padding: 0; font-size: 20px; background: none; border: 0; box-shadow: none; }
+.bag--mobile .bag__head { flex-wrap: nowrap; }
+.bag--mobile .bag__tabs { flex: 1; }
+.bag--mobile .bag__tabs .vx-tab { flex: 1; min-height: 44px; padding: 4px 8px 6px; font-size: 12px; }
+.bag--mobile .bag__close { min-width: 44px; min-height: 44px; }
+
+/* ── Inventory ── */
+.inv { display: grid; grid-template-columns: 290px minmax(0, 1fr) 290px; gap: 24px; min-height: 100%; }
+.inv__col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.inv__doll { display: grid; grid-template-columns: 60px 1fr 60px; gap: 10px 14px; }
+.inv__doll-col { display: flex; flex-direction: column; gap: 10px; }
+.inv__niche {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 300px;
+  padding-bottom: 6px;
+  overflow: hidden;
+  background: #0b0c10;
+  border: 3px solid #07080b;
+  box-shadow: inset 6px 6px 0 rgba(0, 0, 0, 0.6), inset -3px -3px 0 rgba(255, 255, 255, 0.05);
+}
+.inv__niche img { width: 100%; max-width: 150px; height: auto; image-rendering: auto; }
+.inv__grid { display: grid; grid-template-columns: repeat(auto-fill, 60px); gap: 8px; }
+.inv__count { font-size: 16px; color: var(--vx-cream-dim); }
+.inv__row { display: flex; justify-content: space-between; align-items: baseline; }
+.inv__stats { display: flex; flex-direction: column; gap: 3px; }
+
+/* Detail card (parchment) shared by Inventory and Craft */
+.detail { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 18px; min-height: 0; overflow: auto; }
+.detail__top { display: flex; gap: 14px; align-items: center; }
+.detail__name { margin: 0; font-family: var(--vx-font-display); font-size: 18px; font-weight: 400; }
+.detail__sub { font-size: 16px; color: var(--vx-ink-dim); margin-top: 2px; text-transform: capitalize; }
+.detail__desc { margin: 0; font-size: 17px; line-height: 1.3; }
+.detail__rows { display: flex; flex-direction: column; gap: 2px; }
+.detail__fill { flex: 1; }
+.detail__actions { display: flex; flex-direction: column; gap: 10px; }
+.detail__empty { margin: auto 0; text-align: center; font-size: 17px; color: var(--vx-ink-dim); }
+.detail .vx-slot { --size: 88px; }
+.good { color: var(--vx-ink-good); }
+.bad { color: var(--vx-ink-bad); }
+
+/* ── Craft ── */
+.craft { display: grid; grid-template-columns: 150px minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr); gap: 24px; height: 100%; }
+.craft__cats { display: flex; flex-direction: column; gap: 10px; }
+.craft__cats .vx-tab { justify-content: flex-start; }
+.craft__list { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; overflow-y: auto; padding-right: 4px; }
+.craft__list > * { flex: none; }
+.recipe {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 6px 12px 6px 6px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  background: rgba(7, 8, 11, 0.55);
+  border: 3px solid #07080b;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.recipe:hover { background: rgba(7, 8, 11, 0.75); }
+.recipe.is-selected { border-color: #ffe08a; }
+.recipe .vx-slot { --size: 52px; }
+.recipe.is-locked .vx-slot img { filter: grayscale(0.9) brightness(0.6); }
+.recipe__text { flex: 1; min-width: 0; }
+.recipe__name { display: block; font-size: 18px; font-weight: 600; }
+.recipe__sub { font-size: 15px; color: #bfb293; }
+.craft__need .vx-slot { --size: 40px; }
+.craft__need .vx-stat { align-items: center; }
+.craft__need { gap: 6px; }
+.craft__quality { padding: 10px; text-align: center; border: 3px solid #07080b; font-size: 17px; }
+.craft__tiers { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; color: var(--vx-ink-dim); }
+
+/* ── Repair ── */
+.repair__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.repair__item { display: flex; gap: 12px; padding: 12px 14px 14px; }
+.repair__item.is-broken { box-shadow: inset 4px 4px 0 #f1e2bf, inset -4px -4px 0 #a88a58, 0 0 0 3px #9e2a22; }
+.repair__text { flex: 1; min-width: 0; }
+.repair__where { font-size: 15px; color: var(--vx-ink-dim); }
+
+/* Durability inside the kit */
+.tool-durability { margin-top: 6px; }
+.tool-durability__label { display: flex; justify-content: space-between; font-size: 15px; }
+.tool-durability .vx-nbar { margin-top: 3px; height: 14px; }
+.tool-durability .vx-pbtn { margin-top: 8px; }
+
+/* Narrower screens: stack */
+@media (max-width: 1100px) {
+  .inv { grid-template-columns: minmax(0, 1fr) 280px; }
+  .inv__gear { grid-column: 1 / -1; }
+  .craft { grid-template-columns: minmax(0, 1fr) 300px; }
+  .craft { grid-template-rows: auto minmax(0, 1fr); }
+  .craft__cats { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+}
+@media (max-width: 700px) {
+  .inv, .craft { grid-template-columns: minmax(0, 1fr); }
+  .craft { grid-template-rows: none; height: auto; min-height: 100%; }
+  .craft__list { overflow: visible; }
+  .detail { position: sticky; bottom: 0; max-height: 60vh; }
+}
+@media (max-height: 500px) {
+  .inv__niche { min-height: 200px; }
+  .craft__cats .vx-tab { min-height: 40px; padding: 4px 10px 6px; font-size: 12px; }
+  .craft__cats .vx-tab img { width: 16px; height: 16px; }
+  .craft__list .vx-h { display: none; }
+  .recipe { padding: 4px 8px 4px 4px; }
+  .recipe .vx-slot { --size: 44px; }
+  .detail { padding: 12px; gap: 8px; }
+}

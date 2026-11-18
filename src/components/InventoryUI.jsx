@@ -1,56 +1,96 @@
+/**
+ * InventoryUI — the Bag's Inventory tab: equipment around a portrait of your
+ * character, the item and material grids, and a parchment card for whatever
+ * is selected (equip, unequip, use, eat; stat changes; tool wear).
+ * Opened with I; the frame and tabs come from BagFrame.
+ */
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Package } from 'lucide-react';
 import useGameStore, { selectPlayerStats } from '../stores/useGameStore';
-import ToolDurability from './ui/ToolDurability';
-import BagTabs from './ui/BagTabs';
 import { useShallow } from 'zustand/react/shallow';
+import ToolDurability from './ui/ToolDurability';
+import BagFrame from './ui/BagFrame';
+import { artUrl, itemArt, materialArt, rarityClass, RARITY_INK } from './ui/art';
 import { ITEM_TYPES } from '../data/craftingRecipes';
-import {
-  compareStatsWithItem,
-  formatStatDifference,
-} from '../utils/EquipmentStatsIntegration';
+import { compareStatsWithItem, formatStatDifference } from '../utils/EquipmentStatsIntegration';
 import { FOOD_BERRY_RESTORE, FOOD_RAW_MEAT_RESTORE, FOOD_BERRY_HEAL, FOOD_RAW_MEAT_HEAL, FOOD_VEGETABLE_RESTORE, FOOD_VEGETABLE_HEAL } from '../data/tuning';
 
-/**
- * Material definitions - icons and display names for harvested materials
- */
-const MATERIAL_INFO = {
-  wood: { icon: '🪵', name: 'Wood', color: '#8B4513' },
-  stone: { icon: '🪨', name: 'Stone', color: '#808080' },
-  iron: { icon: '⚙️', name: 'Iron', color: '#C0C0C0' },
-  leather: { icon: '🦴', name: 'Leather', color: '#D2691E' },
-  crystal: { icon: '💎', name: 'Crystal', color: '#4FC3F7' },
-  fiber: { icon: '🌾', name: 'Fiber', color: '#F0E68C' },
-  herb: { icon: '🌿', name: 'Herbs', color: '#90EE90' },
-  meat: { icon: '🍖', name: 'Meat', color: '#DC143C' },
-  berry: { icon: '🫐', name: 'Berries', color: '#9370DB' },
-  vegetable: { icon: '🥕', name: 'Vegetables', color: '#FF8C00' },
-  seed: { icon: '🌱', name: 'Seeds', color: '#C8B560' },
-  mushroom: { icon: '🍄', name: 'Mushrooms', color: '#FF6347' },
+/** Display names for harvested materials */
+const MATERIAL_NAMES = {
+  wood: 'Wood', stone: 'Stone', iron: 'Iron', coal: 'Coal', gold_ore: 'Gold Ore', crystal: 'Crystal',
+  clay: 'Clay', sand: 'Sand', dirt: 'Dirt', snow: 'Snow', ice: 'Ice', leather: 'Leather', bone: 'Bone',
+  fiber: 'Fiber', herb: 'Herbs', meat: 'Meat', berry: 'Berries', vegetable: 'Vegetables', seed: 'Seeds', mushroom: 'Mushrooms',
 };
+const materialName = (key) => MATERIAL_NAMES[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
 
 /** Materials the player can eat directly from inventory */
 const EDIBLE_MATERIALS = {
   berry: { restore: FOOD_BERRY_RESTORE, heal: FOOD_BERRY_HEAL, label: 'Eat' },
   vegetable: { restore: FOOD_VEGETABLE_RESTORE, heal: FOOD_VEGETABLE_HEAL, label: 'Eat' },
-  meat: { restore: FOOD_RAW_MEAT_RESTORE, heal: FOOD_RAW_MEAT_HEAL, label: 'Eat Raw' },
+  meat: { restore: FOOD_RAW_MEAT_RESTORE, heal: FOOD_RAW_MEAT_HEAL, label: 'Eat raw' },
 };
 
-/**
- * InventoryUI component - Inventory and equipment management
- * Mobile-compatible with responsive layout
- */
+const SLOT_FOR_TYPE = {
+  [ITEM_TYPES.WEAPON]: 'weapon',
+  [ITEM_TYPES.TOOL]: 'weapon',
+  [ITEM_TYPES.ARMOR]: 'armor',
+  [ITEM_TYPES.HELMET]: 'helmet',
+  [ITEM_TYPES.GLOVES]: 'gloves',
+  [ITEM_TYPES.BOOTS]: 'boots',
+  [ITEM_TYPES.AMULET]: 'amulet',
+  [ITEM_TYPES.OFFHAND]: 'offhand',
+};
+
+// Equipment around the portrait; the faded icon shows what goes where
+const LEFT_SLOTS = [
+  { slot: 'helmet', name: 'Helmet', ghost: ['items', 'ironHelmet'] },
+  { slot: 'armor', name: 'Armor', ghost: ['items', 'ironArmor'] },
+  { slot: 'gloves', name: 'Gloves', ghost: ['ui', 'gloves'] },
+  { slot: 'boots', name: 'Boots', ghost: ['ui', 'boots'] },
+  { slot: 'amulet', name: 'Amulet', ghost: ['ui', 'ring'] },
+];
+const RIGHT_SLOTS = [
+  { slot: 'weapon', name: 'Weapon', ghost: ['items', 'ironSword'] },
+  { slot: 'offhand', name: 'Off-hand', ghost: ['items', 'woodenShield'] },
+  { slot: 'ring1', name: 'Ring', ghost: ['items', 'ironRing'] },
+  { slot: 'ring2', name: 'Ring', ghost: ['items', 'ironRing'] },
+];
+const MIN_ITEM_SLOTS = 24;
+
+const titleCase = (stat) => stat.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
+const fmt = (v) => (typeof v === 'number' ? +v.toFixed(1) : v);
+
+/** An item's picture: generated art, else its emoji. */
+function ItemPicture({ item }) {
+  const url = itemArt(item);
+  return url ? <img src={url} alt="" /> : <span className="vx-slot__emoji" aria-hidden="true">{item.icon}</span>;
+}
+
+function EquipSlot({ def, item, selected, onSelect }) {
+  if (!item) {
+    return (
+      <div className="vx-slot is-ghost" title={`${def.name}: empty`} aria-label={`${def.name}: empty`} role="img">
+        <img src={artUrl(...def.ghost)} alt="" />
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className={`vx-slot ${rarityClass(item)}${selected ? ' is-selected' : ''}`}
+      aria-label={`${def.name}: ${item.name}`}
+      title={item.name}
+      onClick={() => onSelect({ kind: 'equipped', slot: def.slot, item })}
+    >
+      <ItemPicture item={item} />
+    </button>
+  );
+}
+
 const InventoryUI = () => {
   // Open state lives in the store: one panel at a time, Esc handled centrally
   const isOpen = useGameStore((state) => state.openPanel === 'inventory');
-  const setIsOpen = (open) => {
-    const store = useGameStore.getState();
-    if (typeof open === 'function') open = open(isOpen);
-    if (open !== isOpen) store.togglePanel('inventory');
-  };
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const [mobileView, setMobileView] = useState('equipment'); // 'equipment' | 'items' | 'materials' | 'details'
+  const [selection, setSelection] = useState(null); // { kind: 'item'|'equipped'|'material', ... }
 
   const inventory = useGameStore((state) => state.inventory);
   const equipment = useGameStore((state) => state.equipment);
@@ -63,704 +103,275 @@ const InventoryUI = () => {
   const player = useGameStore(useShallow(selectPlayerStats));
   const hunger = useGameStore((state) => state.hunger);
 
-  // Get harvested materials
   const materials = inventory.materials || {};
+  const selectedItem = selection?.kind === 'item' || selection?.kind === 'equipped' ? selection.item : null;
 
-  /**
-   * Get the equipment slot for an item type
-   * @param {object} item - The item to check
-   * @returns {string|null} The slot name or null if not equippable
-   */
   const getSlotForItem = useCallback((item) => {
-    const slotMap = {
-      [ITEM_TYPES.WEAPON]: 'weapon',
-      [ITEM_TYPES.TOOL]: 'weapon',
-      [ITEM_TYPES.ARMOR]: 'armor',
-      [ITEM_TYPES.HELMET]: 'helmet',
-      [ITEM_TYPES.GLOVES]: 'gloves',
-      [ITEM_TYPES.BOOTS]: 'boots',
-      [ITEM_TYPES.RING]: equipment.ring1 ? 'ring2' : 'ring1',
-      [ITEM_TYPES.AMULET]: 'amulet',
-      [ITEM_TYPES.OFFHAND]: 'offhand',
-    };
-    return slotMap[item.type] || null;
+    if (item.type === ITEM_TYPES.RING) return equipment.ring1 ? 'ring2' : 'ring1';
+    return SLOT_FOR_TYPE[item.type] || null;
   }, [equipment.ring1]);
 
-  /**
-   * Calculate stat comparison when an equippable item is selected
-   * Shows how player stats would change if the item is equipped
-   */
+  // How player stats would change if the selected bag item were equipped
   const statComparison = useMemo(() => {
-    if (!selectedItem || selectedItem.type === ITEM_TYPES.CONSUMABLE) {
-      return null;
-    }
-
+    if (selection?.kind !== 'item' || selectedItem.type === ITEM_TYPES.CONSUMABLE) return null;
     const slot = getSlotForItem(selectedItem);
     if (!slot) return null;
-
     try {
-      return compareStatsWithItem(
-        equipment,
-        slot,
-        selectedItem,
-        character,
-        player
-      );
+      return compareStatsWithItem(equipment, slot, selectedItem, character, player);
     } catch (error) {
       console.warn('[InventoryUI] Failed to calculate stat comparison:', error);
       return null;
     }
-  }, [selectedItem, equipment, character, player, getSlotForItem]);
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [selection, selectedItem, equipment, character, player, getSlotForItem]);
 
   useEffect(() => {
     const handleKeyPress = (e) => {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.key === 'i' || e.key === 'I') {
-        useGameStore.getState().togglePanel('inventory');
-      }
+      if (e.key === 'i' || e.key === 'I') useGameStore.getState().togglePanel('inventory');
     };
-
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isOpen]);
+  }, []);
+
+  // Drop a selection that no longer exists (equipped, eaten, used up)
+  useEffect(() => {
+    if (!selection) return;
+    if (selection.kind === 'item' && !inventory.items.includes(selection.item)) setSelection(null);
+    if (selection.kind === 'equipped' && equipment[selection.slot] !== selection.item) setSelection(null);
+    if (selection.kind === 'material' && !(materials[selection.key] > 0)) setSelection(null);
+  }, [selection, inventory.items, equipment, materials]);
 
   if (!isOpen) return null;
 
   const handleEquipItem = (item) => {
-    const slotMap = {
-      [ITEM_TYPES.WEAPON]: 'weapon',
-      [ITEM_TYPES.TOOL]: 'weapon',
-      [ITEM_TYPES.ARMOR]: 'armor',
-      [ITEM_TYPES.HELMET]: 'helmet',
-      [ITEM_TYPES.GLOVES]: 'gloves',
-      [ITEM_TYPES.BOOTS]: 'boots',
-      [ITEM_TYPES.RING]: equipment.ring1 ? 'ring2' : 'ring1',
-      [ITEM_TYPES.AMULET]: 'amulet',
-      [ITEM_TYPES.OFFHAND]: 'offhand',
-    };
-
-    const slot = slotMap[item.type];
-    if (slot) {
-      // If there's already an item in this slot, put it back in inventory
-      const currentlyEquipped = equipment[slot];
-      if (currentlyEquipped) {
-        useGameStore.getState().addItem(currentlyEquipped);
-      }
-      // Remove from inventory and equip with stat recalculation
-      removeItem(item.craftedAt);
-      equipItemWithStats(slot, item);
-    }
+    const slot = getSlotForItem(item);
+    if (!slot) return;
+    // Whatever is in the slot goes back into the bag
+    const currentlyEquipped = equipment[slot];
+    if (currentlyEquipped) useGameStore.getState().addItem(currentlyEquipped);
+    removeItem(item.craftedAt ?? item.id);
+    equipItemWithStats(slot, item);
+    setSelection({ kind: 'equipped', slot, item });
   };
 
   const handleUnequipItem = (slot, item) => {
-    if (item) {
-      unequipItemWithStats(slot);
-      useGameStore.getState().addItem(item);
-    }
+    unequipItemWithStats(slot);
+    useGameStore.getState().addItem(item);
+    setSelection({ kind: 'item', item });
   };
 
   const handleUseConsumable = (item) => {
     consumeItem(item);
-    setSelectedItem(null);
+    setSelection(null);
   };
 
-  // Mobile navigation helpers
-  const handleSelectItem = (item) => {
-    setSelectedItem(item);
-    if (isMobile) {
-      setMobileView('details');
-    }
-  };
-
-  const handleMobileBack = () => {
-    if (mobileView === 'details') {
-      setMobileView('items');
-      setSelectedItem(null);
-    } else if (mobileView === 'items' || mobileView === 'materials') {
-      setMobileView('equipment');
-    }
-  };
-
-  const equipmentSlots = [
-    { slot: 'weapon', name: 'Weapon', icon: '⚔️' },
-    { slot: 'offhand', name: 'Off-Hand', icon: '🛡️' },
-    { slot: 'helmet', name: 'Helmet', icon: '⛑️' },
-    { slot: 'armor', name: 'Armor', icon: '🛡️' },
-    { slot: 'gloves', name: 'Gloves', icon: '🧤' },
-    { slot: 'boots', name: 'Boots', icon: '👢' },
-    { slot: 'ring1', name: 'Ring 1', icon: '💍' },
-    { slot: 'ring2', name: 'Ring 2', icon: '💍' },
-    { slot: 'amulet', name: 'Amulet', icon: '📿' },
-  ];
+  const ownedMaterials = Object.entries(materials).filter(([, amount]) => amount > 0);
+  const emptySlots = Math.max(0, MIN_ITEM_SLOTS - inventory.items.length);
+  const isSelected = (item) => selectedItem === item;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'rgba(0, 0, 0, 0.85)',
-        zIndex: 2000,
-        display: 'flex',
-        alignItems: isMobile ? 'stretch' : 'center',
-        justifyContent: 'center',
-        padding: isMobile ? '0' : '20px',
-      }}
-      onClick={(e) => {
-        if (!isMobile && e.target === e.currentTarget) setIsOpen(false);
-      }}
+    <BagFrame
+      active="inventory"
+      label="Inventory"
+      footer={(
+        <>
+          <span><kbd className="vx-key">I</kbd> or <kbd className="vx-key">Esc</kbd> close</span>
+          <span>Double-click an item to equip or use it</span>
+        </>
+      )}
     >
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-          borderRadius: isMobile ? '0' : '20px',
-          maxWidth: isMobile ? '100%' : '1200px',
-          width: '100%',
-          maxHeight: isMobile ? '100%' : '90vh',
-          height: isMobile ? '100%' : 'auto',
-          overflow: 'hidden',
-          border: isMobile ? 'none' : '2px solid #4a5568',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: isMobile ? '15px 20px' : '20px 30px',
-            borderBottom: '2px solid #4a5568',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'linear-gradient(90deg, #2d3748, #1a202c)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '15px' }}>
-            {isMobile && mobileView !== 'equipment' && (
-              <button
-                onClick={handleMobileBack}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  fontSize: '1.2rem',
-                  minWidth: '44px',
-                  minHeight: '44px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  touchAction: 'manipulation',
-                }}
-              >
-                ←
-              </button>
-            )}
-            <Package size={isMobile ? 24 : 32} color="#4dabf7" />
-            <h2 style={{ margin: 0, color: '#4dabf7', fontSize: isMobile ? '1.3rem' : '2rem' }}>
-              {isMobile ? (
-                mobileView === 'equipment' ? 'Equipment' :
-                mobileView === 'items' ? 'Items' :
-                mobileView === 'materials' ? 'Materials' :
-                'Details'
-              ) : 'Inventory'}
-            </h2>
+      <div className="inv">
+        {/* Equipment around your character */}
+        <div className="inv__col inv__gear">
+          <h3 className="vx-h">Equipment</h3>
+          <div className="inv__doll">
+            <div className="inv__doll-col">
+              {LEFT_SLOTS.map((def) => (
+                <EquipSlot key={def.slot} def={def} item={equipment[def.slot]} selected={isSelected(equipment[def.slot])} onSelect={setSelection} />
+              ))}
+            </div>
+            <div className="inv__niche">
+              <img src={artUrl('portraits', 'player')} alt="Your character" />
+            </div>
+            <div className="inv__doll-col">
+              {RIGHT_SLOTS.map((def) => (
+                <EquipSlot key={def.slot} def={def} item={equipment[def.slot]} selected={isSelected(equipment[def.slot])} onSelect={setSelection} />
+              ))}
+            </div>
           </div>
-          <button
-            onClick={() => setIsOpen(false)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '8px',
-              minWidth: '44px',
-              minHeight: '44px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              touchAction: 'manipulation',
-            }}
-          >
-            <X size={isMobile ? 20 : 24} color="#fff" />
-          </button>
+          <h3 className="vx-h" style={{ marginTop: 4 }}>Stats</h3>
+          <div className="inv__stats">
+            <div className="vx-stat"><span className="vx-stat__label">Damage</span><span className="vx-stat__dots" /><strong>{fmt(player.damage ?? 0)}</strong></div>
+            <div className="vx-stat"><span className="vx-stat__label">Defense</span><span className="vx-stat__dots" /><strong>{fmt(player.defense ?? 0)}</strong></div>
+            <div className="vx-stat"><span className="vx-stat__label">Crit chance</span><span className="vx-stat__dots" /><strong>{fmt(player.critChance ?? 0)}%</strong></div>
+            <div className="vx-stat"><span className="vx-stat__label">Speed</span><span className="vx-stat__dots" /><strong>{fmt(player.speed ?? 0)}</strong></div>
+          </div>
         </div>
 
-        <BagTabs active="inventory" isMobile={isMobile} />
-
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* Equipment Panel */}
-          {(!isMobile || mobileView === 'equipment') && (
-          <div
-            style={{
-              width: isMobile ? '100%' : '350px',
-              borderRight: isMobile ? 'none' : '2px solid #4a5568',
-              padding: isMobile ? '15px' : '20px',
-              background: '#1a202c',
-              overflowY: 'auto',
-            }}
-          >
-            <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '15px', fontSize: isMobile ? '1.1rem' : '1rem' }}>Equipment</h3>
-            {isMobile && (
-              <>
-                <button
-                  onClick={() => setMobileView('items')}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    marginBottom: '10px',
-                    background: 'linear-gradient(90deg, #4dabf7, #339af0)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    minHeight: '50px',
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  View Items ({inventory.items.length})
-                </button>
-                <button
-                  onClick={() => setMobileView('materials')}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    marginBottom: '15px',
-                    background: 'linear-gradient(90deg, #8B4513, #A0522D)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    minHeight: '50px',
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  View Materials ({Object.values(materials).reduce((sum, amt) => sum + amt, 0)})
-                </button>
-              </>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
-              {equipmentSlots.map(({ slot, name, icon }) => {
-                const equippedItem = equipment[slot];
-                return (
-                  <div
-                    key={slot}
-                    style={{
-                      background: equippedItem ? '#2d3748' : '#1a202c',
-                      border: equippedItem ? `2px solid ${equippedItem.rarity?.color || '#4a5568'}` : '2px dashed #4a5568',
-                      borderRadius: '8px',
-                      padding: isMobile ? '14px' : '12px',
-                      minHeight: isMobile ? '70px' : '60px',
-                      cursor: equippedItem ? 'pointer' : 'default',
-                      transition: 'all 0.2s',
-                      touchAction: equippedItem ? 'manipulation' : 'auto',
-                    }}
-                    onClick={() => equippedItem && handleSelectItem(equippedItem)}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: isMobile ? '1.8rem' : '1.5rem' }}>{equippedItem?.icon || icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: '#a0aec0', fontSize: isMobile ? '0.95rem' : '0.85rem' }}>{name}</div>
-                        {equippedItem ? (
-                          <>
-                            <div
-                              style={{
-                                color: equippedItem.rarity?.color || '#fff',
-                                fontWeight: 'bold',
-                                fontSize: isMobile ? '1.05rem' : '0.95rem',
-                              }}
-                            >
-                              {equippedItem.name}
-                            </div>
-                            <ToolDurability item={equippedItem} target={{ slot }} />
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUnequipItem(slot, equippedItem);
-                              }}
-                              style={{
-                                marginTop: '4px',
-                                padding: isMobile ? '8px 12px' : '4px 8px',
-                                fontSize: isMobile ? '0.9rem' : '0.75rem',
-                                background: '#4a5568',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                minHeight: isMobile ? '36px' : 'auto',
-                                touchAction: 'manipulation',
-                              }}
-                            >
-                              Unequip
-                            </button>
-                          </>
-                        ) : (
-                          <div style={{ color: '#4a5568', fontSize: isMobile ? '0.95rem' : '0.85rem' }}>Empty</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Items and materials */}
+        <div className="inv__col">
+          <div className="inv__row">
+            <h3 className="vx-h">Items</h3>
+            <span className="inv__count">{inventory.items.length} items</span>
           </div>
-          )}
-
-          {/* Inventory Items */}
-          {(!isMobile || mobileView === 'items') && (
-          <div
-            style={{
-              flex: 1,
-              width: isMobile ? '100%' : 'auto',
-              padding: isMobile ? '15px' : '20px',
-              overflowY: 'auto',
-              background: '#2d3748',
-            }}
-          >
-            <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '15px', fontSize: isMobile ? '1.1rem' : '1rem' }}>
-              Items ({inventory.items.length})
-            </h3>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile
-                ? 'repeat(auto-fill, minmax(150px, 1fr))'
-                : 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: isMobile ? '12px' : '15px'
-            }}>
-              {inventory.items.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#a0aec0', padding: isMobile ? '30px 20px' : '40px' }}>
-                  No items in inventory. Craft some items at the Crafting Station!
-                </div>
-              ) : (
-                inventory.items.map((item, index) => (
-                  <div
-                    key={item.craftedAt || index}
-                    style={{
-                      background: '#1a202c',
-                      border: `2px solid ${item.rarity?.color || '#4a5568'}`,
-                      borderRadius: '10px',
-                      padding: isMobile ? '12px' : '15px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      minHeight: isMobile ? '180px' : 'auto',
-                      touchAction: 'manipulation',
-                    }}
-                    onClick={() => handleSelectItem(item)}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = `0 4px 15px ${item.rarity?.color || '#4a5568'}40`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '2.5rem' }}>{item.icon}</span>
-                    </div>
-                    <div
-                      style={{
-                        color: item.rarity?.color || '#fff',
-                        fontWeight: 'bold',
-                        fontSize: isMobile ? '0.95rem' : '1rem',
-                        textAlign: 'center',
-                        marginBottom: '5px',
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    <div style={{ color: '#a0aec0', fontSize: isMobile ? '0.8rem' : '0.85rem', textAlign: 'center', marginBottom: '10px' }}>
-                      {item.rarity?.name}
-                    </div>
-                    <ToolDurability item={item} target={{ index }} />
-                    {item.type === ITEM_TYPES.CONSUMABLE ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUseConsumable(item);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: isMobile ? '12px' : '8px',
-                          minHeight: isMobile ? '44px' : 'auto',
-                          background: 'linear-gradient(90deg, #51cf66, #37b24d)',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: 'bold',
-                          fontSize: isMobile ? '0.95rem' : '1rem',
-                          touchAction: 'manipulation',
-                        }}
-                      >
-                        Use
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEquipItem(item);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: isMobile ? '12px' : '8px',
-                          minHeight: isMobile ? '44px' : 'auto',
-                          background: 'linear-gradient(90deg, #4dabf7, #339af0)',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: 'bold',
-                          fontSize: isMobile ? '0.95rem' : '1rem',
-                          touchAction: 'manipulation',
-                        }}
-                      >
-                        Equip
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          )}
-
-          {/* Materials Panel (Phase 3A: Harvested Materials) */}
-          {(!isMobile || mobileView === 'materials') && (
-          <div
-            style={{
-              width: isMobile ? '100%' : '300px',
-              borderLeft: isMobile ? 'none' : '2px solid #4a5568',
-              padding: isMobile ? '15px' : '20px',
-              background: '#1a202c',
-              overflowY: 'auto',
-            }}
-          >
-            <h3 style={{ color: '#fff', marginTop: 0, marginBottom: '15px', fontSize: isMobile ? '1.1rem' : '1rem' }}>
-              Materials
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
-              {Object.entries(materials).length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#a0aec0', padding: '20px' }}>
-                  No materials collected. Harvest trees, rocks, and other props to gather materials!
-                </div>
-              ) : (
-                Object.entries(materials)
-                  .filter(([_, amount]) => amount > 0) // Only show materials with quantity > 0
-                  .map(([materialType, amount]) => {
-                    const materialInfo = MATERIAL_INFO[materialType] || {
-                      icon: '📦',
-                      name: materialType.charAt(0).toUpperCase() + materialType.slice(1),
-                      color: '#4a5568'
-                    };
-
-                    const edible = EDIBLE_MATERIALS[materialType];
-                    const hungerFull = hunger.current >= hunger.max;
-
-                    return (
-                      <div
-                        key={materialType}
-                        style={{
-                          background: '#2d3748',
-                          border: `2px solid ${materialInfo.color}`,
-                          borderRadius: '8px',
-                          padding: isMobile ? '14px' : '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          minHeight: isMobile ? '70px' : '60px',
-                        }}
-                      >
-                        <span style={{ fontSize: isMobile ? '2rem' : '1.8rem' }}>{materialInfo.icon}</span>
-                        <div style={{ flex: 1 }}>
-                          <div
-                            style={{
-                              color: materialInfo.color,
-                              fontWeight: 'bold',
-                              fontSize: isMobile ? '1.05rem' : '0.95rem',
-                              marginBottom: '2px',
-                            }}
-                          >
-                            {materialInfo.name}
-                          </div>
-                          <div style={{ color: '#a0aec0', fontSize: isMobile ? '0.9rem' : '0.85rem' }}>
-                            Quantity: <span style={{ color: '#51cf66', fontWeight: 'bold' }}>{amount}</span>
-                          </div>
-                        </div>
-                        {edible && (
-                          <button
-                            onClick={() => eatMaterial(materialType, edible.restore, edible.heal)}
-                            disabled={hungerFull}
-                            title={hungerFull ? 'Not hungry' : `+${edible.restore} hunger, +${edible.heal} HP`}
-                            style={{
-                              padding: isMobile ? '8px 14px' : '6px 12px',
-                              borderRadius: '6px',
-                              border: 'none',
-                              background: hungerFull ? '#4a5568' : '#51cf66',
-                              color: hungerFull ? '#a0aec0' : '#1a202c',
-                              fontWeight: 'bold',
-                              fontSize: isMobile ? '0.9rem' : '0.8rem',
-                              cursor: hungerFull ? 'default' : 'pointer',
-                              whiteSpace: 'nowrap',
-                              opacity: hungerFull ? 0.5 : 1,
-                              touchAction: 'manipulation',
-                            }}
-                          >
-                            {edible.label} (+{edible.heal}HP)
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-              )}
-            </div>
-          </div>
-          )}
-
-          {/* Item Details Sidebar */}
-          {selectedItem && (
-            <div
-              style={{
-                width: '300px',
-                borderLeft: '2px solid #4a5568',
-                padding: '20px',
-                background: '#1a202c',
-                overflowY: 'auto',
-              }}
-            >
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <span style={{ fontSize: '4rem' }}>{selectedItem.icon}</span>
-              </div>
-              <h3
-                style={{
-                  color: selectedItem.rarity?.color || '#fff',
-                  textAlign: 'center',
-                  marginBottom: '10px',
-                }}
-              >
-                {selectedItem.name}
-              </h3>
-              <div style={{ color: '#a0aec0', textAlign: 'center', marginBottom: '15px' }}>
-                {selectedItem.rarity?.name} {selectedItem.type}
-              </div>
-              <p style={{ color: '#cbd5e0', marginBottom: '20px' }}>{selectedItem.description}</p>
-
-              {/* Stat Comparison Display */}
-              {statComparison && Object.keys(statComparison).length > 0 && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#ffd700', marginBottom: '10px' }}>Stat Changes</h4>
-                  {Object.entries(statComparison).map(([stat, diff]) => {
-                    const formatted = formatStatDifference(stat, diff);
-                    return (
-                      <div
-                        key={stat}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '8px 10px',
-                          marginBottom: '4px',
-                          borderRadius: '4px',
-                          background: diff.isPositive
-                            ? 'rgba(81, 207, 102, 0.15)'
-                            : 'rgba(255, 107, 107, 0.15)',
-                          border: `1px solid ${diff.isPositive ? 'rgba(81, 207, 102, 0.3)' : 'rgba(255, 107, 107, 0.3)'}`,
-                        }}
-                      >
-                        <span style={{ color: '#fff', textTransform: 'capitalize' }}>
-                          {stat.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ color: '#a0aec0', fontSize: '0.9rem' }}>
-                            {typeof diff.current === 'number' ? diff.current.toFixed(1) : diff.current}
-                          </span>
-                          <span style={{ color: formatted.color, fontSize: '1rem' }}>
-                            {diff.isPositive ? '→' : '→'}
-                          </span>
-                          <span style={{ color: formatted.color, fontWeight: 'bold' }}>
-                            {typeof diff.new === 'number' ? diff.new.toFixed(1) : diff.new}
-                          </span>
-                          <span
-                            style={{
-                              color: formatted.color,
-                              fontSize: '0.85rem',
-                              fontWeight: 'bold',
-                              marginLeft: '4px',
-                            }}
-                          >
-                            ({formatted.text})
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Basic Stats Display (fallback for items without stat comparison) */}
-              {selectedItem.stats && (!statComparison || Object.keys(statComparison).length === 0) && (
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ color: '#ffd700', marginBottom: '10px' }}>Stats</h4>
-                  {Object.entries(selectedItem.stats).map(([stat, value]) => (
-                    <div
-                      key={stat}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '6px 0',
-                        borderBottom: '1px solid #4a5568',
-                        color: '#fff',
-                      }}
-                    >
-                      <span style={{ textTransform: 'capitalize' }}>
-                        {stat.replace(/([A-Z])/g, ' $1').trim()}
-                      </span>
-                      <span style={{ color: '#51cf66', fontWeight: 'bold' }}>+{value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
+          <div className="inv__grid">
+            {inventory.items.map((item, index) => (
               <button
-                onClick={() => setSelectedItem(null)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  background: '#4a5568',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
+                key={item.craftedAt || index}
+                type="button"
+                className={`vx-slot ${rarityClass(item)}${isSelected(item) ? ' is-selected' : ''}`}
+                aria-label={item.name}
+                title={item.name}
+                onClick={() => setSelection({ kind: 'item', item })}
+                onDoubleClick={() => (item.type === ITEM_TYPES.CONSUMABLE ? handleUseConsumable(item) : handleEquipItem(item))}
               >
-                Close
+                <ItemPicture item={item} />
               </button>
+            ))}
+            {Array.from({ length: emptySlots }, (_, i) => (
+              <div key={`empty${i}`} className="vx-slot" aria-hidden="true" />
+            ))}
+          </div>
+          {inventory.items.length === 0 && (
+            <p className="bag__empty">No items yet. Craft some in the Craft tab.</p>
+          )}
+
+          <h3 className="vx-h" style={{ marginTop: 8 }}>Materials</h3>
+          {ownedMaterials.length === 0 ? (
+            <p className="bag__empty">No materials yet. Mine blocks and fell trees to gather them.</p>
+          ) : (
+            <div className="inv__grid">
+              {ownedMaterials.map(([key, amount]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`vx-slot${selection?.kind === 'material' && selection.key === key ? ' is-selected' : ''}`}
+                  aria-label={`${materialName(key)}, ${amount}`}
+                  title={materialName(key)}
+                  onClick={() => setSelection({ kind: 'material', key })}
+                >
+                  {materialArt(key) ? <img src={materialArt(key)} alt="" /> : <span className="vx-slot__emoji">?</span>}
+                  <span className="vx-slot__qty">{amount}</span>
+                </button>
+              ))}
             </div>
           )}
         </div>
+
+        {/* Selected thing */}
+        <aside className="vx-parch detail" aria-label="Selected">
+          {selectedItem ? (
+            <ItemDetail
+              item={selectedItem}
+              equippedSlot={selection.kind === 'equipped' ? selection.slot : null}
+              index={inventory.items.indexOf(selectedItem)}
+              statComparison={statComparison}
+              onEquip={handleEquipItem}
+              onUnequip={handleUnequipItem}
+              onUse={handleUseConsumable}
+            />
+          ) : selection?.kind === 'material' ? (
+            <MaterialDetail
+              materialKey={selection.key}
+              amount={materials[selection.key] || 0}
+              hungerFull={hunger.current >= hunger.max}
+              onEat={eatMaterial}
+            />
+          ) : (
+            <p className="detail__empty">Select an item or material to see it here.</p>
+          )}
+        </aside>
       </div>
-    </div>
+    </BagFrame>
   );
 };
+
+function ItemDetail({ item, equippedSlot, index, statComparison, onEquip, onUnequip, onUse }) {
+  const consumable = item.type === ITEM_TYPES.CONSUMABLE;
+  const comparing = statComparison && Object.keys(statComparison).length > 0;
+  return (
+    <>
+      <div className="detail__top">
+        <div className={`vx-slot ${rarityClass(item)}`}><ItemPicture item={item} /></div>
+        <div>
+          <h3 className="detail__name" style={{ color: RARITY_INK[item.rarity?.name] || 'var(--vx-ink)' }}>{item.name}</h3>
+          <div className="detail__sub">{[item.rarity?.name, item.type].filter(Boolean).join(' ')}{item.quality ? ` · ${item.quality}` : ''}</div>
+        </div>
+      </div>
+      {item.description && <p className="detail__desc">{item.description}</p>}
+
+      {comparing ? (
+        <div className="detail__rows">
+          <h4 className="vx-h">If equipped</h4>
+          {Object.entries(statComparison).map(([stat, diff]) => {
+            const formatted = formatStatDifference(stat, diff);
+            return (
+              <div key={stat} className="vx-stat">
+                <span>{titleCase(stat)}</span>
+                <span className="vx-stat__dots" />
+                <span>{fmt(diff.current)} → <strong className={diff.isPositive ? 'good' : 'bad'}>{fmt(diff.new)}</strong> ({formatted.text})</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : item.stats && (
+        <div className="detail__rows">
+          {Object.entries(item.stats).map(([stat, value]) => (
+            <div key={stat} className="vx-stat">
+              <span>{titleCase(stat)}</span>
+              <span className="vx-stat__dots" />
+              <strong className="good">+{fmt(value)}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ToolDurability item={item} target={equippedSlot ? { slot: equippedSlot } : { index }} />
+      <div className="detail__fill" />
+      <div className="detail__actions">
+        {equippedSlot ? (
+          <button type="button" className="vx-pbtn vx-pbtn--stone vx-pbtn--block" onClick={() => onUnequip(equippedSlot, item)}>Unequip</button>
+        ) : consumable ? (
+          <button type="button" className="vx-pbtn vx-pbtn--green vx-pbtn--block" onClick={() => onUse(item)}>Use</button>
+        ) : (
+          <button type="button" className="vx-pbtn vx-pbtn--block" onClick={() => onEquip(item)}>Equip</button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function MaterialDetail({ materialKey, amount, hungerFull, onEat }) {
+  const edible = EDIBLE_MATERIALS[materialKey];
+  const url = materialArt(materialKey);
+  return (
+    <>
+      <div className="detail__top">
+        <div className="vx-slot">{url && <img src={url} alt="" />}</div>
+        <div>
+          <h3 className="detail__name">{materialName(materialKey)}</h3>
+          <div className="detail__sub">Material</div>
+        </div>
+      </div>
+      <div className="vx-stat"><span>In your bag</span><span className="vx-stat__dots" /><strong>{amount}</strong></div>
+      {edible && (
+        <div className="vx-stat"><span>Eating restores</span><span className="vx-stat__dots" /><strong className="good">+{edible.restore} food, +{edible.heal} HP</strong></div>
+      )}
+      <div className="detail__fill" />
+      {edible && (
+        <button
+          type="button"
+          className="vx-pbtn vx-pbtn--green vx-pbtn--block"
+          disabled={hungerFull}
+          title={hungerFull ? 'Not hungry' : undefined}
+          onClick={() => onEat(materialKey, edible.restore, edible.heal)}
+        >
+          {hungerFull ? 'Not hungry' : `${edible.label} (+${edible.heal} HP)`}
+        </button>
+      )}
+    </>
+  );
+}
 
 export default InventoryUI;
