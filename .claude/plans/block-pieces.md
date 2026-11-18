@@ -167,6 +167,17 @@ one plank; 8 = two). The rest is lost as rubble or splinters.
      a Stone House; all 56 cells (16 slabs, 4 plank cells) match the blueprint in the world.
 5. **Polish.**
    - Changes: 3D loot pieces, piece icons, sub-cube ambient occlusion, tuning pass.
+   - Built: loot on the ground has a model per material (`pickups/pickupModels.jsx`
+     `LootModel`): slabs, planks and cubes as pieces; wood a log; iron, gold and coal ore
+     chunks; crystal shards; bone; berries and seeds; leather and fiber bundles. Mining or
+     harvesting pops a small model of the drop out of the block and flies it to the player
+     (`MinedPops`, visual only). Chunks holding pieces shade corners on the half-block grid
+     (`unitAO` in the worker), so pieces and the blocks beside them darken where they meet.
+     Tuning: a settler builds a slab or plank cell in half a block's time
+     (`buildingInfo.nextCellWork`), and the ETA counts it. Piece icons were already done in
+     phase 1.
+   - Checked: unit tests for AO (a slab against a wall darkens at the wall, one in the open
+     doesn't) and per-cell build time; in the browser, every loot model and the pops.
 
 Each phase is its own branch, playable on its own, merged only with the user's go-ahead.
 

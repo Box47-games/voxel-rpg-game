@@ -5,6 +5,7 @@
  */
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
+import { pieceInfo, baseMaterial } from '../../../data/pieces';
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const shadowGeo = new THREE.PlaneGeometry(1, 1);
@@ -70,3 +71,123 @@ export const XPShard = () => (
     <Cube size={[0.14, 0.14, 0.14]} rotation={[Math.PI / 4, 0, Math.PI / 4]} position={[0, 0, 0]} color="#fff6c8" glow={1} />
   </group>
 );
+
+// Colour of each material's loot (pieces use their block's)
+const MATERIAL_COLORS = {
+  wood: '#8a5a32', stone: '#8d8d8d', dirt: '#7a5233', iron: '#b9a08a', coal: '#3a3a3e',
+  gold_ore: '#e0b94a', crystal: '#9b5de5', leather: '#a0673a', bone: '#e8e1cf',
+  fiber: '#9bbf5a', berry: '#c8283c', meat: '#c4524a', sand: '#dccb8e', clay: '#a59fae',
+  snow: '#eef3f7', seed: '#c8a36a',
+};
+export const materialColor = (m) => MATERIAL_COLORS[baseMaterial(m)] || '#88ff88';
+
+const lighter = (color, t = 0.25) => '#' + new THREE.Color(color).lerp(new THREE.Color('#ffffff'), t).getHexString();
+const darker = (color, t = 0.3) => '#' + new THREE.Color(color).lerp(new THREE.Color('#000000'), t).getHexString();
+
+/** A piece as it looks in the world, small: a slab, a plank or a cube. */
+export const PieceModel = ({ shape, color }) => {
+  const top = useMemo(() => lighter(color), [color]);
+  if (shape === 'plank') {
+    return (
+      <group rotation={[0.2, 0.5, 0.1]}>
+        <Cube size={[0.66, 0.13, 0.22]} position={[0, 0, 0]} color={color} />
+        <Cube size={[0.66, 0.02, 0.2]} position={[0, 0.07, 0]} color={top} />
+      </group>
+    );
+  }
+  if (shape === 'slab') {
+    return (
+      <group rotation={[0.25, 0.4, 0.1]}>
+        <Cube size={[0.46, 0.22, 0.46]} position={[0, 0, 0]} color={color} />
+        <Cube size={[0.44, 0.02, 0.44]} position={[0, 0.115, 0]} color={top} />
+      </group>
+    );
+  }
+  return (
+    <group rotation={[0.35, 0.6, 0.2]}>
+      <Cube size={[0.26, 0.26, 0.26]} position={[0, 0, 0]} color={color} />
+    </group>
+  );
+};
+
+/** A short log with lighter ends. */
+const Log = ({ color }) => {
+  const end = useMemo(() => lighter(color, 0.45), [color]);
+  return (
+    <group rotation={[0.2, 0.6, 0.15]}>
+      <Cube size={[0.56, 0.26, 0.26]} position={[0, 0, 0]} color={darker(color, 0.1)} />
+      <Cube size={[0.02, 0.2, 0.2]} position={[0.285, 0, 0]} color={end} />
+      <Cube size={[0.02, 0.2, 0.2]} position={[-0.285, 0, 0]} color={end} />
+    </group>
+  );
+};
+
+/** A chunk of rock with flecks of ore in it. */
+const Ore = ({ color, fleck }) => (
+  <group rotation={[0.25, 0.4, 0.15]}>
+    <Cube size={[0.38, 0.32, 0.36]} position={[0, -0.03, 0]} color="#77787c" />
+    <Cube size={[0.12, 0.1, 0.02]} position={[0.06, 0.04, 0.185]} color={fleck || color} glow={0.4} />
+    <Cube size={[0.02, 0.1, 0.1]} position={[0.195, -0.06, -0.05]} color={fleck || color} glow={0.4} />
+    <Cube size={[0.1, 0.02, 0.1]} position={[-0.08, 0.135, -0.06]} color={fleck || color} glow={0.4} />
+  </group>
+);
+
+/** Crystal shards, glowing. */
+const Crystal = ({ color }) => (
+  <group>
+    <Cube size={[0.16, 0.42, 0.16]} rotation={[0, Math.PI / 4, 0.15]} position={[0, 0.02, 0]} color={color} glow={0.8} />
+    <Cube size={[0.11, 0.26, 0.11]} rotation={[0.2, Math.PI / 4, -0.45]} position={[0.13, -0.06, 0.04]} color={lighter(color, 0.3)} glow={0.8} />
+  </group>
+);
+
+/** A bone: a bar with knobbly ends. */
+const Bone = ({ color }) => (
+  <group rotation={[0.3, 0.5, 0.25]}>
+    <Cube size={[0.46, 0.09, 0.09]} position={[0, 0, 0]} color={color} />
+    <Cube size={[0.1, 0.17, 0.15]} position={[0.24, 0, 0]} color={color} />
+    <Cube size={[0.1, 0.17, 0.15]} position={[-0.24, 0, 0]} color={color} />
+  </group>
+);
+
+/** A few small round-ish pieces: berries or seeds. */
+const Cluster = ({ color, size = 0.13 }) => (
+  <group>
+    <Cube size={[size, size, size]} position={[0, -0.05, 0]} color={color} glow={0.3} />
+    <Cube size={[size, size, size]} position={[0.13, -0.08, 0.06]} color={darker(color, 0.15)} glow={0.3} />
+    <Cube size={[size, size, size]} position={[-0.06, 0.06, 0.07]} color={lighter(color, 0.15)} glow={0.3} />
+    <Cube size={[size * 0.4, size * 0.6, size * 0.4]} position={[-0.06, 0.15, 0.07]} color="#3f7a2c" />
+  </group>
+);
+
+/** A folded strip (leather) or a tied bundle (fiber). */
+const Bundle = ({ color, tie }) => (
+  <group rotation={[0.2, 0.5, 0.05]}>
+    <Cube size={[0.5, 0.1, 0.3]} position={[0, -0.04, 0]} color={color} />
+    <Cube size={[0.44, 0.08, 0.26]} position={[0.02, 0.05, 0]} color={lighter(color, 0.12)} />
+    {tie && <Cube size={[0.06, 0.22, 0.34]} position={[0, 0, 0]} color={tie} />}
+  </group>
+);
+
+/**
+ * The 3D loot for a material key: pieces as slabs, planks or cubes; wood as
+ * a log; ores, crystal, bone, berries, leather and fiber as their own shapes;
+ * anything else as a rough chunk in its colour.
+ */
+export const LootModel = ({ material, color }) => {
+  const c = color || materialColor(material);
+  const piece = pieceInfo(material);
+  if (piece) return <PieceModel shape={piece.shape} color={c} />;
+  switch (material) {
+    case 'wood': return <Log color={c} />;
+    case 'iron': return <Ore color={c} fleck="#d9b79a" />;
+    case 'gold_ore': return <Ore color={c} fleck="#f2c14e" />;
+    case 'coal': return <Ore color={c} fleck="#1c1c20" />;
+    case 'crystal': return <Crystal color={c} />;
+    case 'bone': return <Bone color={c} />;
+    case 'berry': return <Cluster color={c} />;
+    case 'seed': return <Cluster color={c} size={0.09} />;
+    case 'leather': return <Bundle color={c} />;
+    case 'fiber': return <Bundle color={c} tie="#6b5236" />;
+    default: return <MaterialChunk color={c} />;
+  }
+};

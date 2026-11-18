@@ -58,7 +58,7 @@ import {
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
 import { fellTree } from '../../systems/settlement/GatherScanner';
 import { getTileStage, TileStage, withTile } from './farming';
-import { placeNextBlock, getNextBlock, canPlaceNext } from './buildingInfo';
+import { placeNextBlock, getNextBlock, canPlaceNext, nextCellWork } from './buildingInfo';
 import {
   getScaffoldRoute,
   projectOnRoute,
@@ -456,7 +456,8 @@ function tickBuild(npc, tickDelta, updates, ctx) {
   updates.targetPosition = null; // in place: stand still and work
 
   const buildSkill = npc.skills?.building || NPC_WORK_SKILL_FALLBACK;
-  const adjustedDuration = NPC_BUILD_DURATION / buildSkill;
+  // A slab or plank cell is half a block's work
+  const adjustedDuration = (NPC_BUILD_DURATION * nextCellWork(site)) / buildSkill;
   const wt = (npc.workTimer || 0) + tickDelta;
   updates.workTimer = wt;
   if (wt < adjustedDuration) return false;

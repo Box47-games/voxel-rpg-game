@@ -3,15 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
-import { GoldCoins, MaterialChunk, Potion, PickupShadow } from './pickups/pickupModels';
-
-// Colours for material drops that don't bring their own
-const MATERIAL_COLORS = {
-  wood: '#8a5a32', stone: '#8d8d8d', dirt: '#7a5233', iron: '#b9a08a', coal: '#3a3a3e',
-  gold_ore: '#e0b94a', crystal: '#9b5de5', leather: '#a0673a', bone: '#e8e1cf',
-  fiber: '#9bbf5a', berry: '#c8283c', meat: '#c4524a', sand: '#dccb8e', clay: '#a59fae',
-};
-const materialColor = (m) => MATERIAL_COLORS[m] || '#88ff88';
+import { GoldCoins, MaterialChunk, Potion, PickupShadow, LootModel } from './pickups/pickupModels';
 
 /**
  * LootDrop component - Collectible loot that drops from enemies
@@ -107,7 +99,7 @@ const LootDrop = ({ position, lootType, type, amount = 10, material, color, id, 
     >
       <group ref={groupRef}>
         {resolvedType === 'gold' && <GoldCoins />}
-        {resolvedType === 'material' && <MaterialChunk color={color || materialColor(material)} />}
+        {resolvedType === 'material' && <LootModel material={material} />}
         {(resolvedType === 'health' || resolvedType === 'mana') && <Potion color={lootColor} />}
         {!['gold', 'material', 'health', 'mana'].includes(resolvedType) && <MaterialChunk color={lootColor} />}
       </group>

@@ -302,6 +302,7 @@ function _executeUseAction(action, wx, wy, wz, blockType, chunkManager, store) {
     if (amount > 0) {
       store.addMaterial(drop.material, amount);
       store.addPickupText(`+${amount} ${drop.material}`, '#44ff44');
+      store.addMinedPop?.([wx, wy, wz], drop.material);
     }
   }
 
@@ -810,9 +811,10 @@ export function BlockInteraction({ chunkManager }) {
         audioManager.play('error');
       }
 
-      drops.forEach((drop) => {
+      drops.forEach((drop, i) => {
         store.addMaterial(drop.material, drop.amount);
         store.addPickupText(`+${drop.amount} ${materialName(drop.material, drop.amount)}`, '#44ff44');
+        if (i < 2) store.addMinedPop([blockX, blockY, blockZ], drop.material);
       });
 
       // Audio + quest tracking for mining

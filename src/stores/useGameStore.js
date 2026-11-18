@@ -198,6 +198,9 @@ const createInitialSettlement = () => ({
 // At most one panel is open (inventory, crafting, settlement, building
 // catalog), and at most one mode is on (build or zone). Opening either
 // clears the others. Esc backs out one step (see backOut).
+// At most this many mined-material pops fly at once
+const MINED_POP_MAX = 6;
+
 const CLOSED_PANELS = {
   openPanel: null,
   settlementDashboardOpen: false,
@@ -603,6 +606,15 @@ const useGameStore = create((rawSet, get, api) => {
 
   // Pickup text (HTML overlay, always readable)
   pickupTexts: [],
+  // Mined material flying from the block to the player (visual only; the
+  // material is already in the inventory). Newest few only.
+  minedPops: [],
+  addMinedPop: (position, material) =>
+    set((state) => ({
+      minedPops: [...state.minedPops.slice(-(MINED_POP_MAX - 1)), { id: nextEntityId(), position, material }],
+    })),
+  removeMinedPop: (id) => set((state) => ({ minedPops: state.minedPops.filter((p) => p.id !== id) })),
+
   addPickupText: (text, color = '#ffffff') =>
     set((state) => ({
       pickupTexts: [...state.pickupTexts, { id: nextEntityId(), text, color, createdAt: Date.now() }],
@@ -2074,6 +2086,7 @@ const useGameStore = create((rawSet, get, api) => {
       damageNumbers: [],
       pickupTexts: [],
       lootDrops: [],
+      minedPops: [],
       xpOrbs: [],
       particleEffects: [],
       screenShake: null,

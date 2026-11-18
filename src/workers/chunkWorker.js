@@ -930,6 +930,45 @@ function buildChunkMesh(params) {
     return b !== BlockTypes.AIR && b !== BlockTypes.WATER && b !== BlockTypes.LEAVES && b !== BlockTypes.ICE && b !== BlockTypes.DEAD_LEAVES;
   }
 
+  /**
+   * Is the half-block unit (ux, uy, uz) filled? Units are cell * 2 + sub-cube,
+   * so pieces count only where they are (a slab fills its lower four units).
+   */
+  function isSolidUnit(ux, uy, uz) {
+    const cx = Math.floor(ux / 2), cy = Math.floor(uy / 2), cz = Math.floor(uz / 2);
+    const b = getBlock(cx, cy, cz);
+    if (b === BlockTypes.AIR || b === BlockTypes.WATER || b === BlockTypes.LEAVES || b === BlockTypes.ICE || b === BlockTypes.DEAD_LEAVES) return 0;
+    const shape = getShape(cx, cy, cz);
+    if (!shape) return 1;
+    return (shape >> ((ux - cx * 2) + (uy - cy * 2) * 2 + (uz - cz * 2) * 4)) & 1;
+  }
+
+  /**
+   * Ambient occlusion on the half-block grid, for chunks holding pieces: a face
+   * corner darkens by the units beside and diagonal to it, just outside the
+   * face. Works for pieces and for full blocks next to pieces.
+   * @param corner - the vertex in units; normal - the face's normal; v - the
+   *   vertex's 0/1 position on the face's box
+   */
+  function unitAO(corner, normal, v) {
+    const na = normal[0] ? 0 : normal[1] ? 1 : 2;
+    const t1 = na === 0 ? 1 : 0;
+    const t2 = na === 2 ? 1 : 2;
+    const out = [0, 0, 0];
+    out[na] = normal[na] > 0 ? corner[na] : corner[na] - 1;
+    const a = v[t1] ? corner[t1] : corner[t1] - 1;
+    const b = v[t2] ? corner[t2] : corner[t2] - 1;
+    const inA = v[t1] ? corner[t1] - 1 : corner[t1];
+    const inB = v[t2] ? corner[t2] - 1 : corner[t2];
+    out[t1] = a; out[t2] = inB;
+    const s1 = isSolidUnit(out[0], out[1], out[2]);
+    out[t1] = inA; out[t2] = b;
+    const s2 = isSolidUnit(out[0], out[1], out[2]);
+    out[t1] = a; out[t2] = b;
+    const cn = isSolidUnit(out[0], out[1], out[2]);
+    return (s1 && s2) ? 0 : 3 - (s1 + s2 + cn);
+  }
+
   // AO neighbor offsets per face per vertex: [side1, side2, corner]
   // Each is [dx, dy, dz] relative to the block position
   const AO_OFFSETS = {
@@ -1056,7 +1095,7 @@ function buildChunkMesh(params) {
   }
 
   // box: optional piece box [x0, y0, z0, x1, y1, z1] in half-cell units
-  // (0..2) — the face is drawn on that box, shrunk by PIECE_SEAM, without AO.
+  // (0..2) — the face is drawn on that box, shrunk by PIECE_SEAM.
   // inset: optional per-side shrink [x0, y0, z0, x1, y1, z1] (default PIECE_SEAM)
   function addFace(x, y, z, face, blockType, box, inset) {
     if (vertexCount + 4 > maxVertices) return;
@@ -1110,7 +1149,13 @@ function buildChunkMesh(params) {
 
       // Compute per-vertex AO
       let aoMod = 1;
-      if (!box) {
+      if (anyShapes) {
+        // Chunk has pieces: shade on the half-block grid (pieces and their neighbours)
+        const corner = box
+          ? [(x * 2) + (v[0] ? box[3] : box[0]), (y * 2) + (v[1] ? box[4] : box[1]), (z * 2) + (v[2] ? box[5] : box[2])]
+          : [(x + v[0]) * 2, (y + v[1]) * 2, (z + v[2]) * 2];
+        aoMod = AO_BRIGHTNESS[unitAO(corner, faceData.normal, v)];
+      } else if (!box) {
         const offsets = aoOffsets[i];
         const s1 = isSolidForAO(x + offsets[0][0], y + offsets[0][1], z + offsets[0][2]);
         const s2 = isSolidForAO(x + offsets[1][0], y + offsets[1][1], z + offsets[1][2]);

@@ -12,6 +12,7 @@ import {
   siteStage,
   materialsUsed,
   buildProgress,
+  nextCellWork,
 } from '../buildingInfo';
 import { getBuildingById, parseLayers } from '../../../data/buildings';
 import { VOXEL_SIZE } from '../../../systems/chunks/coordinates';
@@ -172,5 +173,18 @@ describe('paying as you build', () => {
     expect(materialsUsed(houseSite())).toEqual({});
     expect(materialsUsed(houseSite({ status: 'COMPLETE' }))).toEqual(house.cost);
     expect(buildProgress(houseSite({ status: 'BUILDING', blocksPlaced: cells.length / 2 }))).toBe(0.5);
+  });
+});
+
+describe('build time per cell', () => {
+  test('a slab or plank cell takes half a block\'s time', () => {
+    const house = getBuildingById('stone_house');
+    const cells = parseLayers(house);
+    const slab = cells.findIndex((c) => c.shape);
+    const block = cells.findIndex((c) => !c.shape);
+    const at = (i) => nextCellWork({ buildingId: 'stone_house', blocksPlaced: i });
+    expect(at(block)).toBe(1);
+    expect(at(slab)).toBe(0.5);
+    expect(nextCellWork({ buildingId: 'nope' })).toBe(1);
   });
 });

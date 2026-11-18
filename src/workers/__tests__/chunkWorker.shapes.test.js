@@ -165,3 +165,40 @@ describe('chunk worker: shaped cells', () => {
     expect(Array.from(b.positions)).toEqual(Array.from(a.positions));
   });
 });
+
+describe('chunk worker: ambient occlusion on pieces', () => {
+  /** Brightness (red channel) of the top face of the slab in cell (x, y, z), per vertex, keyed by x position. */
+  function slabTopShade(m, x, y, z) {
+    const out = [];
+    for (let f = 0; f < m.vertexCount / 4; f++) {
+      const ys = [0, 1, 2, 3].map((k) => m.positions[(f * 4 + k) * 3 + 1]);
+      const xs = [0, 1, 2, 3].map((k) => m.positions[(f * 4 + k) * 3]);
+      const zs = [0, 1, 2, 3].map((k) => m.positions[(f * 4 + k) * 3 + 2]);
+      const top = ys.every((v) => Math.abs(v - (y * 2 + 1 - PIECE_SEAM)) < 1e-6);
+      const inCell = xs.every((v) => v > x * 2 && v < x * 2 + 2) && zs.every((v) => v > z * 2 && v < z * 2 + 2);
+      if (top && inCell) {
+        for (let k = 0; k < 4; k++) out.push({ x: xs[k], shade: m.colors[(f * 4 + k) * 3] });
+      }
+    }
+    return out;
+  }
+
+  it('a slab against a wall is darker at the wall edge', () => {
+    const m = mesh([
+      [4, 1, 4, B.STONE, S.slab(AXIS.Y, [0])],
+      [5, 1, 4, B.STONE], // full block to the east
+    ], true);
+    const v = slabTopShade(m, 4, 1, 4);
+    expect(v).toHaveLength(4);
+    const nearWall = v.filter((p) => p.x > 9).map((p) => p.shade);
+    const away = v.filter((p) => p.x < 9).map((p) => p.shade);
+    expect(Math.max(...nearWall)).toBeLessThan(Math.min(...away));
+  });
+
+  it('a slab in the open is evenly lit', () => {
+    const m = mesh([[4, 1, 4, B.STONE, S.slab(AXIS.Y, [0])]], true);
+    const shades = slabTopShade(m, 4, 1, 4).map((p) => p.shade);
+    // Only the per-vertex colour noise varies: no AO step (AO steps are ≥ 15%)
+    expect(Math.max(...shades) / Math.min(...shades)).toBeLessThan(1.1);
+  });
+});

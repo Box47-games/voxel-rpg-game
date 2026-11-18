@@ -11,6 +11,7 @@ import TargetMarker from './TargetMarker';
 import DamageNumber from './DamageNumber';
 import XPOrb from './XPOrb';
 import LootDrop from './LootDrop';
+import MinedPops from './MinedPops';
 import ParticleEffect from './ParticleEffect';
 import ChunkRenderer from './ChunkRenderer';
 import BlockInteraction from './BlockInteraction';
@@ -343,6 +344,7 @@ const Experience = () => {
       {/* Zone designation overlays + interaction (Phase 2.2) */}
       <ZoneOverlay chunkManager={isReady ? chunkManager : null} />
       <PlanPlayerMarker />
+      <MinedPops />
       <ZoneInteraction chunkManager={isReady ? chunkManager : null} />
 
       {/* Stockpile visual crates (Phase 2.3) */}

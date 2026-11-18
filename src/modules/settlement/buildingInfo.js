@@ -64,6 +64,22 @@ export function paymentSchedule(site, building = getBuildingById(site.buildingId
   return schedule;
 }
 
+const _cellWork = new Map(); // building id → per-cell share of a block's build time
+
+/**
+ * Share of a full block's build time the site's next cell takes: a slab or
+ * plank cell is half a block, so it goes up in half the time.
+ */
+export function nextCellWork(site, building = getBuildingById(site.buildingId)) {
+  if (!building) return 1;
+  let work = _cellWork.get(building.id);
+  if (!work) {
+    work = parseLayers(building).map((c) => cellUnits(c) / 8);
+    _cellWork.set(building.id, work);
+  }
+  return work[site.blocksPlaced || 0] ?? 1;
+}
+
 /** Materials the cells placed so far have used: { material: amount }. */
 export function materialsUsed(site, building = getBuildingById(site.buildingId)) {
   const n = site.status === 'COMPLETE' ? (site.totalBlocks || 0) : site.blocksPlaced || 0;
@@ -163,9 +179,14 @@ export function getDemolishRefund(building) {
 export function getConstructionEta(site, builderSkill = null) {
   // Only while it can keep going: a site waiting on materials has no ETA
   if (site.status === 'COMPLETE' || !site.totalBlocks || needsMaterials(site) || !canPlaceNext(site)) return null;
-  const remaining = Math.max(0, site.totalBlocks - (site.blocksPlaced || 0));
-  const perBlock = builderSkill ? NPC_BUILD_DURATION / builderSkill : CONSTRUCTION_BLOCK_INTERVAL;
-  return remaining * perBlock;
+  if (!builderSkill) return Math.max(0, site.totalBlocks - (site.blocksPlaced || 0)) * CONSTRUCTION_BLOCK_INTERVAL;
+  // A settler builds pieces faster than blocks (nextCellWork); add up the cells left
+  const building = getBuildingById(site.buildingId);
+  let work = 0;
+  for (let i = site.blocksPlaced || 0; i < site.totalBlocks; i++) {
+    work += building ? nextCellWork({ ...site, blocksPlaced: i }, building) : 1;
+  }
+  return (work * NPC_BUILD_DURATION) / builderSkill;
 }
 
 /** Farm zones a completed Farm Plot is close enough to run. */
