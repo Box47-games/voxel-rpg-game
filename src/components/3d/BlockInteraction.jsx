@@ -11,7 +11,8 @@ import * as THREE from 'three';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { BlockTypes, isSolid, getBlockHardness } from '../../systems/chunks/blockTypes';
 import useGameStore from '../../stores/useGameStore';
-import { calculateDrops, getPlacementCost, canAffordPlacement } from '../../data/blockDrops';
+import { calculateDrops, getPlacementCost, canAffordPlacement, payPlacement, placementByVolume } from '../../data/blockDrops';
+import { pieceTiers, materialName, PIECES, blocksAvailable, baseMaterial } from '../../data/pieces';
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
 import { usableTool } from '../../systems/tools/toolDurability';
 import { TOUCH_MINE_HOLD_MS, TOUCH_BLOCK_REACH, TAP_MAX_DISTANCE_PX, HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN } from '../../data/tuning';
@@ -112,6 +113,16 @@ let _lastCostWarning = 0;
  * Single code path for desktop first-person, third-person and mobile placement.
  * @returns {boolean} true if the block was placed
  */
+/** "Need 1 stone block", plus a nudge to craft one when the player holds enough pieces. */
+function needText(blockType, mat, qty, materials) {
+  const label = `Need ${qty} ${materialName(mat, qty)}`;
+  const piece = PIECES[mat];
+  if (piece && !placementByVolume(blockType) && blocksAvailable(materials, mat) >= qty) {
+    return `${label}: combine ${piece.name.toLowerCase()}s in Craft`;
+  }
+  return label;
+}
+
 function tryPlaceBlock(chunkManager, block, face, blockType) {
   if (!chunkManager || !block || !face) return false;
   const target = getAdjacentBlockCenter(block, face);
@@ -125,21 +136,20 @@ function tryPlaceBlock(chunkManager, block, face, blockType) {
   // Pay for the block (mining it back returns the same materials)
   const store = useGameStore.getState();
   const cost = getPlacementCost(blockType);
-  const { ok, missing } = canAffordPlacement(store.inventory.materials, cost);
+  const { ok, missing } = canAffordPlacement(store.inventory.materials, cost, blockType);
   if (!ok) {
     const now = Date.now();
     if (now - _lastCostWarning > 1000) {
       _lastCostWarning = now;
-      store.addPickupText(missing ? `Need ${cost[missing]} ${missing}` : 'Cannot place that block', '#ff6666');
+      store.addPickupText(missing ? needText(blockType, missing, cost[missing], store.inventory.materials) : 'Cannot place that block', '#ff6666');
     }
     return false;
   }
 
   if (!chunkManager.setBlock(px, py, pz, blockType)) return false;
   notePlayerAction('place');
-  for (const [mat, qty] of Object.entries(cost)) {
-    store.removeMaterial(mat, qty);
-  }
+  const paid = payPlacement(blockType, store.inventory.materials);
+  if (paid) store.setMaterials(paid);
   return true;
 }
 
@@ -676,7 +686,7 @@ export function BlockInteraction({ chunkManager }) {
       const store = useGameStore.getState();
       const equippedTool = usableTool(store.equipment?.weapon);
       const toolTier = equippedTool?.stats?.toolTier || 0;
-      const drops = calculateDrops(currentBlock, toolTier);
+      const drops = calculateDrops(currentBlock, toolTier, pieceTiers(equippedTool));
 
       // Mining wears the tool, harder blocks more
       if (equippedTool && store.wearEquippedTool(getBlockHardness(currentBlock))) {
@@ -686,13 +696,14 @@ export function BlockInteraction({ chunkManager }) {
 
       drops.forEach((drop) => {
         store.addMaterial(drop.material, drop.amount);
-        store.addPickupText(`+${drop.amount} ${drop.material}`, '#44ff44');
+        store.addPickupText(`+${drop.amount} ${materialName(drop.material, drop.amount)}`, '#44ff44');
       });
 
       // Audio + quest tracking for mining
       audioManager.play('lootDrop');
       drops.forEach((drop) => {
-        try { getQuestManager().emit('itemCollected', drop.material); } catch (_) { /* quest system not ready */ }
+        // Quests count the material: a stone slab counts as stone
+        try { getQuestManager().emit('itemCollected', baseMaterial(drop.material)); } catch (_) { /* quest system not ready */ }
       });
     }
 

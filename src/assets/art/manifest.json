@@ -796,6 +796,42 @@
     "file": "blocks/ICE.svg"
   },
   {
+    "group": "pieces",
+    "id": "wood_plank",
+    "label": "Wood plank",
+    "file": "pieces/wood_plank.svg"
+  },
+  {
+    "group": "pieces",
+    "id": "stone_slab",
+    "label": "Stone slab",
+    "file": "pieces/stone_slab.svg"
+  },
+  {
+    "group": "pieces",
+    "id": "dirt_cube",
+    "label": "Dirt cube",
+    "file": "pieces/dirt_cube.svg"
+  },
+  {
+    "group": "pieces",
+    "id": "sand_cube",
+    "label": "Sand cube",
+    "file": "pieces/sand_cube.svg"
+  },
+  {
+    "group": "pieces",
+    "id": "snow_cube",
+    "label": "Snow cube",
+    "file": "pieces/snow_cube.svg"
+  },
+  {
+    "group": "pieces",
+    "id": "clay_cube",
+    "label": "Clay cube",
+    "file": "pieces/clay_cube.svg"
+  },
+  {
     "group": "buildings",
     "id": "wooden_shelter",
     "label": "Wooden Shelter",

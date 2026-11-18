@@ -16,6 +16,11 @@
 
 import { BlockTypes } from '../../systems/chunks/blockTypes';
 import { calculateDrops } from '../../data/blockDrops';
+import { volumeOf } from '../../data/pieces';
+import { NPC_PIECE_YIELD_TIER } from '../../data/tuning';
+
+// Settlers' piece yield: as if mining and chopping with stone tools
+const NPC_PIECE_TIERS = { pickaxe: NPC_PIECE_YIELD_TIER, axe: NPC_PIECE_YIELD_TIER };
 import { scanMiningZone } from '../../systems/settlement/MiningZoneScanner';
 import { getSleepTarget } from './housing';
 import {
@@ -287,7 +292,7 @@ export function depositDrops(drops, ctx) {
         storage: {
           ...freshZone.storage,
           items: newItems,
-          usedCapacity: freshZone.storage.usedCapacity + drop.amount,
+          usedCapacity: freshZone.storage.usedCapacity + volumeOf(drop.material, drop.amount),
         },
       });
     }
@@ -342,7 +347,7 @@ function tickMine(npc, tickDelta, updates, ctx) {
   const blockType = ctx.chunkAdapter.getBlock(bx, by, bz);
   if (blockType && blockType !== BlockTypes.AIR) {
     ctx.chunkAdapter.setBlock(bx, by, bz, BlockTypes.AIR);
-    depositDrops(calculateDrops(blockType, NPC_MINE_TOOL_TIER), ctx);
+    depositDrops(calculateDrops(blockType, NPC_MINE_TOOL_TIER, NPC_PIECE_TIERS), ctx);
   }
 
   refreshMiningZone(task, ctx);
@@ -405,7 +410,7 @@ function tickHaul(npc, tickDelta, updates, ctx) {
 
   const carrying = npc.carryingItem;
   if (carrying && task.siteId) {
-    ctx.host.npcDeliverToConstruction(task.siteId, carrying.material, carrying.amount);
+    ctx.host.npcDeliverToConstruction(task.siteId, carrying.material, carrying.amount, task.zoneId);
   }
 
   completeTask(npc.currentTaskId);
@@ -607,7 +612,7 @@ function tickChop(npc, tickDelta, updates, ctx) {
   const [x, y, z] = task.position;
   const trunk = fellTree(ctx.chunkAdapter, x, y, z);
   const drops = [];
-  for (let i = 0; i < trunk; i++) drops.push(...calculateDrops(BlockTypes.WOOD, NPC_MINE_TOOL_TIER));
+  for (let i = 0; i < trunk; i++) drops.push(...calculateDrops(BlockTypes.WOOD, NPC_MINE_TOOL_TIER, NPC_PIECE_TIERS));
   if (drops.length) depositDrops(drops, ctx);
   completeTask(npc.currentTaskId);
   growSkill(npc, updates, 'gathering');

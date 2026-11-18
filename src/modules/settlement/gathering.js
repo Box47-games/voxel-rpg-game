@@ -20,12 +20,16 @@ import {
   NPC_FOOD_SOURCES,
   SEED_MATERIAL,
 } from '../../data/tuning.js';
+import { blocksAvailable } from '../../data/pieces';
 
-/** Total of a material across all stockpiles. */
+/**
+ * Total of a material across all stockpiles. Building materials count their
+ * pieces by volume (2 planks = 1 wood).
+ */
 export function stocked(zones, material) {
   let n = 0;
   for (const z of zones || []) {
-    if (z.type === 'STOCKPILE' && z.storage) n += z.storage.items?.[material] || 0;
+    if (z.type === 'STOCKPILE' && z.storage) n += blocksAvailable(z.storage.items, material);
   }
   return n;
 }

@@ -28,20 +28,23 @@ block removes the whole block and gives its 8 units as pieces in the material's 
 
 ## Core model
 
-### Inventory: real pieces by shape **[decided]**
-- Building materials are held as pieces by shape: `inventory.pieces.<material>.<shape>` with shapes
-  `block`, `slab`, `plank`, `cube` (only the ones that make sense per material: wood has block +
-  plank, stone block + slab, dirt/sand/snow/clay block + cube).
-- The player places the shape they hold. A full block is placeable only if you have a block.
-- **Crafting converts** (new "Pieces" category in the Craft tab, no station needed):
-  2 slabs → 1 stone block, 2 planks → 1 wood block, 8 cubes → 1 block of that material, and the
-  reverse splits (1 block → 2 slabs / 2 planks / 8 cubes).
-- **Costs by volume** for blueprints, settler construction and hauling: each shape has a unit
-  value (block 8, slab 4, plank 4, cube 1). Paying takes whole pieces, smallest first, and never
-  breaks pieces implicitly. If only larger pieces are left, it spends one larger piece and returns
-  the leftover as smaller pieces of the same material (a slab paid for 1 cube's worth gives 3
-  cubes back) **[proposed]**.
-- The old `materials.wood / stone / dirt / ...` counts migrate to blocks (1 old unit = 1 block).
+### Inventory: real pieces by shape **[decided; built in phase 1]**
+- Pieces are their own material keys next to the block keys: `wood` + `wood_plank`,
+  `stone` + `stone_slab`, `dirt` + `dirt_cube`, and `sand`, `snow`, `clay` with `_cube`
+  (`src/data/pieces.js`). Stockpiles, hauling and saves carry them like any material, so old
+  saves need no conversion (their counts were already blocks).
+- The player places the shape they hold. A full block needs a block.
+  Exceptions paid by volume: the campfire and leaves, which aren't a material's own block.
+  A hand-chopping new player has only planks, and the campfire starts the settlement.
+- **Crafting converts** (Craft → Pieces, no station needed): 2 slabs → 1 stone block, 2 planks → 1
+  wood block, 8 cubes → 1 block, and the reverse splits. "Combine all" does a whole stack.
+- **Costs by volume** for gear recipes, repairs, blueprints, upgrades, settler construction and
+  hauling: block 8 units, slab and plank 4, cube 1. Payment takes pieces first, then blocks. A
+  block broken to pay less than a block gives the change back as pieces; a settler's change goes
+  back to the stockpile it hauled from.
+- Stockpile capacity counts volume (a slab takes half a block's room).
+- Settlers mine and chop as if with stone tools (6 units: one piece and a 50% chance of a second).
+- Quests count the base material (a stone slab counts as stone).
 
 ### World: shape mask plus piece layout per cell
 - `Chunk` gets two more `Uint8Array(CHUNK_SIZE_CUBED)`:
@@ -97,7 +100,7 @@ one plank; 8 = two). The rest is lost as rubble or splinters.
 
 ## Phases and checkpoints
 
-1. **Pieces in the inventory (no world change).**
+1. **Pieces in the inventory (no world change).** Built on branch `block-pieces-1`.
    - Changes: `inventory.pieces`, drops as pieces by tool yield, the Pieces craft category
      (combine and split), pay-by-volume for blueprints and settlers, stockpiles hold pieces,
      the Bag shows pieces, save v7 for the inventory.

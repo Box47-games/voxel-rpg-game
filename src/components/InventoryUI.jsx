@@ -11,17 +11,10 @@ import { useShallow } from 'zustand/react/shallow';
 import ToolDurability from './ui/ToolDurability';
 import BagFrame from './ui/BagFrame';
 import { artUrl, itemArt, materialArt, rarityClass, RARITY_INK } from './ui/art';
+import { materialName, pieceInfo, isBuildingMaterial, PIECES } from '../data/pieces';
 import { ITEM_TYPES } from '../data/craftingRecipes';
 import { compareStatsWithItem, formatStatDifference } from '../utils/EquipmentStatsIntegration';
 import { FOOD_BERRY_RESTORE, FOOD_RAW_MEAT_RESTORE, FOOD_BERRY_HEAL, FOOD_RAW_MEAT_HEAL, FOOD_VEGETABLE_RESTORE, FOOD_VEGETABLE_HEAL } from '../data/tuning';
-
-/** Display names for harvested materials */
-const MATERIAL_NAMES = {
-  wood: 'Wood', stone: 'Stone', iron: 'Iron', coal: 'Coal', gold_ore: 'Gold Ore', crystal: 'Crystal',
-  clay: 'Clay', sand: 'Sand', dirt: 'Dirt', snow: 'Snow', ice: 'Ice', leather: 'Leather', bone: 'Bone',
-  fiber: 'Fiber', herb: 'Herbs', meat: 'Meat', berry: 'Berries', vegetable: 'Vegetables', seed: 'Seeds', mushroom: 'Mushrooms',
-};
-const materialName = (key) => MATERIAL_NAMES[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
 
 /** Materials the player can eat directly from inventory */
 const EDIBLE_MATERIALS = {
@@ -56,6 +49,16 @@ const RIGHT_SLOTS = [
   { slot: 'ring2', name: 'Ring', ghost: ['items', 'ironRing'] },
 ];
 const MIN_ITEM_SLOTS = 24;
+
+// Blocks first, each followed by its pieces (wood, planks, stone, slabs, ...), then the rest
+const BUILDING_ORDER = Object.keys(PIECES).flatMap((base) => [base, PIECES[base].key]);
+const materialOrder = (key) => {
+  const i = BUILDING_ORDER.indexOf(key);
+  return i === -1 ? BUILDING_ORDER.length : i;
+};
+
+/** Size in units (a block is 2×2×2): "4×1×1" etc. */
+const SHAPE_SIZE = { plank: '4×1×1', slab: '2×1×2', cube: '1×1×1' };
 
 const titleCase = (stat) => stat.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
 const fmt = (v) => (typeof v === 'number' ? +v.toFixed(1) : v);
@@ -166,7 +169,9 @@ const InventoryUI = () => {
     setSelection(null);
   };
 
-  const ownedMaterials = Object.entries(materials).filter(([, amount]) => amount > 0);
+  const ownedMaterials = Object.entries(materials)
+    .filter(([, amount]) => amount > 0)
+    .sort(([a], [b]) => materialOrder(a) - materialOrder(b));
   const emptySlots = Math.max(0, MIN_ITEM_SLOTS - inventory.items.length);
   const isSelected = (item) => selectedItem === item;
 
@@ -247,7 +252,7 @@ const InventoryUI = () => {
                   key={key}
                   type="button"
                   className={`vx-slot${selection?.kind === 'material' && selection.key === key ? ' is-selected' : ''}`}
-                  aria-label={`${materialName(key)}, ${amount}`}
+                  aria-label={`${materialName(key, amount)}, ${amount}`}
                   title={materialName(key)}
                   onClick={() => setSelection({ kind: 'material', key })}
                 >
@@ -342,8 +347,12 @@ function ItemDetail({ item, equippedSlot, index, statComparison, onEquip, onUneq
   );
 }
 
+/** "2 stone slabs" / "8 dirt cubes": how many of a piece make a block. */
+const BLOCK_PER = (piece) => `${8 / piece.units} ${piece.name.toLowerCase()}s`;
+
 function MaterialDetail({ materialKey, amount, hungerFull, onEat }) {
   const edible = EDIBLE_MATERIALS[materialKey];
+  const piece = pieceInfo(materialKey);
   const url = materialArt(materialKey);
   return (
     <>
@@ -351,10 +360,21 @@ function MaterialDetail({ materialKey, amount, hungerFull, onEat }) {
         <div className="vx-slot">{url && <img src={url} alt="" />}</div>
         <div>
           <h3 className="detail__name">{materialName(materialKey)}</h3>
-          <div className="detail__sub">Material</div>
+          <div className="detail__sub">{piece ? `Piece · ${SHAPE_SIZE[piece.shape]}` : isBuildingMaterial(materialKey) ? 'Block · 2×2×2' : 'Material'}</div>
         </div>
       </div>
       <div className="vx-stat"><span>In your bag</span><span className="vx-stat__dots" /><strong>{amount}</strong></div>
+      {piece && (
+        <p className="detail__desc">
+          {BLOCK_PER(piece)} make a {materialName(piece.base).toLowerCase()}. Combine them in Craft → Pieces to place
+          a full block. Buildings and recipes take pieces as they are.
+        </p>
+      )}
+      {isBuildingMaterial(materialKey) && (
+        <p className="detail__desc">
+          Place it from the hotbar, or split it into {BLOCK_PER(PIECES[materialKey])} in Craft → Pieces.
+        </p>
+      )}
       {edible && (
         <div className="vx-stat"><span>Eating restores</span><span className="vx-stat__dots" /><strong className="good">+{edible.restore} food, +{edible.heal} HP</strong></div>
       )}

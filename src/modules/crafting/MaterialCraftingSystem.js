@@ -19,6 +19,7 @@
  */
 
 import { CRAFTING_RECIPES, canCraft, consumeMaterials } from '../../data/craftingRecipes.js';
+import { missingByVolume } from '../../data/pieces';
 import {
   CRAFT_FRACTIONAL_STAT_DECIMALS,
   CRAFT_UNSCALED_STATS,
@@ -126,13 +127,7 @@ export class MaterialCraftingSystem {
 
     if (!hasMaterials) {
       // Calculate missing materials
-      const missing = {};
-      for (const [material, required] of Object.entries(recipe.requirements || {})) {
-        const available = inventory.materials[material] || 0;
-        if (available < required) {
-          missing[material] = required - available;
-        }
-      }
+      const missing = missingByVolume(inventory.materials, recipe.requirements);
       return {
         canCraft: false,
         reason: CRAFT_RESULT.INSUFFICIENT_MATERIALS,

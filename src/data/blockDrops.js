@@ -7,24 +7,27 @@
  *   - chance: probability of dropping (default 1.0)
  *   - bonus: additional rare drop { material, amount, chance }
  *   - requiresTier: minimum TOOL_TIER to get drops (block still breaks without it)
+ *   - pieces: true — a building material: drops its pieces (planks, slabs,
+ *     cubes; data/pieces.js) by tool yield instead of min/max
  */
 
 import { BlockTypes } from '../systems/chunks/blockTypes';
 import { TOOL_TIER, APPLE_DROP_CHANCE } from './tuning';
+import { PIECES, piecesFromMining, blocksAvailable, spendByVolume } from './pieces';
 
 export const BLOCK_DROPS = {
-  [BlockTypes.STONE]: { material: 'stone', min: 1, max: 1 },
-  [BlockTypes.DIRT]: { material: 'dirt', min: 1, max: 1 },
-  [BlockTypes.GRASS]: { material: 'dirt', min: 1, max: 1 },
-  [BlockTypes.SAND]: { material: 'sand', min: 1, max: 1 },
-  [BlockTypes.WOOD]: { material: 'wood', min: 1, max: 2 },
+  [BlockTypes.STONE]: { material: 'stone', pieces: true },
+  [BlockTypes.DIRT]: { material: 'dirt', pieces: true },
+  [BlockTypes.GRASS]: { material: 'dirt', pieces: true },
+  [BlockTypes.SAND]: { material: 'sand', pieces: true },
+  [BlockTypes.WOOD]: { material: 'wood', pieces: true },
   [BlockTypes.LEAVES]: {
     material: null, // No primary drop
     min: 0,
     max: 0,
     bonus: { material: 'berry', amount: 1, chance: APPLE_DROP_CHANCE },
   },
-  [BlockTypes.GRAVEL]: { material: 'stone', min: 1, max: 1 },
+  [BlockTypes.GRAVEL]: { material: 'stone', pieces: true },
   [BlockTypes.COAL_ORE]: {
     material: 'coal',
     min: 1,
@@ -43,26 +46,38 @@ export const BLOCK_DROPS = {
     max: 1,
     requiresTier: TOOL_TIER.IRON,
   },
-  [BlockTypes.CLAY]: { material: 'clay', min: 1, max: 2 },
-  [BlockTypes.SNOW]: { material: 'snow', min: 1, max: 1 },
+  [BlockTypes.CLAY]: { material: 'clay', pieces: true },
+  [BlockTypes.SNOW]: { material: 'snow', pieces: true },
   [BlockTypes.ICE]: { material: 'ice', min: 1, max: 1 },
   [BlockTypes.BERRY_BUSH]: { material: 'berry', min: 1, max: 3 },
   [BlockTypes.CAMPFIRE]: { material: 'wood', min: 2, max: 2 },
-  [BlockTypes.CORRUPTED_STONE]: { material: 'stone', min: 1, max: 1 },
-  [BlockTypes.CORRUPTED_GRASS]: { material: 'dirt', min: 1, max: 1 },
+  [BlockTypes.CORRUPTED_STONE]: { material: 'stone', pieces: true },
+  [BlockTypes.CORRUPTED_GRASS]: { material: 'dirt', pieces: true },
 };
 
 /**
  * Calculate drops for a mined block.
  * @param {number} blockType - The block type that was mined
- * @param {number} toolTier - The tier of the tool used (0 = bare hands)
+ * @param {number} toolTier - The tier of the tool used (0 = bare hands); gates ores
+ * @param {{pickaxe: number, axe: number}} [pieceTiers] - Tool tiers for piece
+ *   yields (pickaxe for stone, axe for wood; data/pieces.js pieceTiers). Defaults
+ *   to toolTier for both.
  * @returns {Array<{material: string, amount: number}>} drops
  */
-export function calculateDrops(blockType, toolTier = 0) {
+export function calculateDrops(blockType, toolTier = 0, pieceTiers = null) {
   const dropDef = BLOCK_DROPS[blockType];
   if (!dropDef) return [];
 
   const drops = [];
+
+  // Building materials break into pieces; the right tool keeps more of the block
+  if (dropDef.pieces) {
+    const piece = PIECES[dropDef.material];
+    const tier = piece.tool ? (pieceTiers ? pieceTiers[piece.tool] : toolTier) : toolTier;
+    const count = piecesFromMining(dropDef.material, tier);
+    if (count > 0) drops.push({ material: piece.key, amount: count });
+    return drops;
+  }
 
   // Check tool tier requirement
   if (dropDef.requiresTier && toolTier < dropDef.requiresTier) {
@@ -112,6 +127,20 @@ export const BLOCK_PLACEMENT_COSTS = {
 };
 
 /**
+ * Placements paid by volume (planks, slabs and cubes count). Every other block
+ * takes a real block of its material: pieces combine into blocks only by
+ * crafting (data/pieces.js).
+ */
+const PLACE_BY_VOLUME = new Set([BlockTypes.LEAVES, BlockTypes.CAMPFIRE]);
+
+/** Does placing this block accept pieces (by volume)? */
+export const placementByVolume = (blockType) => PLACE_BY_VOLUME.has(blockType);
+
+/** How much of `mat` counts toward placing `blockType`. */
+const have = (blockType, materials, mat) =>
+  placementByVolume(blockType) ? blocksAvailable(materials, mat) : materials?.[mat] || 0;
+
+/**
  * Get the material cost for placing a block, or null if it can't be placed.
  * @param {number} blockType
  * @returns {Object<string, number>|null}
@@ -148,7 +177,7 @@ export function countPlaceable(blockType, materials) {
   if (!cost) return 0;
   let count = Infinity;
   for (const [mat, qty] of Object.entries(cost)) {
-    count = Math.min(count, Math.floor((materials?.[mat] || 0) / qty));
+    count = Math.min(count, Math.floor(have(blockType, materials, mat) / qty + 1e-9));
   }
   return Number.isFinite(count) ? count : 0;
 }
@@ -159,10 +188,24 @@ export function countPlaceable(blockType, materials) {
  * @param {Object<string, number>} cost
  * @returns {{ ok: boolean, missing: string|null }}
  */
-export function canAffordPlacement(materials, cost) {
+export function canAffordPlacement(materials, cost, blockType = null) {
   if (!cost) return { ok: false, missing: null };
   for (const [mat, qty] of Object.entries(cost)) {
-    if ((materials?.[mat] || 0) < qty) return { ok: false, missing: mat };
+    if (have(blockType, materials, mat) < qty - 1e-9) return { ok: false, missing: mat };
   }
   return { ok: true, missing: null };
+}
+
+/**
+ * Materials after paying to place `blockType`, or null if short.
+ * @param {number} blockType
+ * @param {Object<string, number>} materials
+ */
+export function payPlacement(blockType, materials) {
+  const cost = getPlacementCost(blockType);
+  if (!cost || !canAffordPlacement(materials, cost, blockType).ok) return null;
+  if (placementByVolume(blockType)) return spendByVolume(materials, cost);
+  const next = { ...materials };
+  for (const [mat, qty] of Object.entries(cost)) next[mat] -= qty;
+  return next;
 }

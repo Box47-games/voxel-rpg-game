@@ -502,3 +502,12 @@ export const NPC_SKILL_GROWTH_BASE = 0.3;      // Skill a first completed task g
 export const TOAST_DURATION_MS = 5000;     // Default time a toast stays up, counted from when it is shown
 export const TOAST_MAX_VISIBLE = 3;        // Toasts stacked at once; more wait their turn
 export const TOAST_MAX_VISIBLE_SHORT = 1;  // Same on phones (short or narrow screens)
+
+// ── Block pieces (.claude/plans/block-pieces.md) ──
+// A block is 8 units. Mining gives back units as the material's pieces
+// (planks and slabs are 4 units, cubes 1); a remainder is a chance of one more piece.
+export const PIECE_YIELD_HAND = 4;        // Stone or wood without the right tool (pickaxe / axe)
+export const PIECE_YIELD_STONE_TOOL = 6;  // Stone-tier pickaxe or axe
+export const PIECE_YIELD_IRON_TOOL = 8;   // Iron or better: the whole block
+export const PIECE_YIELD_LOOSE = 8;       // Dirt, sand, snow and clay always give the whole block
+export const NPC_PIECE_YIELD_TIER = 2;    // Settlers mine and chop as if with stone tools (TOOL_TIER.STONE)

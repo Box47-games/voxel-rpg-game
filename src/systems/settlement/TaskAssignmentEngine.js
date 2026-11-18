@@ -16,6 +16,30 @@ import {
   MAX_FARMERS_PER_ZONE,
 } from '../../data/tuning';
 import { getActiveFarms, getTileStage, TileStage } from '../../modules/settlement/farming';
+import { PIECES, BLOCK_UNITS } from '../../data/pieces';
+
+/**
+ * Where to haul `needed` blocks of `mat` from: { zone, key, amount } or null.
+ * Pieces first (up to what is needed, rounded up to a whole piece), then whole
+ * blocks (at least one; npcDeliverToConstruction returns the change).
+ */
+export function findHaulSource(stockpiles, mat, needed) {
+  const piece = PIECES[mat];
+  if (piece) {
+    for (const zone of stockpiles) {
+      const stored = zone.storage.items[piece.key] || 0;
+      if (stored > 0) {
+        const want = Math.ceil((needed * BLOCK_UNITS) / piece.units - 1e-9);
+        return { zone, key: piece.key, amount: Math.min(stored, Math.max(1, want)) };
+      }
+    }
+  }
+  for (const zone of stockpiles) {
+    const stored = zone.storage.items[mat] || 0;
+    if (stored > 0) return { zone, key: mat, amount: Math.min(stored, Math.max(1, Math.ceil(needed - 1e-9))) };
+  }
+  return null;
+}
 
 // ── Task Registry (module-level singleton) ──
 const _tasks = new Map();
@@ -103,19 +127,11 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
       const delivered = site.materialsDelivered[mat] || 0;
       const needed = required - delivered;
       if (needed <= 0) continue;
-      // Check if any stockpile has this material
-      let sourceZone = null;
-      let available = 0;
-      for (const sp of stockpiles) {
-        const stored = sp.storage.items[mat] || 0;
-        if (stored > 0) {
-          sourceZone = sp;
-          available = stored;
-          break;
-        }
-      }
-      if (!sourceZone) continue;
-      const amount = Math.min(needed, available);
+      // A stockpile with this material: pieces first (planks, slabs, cubes count
+      // by volume), whole blocks once a block or more is needed
+      const source = findHaulSource(stockpiles, mat, needed);
+      if (!source) continue;
+      const { zone: sourceZone, key: haulKey, amount } = source;
       const cx = (sourceZone.bounds.minX + sourceZone.bounds.maxX) / 2;
       const cz = (sourceZone.bounds.minZ + sourceZone.bounds.maxZ) / 2;
       const key = `HAUL:${site.id}:${mat}`;
@@ -128,7 +144,7 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
         siteId: site.id,
         position: [cx, site.position[1], cz],
         blockType: null,
-        material: mat,
+        material: haulKey,
         amount,
         claimedBy: existing ? existing.claimedBy : null,
         priority: 2,

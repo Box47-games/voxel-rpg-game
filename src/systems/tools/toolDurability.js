@@ -10,6 +10,7 @@
  */
 
 import { TOOL_REPAIR_COST_FRACTION, DEATH_TOOL_DURABILITY_LOSS } from '../../data/tuning';
+import { canAffordByVolume } from '../../data/pieces';
 
 export function isTool(item) {
   return !!item && item.maxDurability > 0;
@@ -67,7 +68,7 @@ export function getRepairCost(item) {
 export function canAffordRepair(item, materials) {
   const cost = getRepairCost(item);
   if (!cost) return false;
-  return Object.entries(cost).every(([m, n]) => (materials?.[m] || 0) >= n);
+  return canAffordByVolume(materials, cost); // planks and slabs count
 }
 
 /** A copy of `item` at full durability. */

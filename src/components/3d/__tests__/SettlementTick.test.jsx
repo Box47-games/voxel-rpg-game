@@ -139,11 +139,11 @@ describe('SettlementTick', () => {
       store().updateZone(zone.id, { miningTasks: scanMiningZone(zone.bounds, chunkManager) });
     });
 
-    const stoneBefore = store().inventory.materials.stone || 0;
+    const slabsBefore = store().inventory.materials.stone_slab || 0;
     run(WORK_SCAN_INTERVAL + NPC_MINE_DURATION + 4);
 
     expect(chunkManager.setBlock).toHaveBeenCalledWith(101, 5, 101, BlockTypes.AIR);
-    expect(store().inventory.materials.stone).toBe(stoneBefore + 1);
+    expect(store().inventory.materials.stone_slab).toBeGreaterThanOrEqual(slabsBefore + 1); // stone breaks into slabs
     expect(store().zones[0].miningTasks).toEqual([
       expect.objectContaining({ wx: 101, wy: 5, wz: 101, status: 'done' }),
     ]);

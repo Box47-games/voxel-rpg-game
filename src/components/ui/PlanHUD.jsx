@@ -23,6 +23,7 @@ import {
 } from '../../modules/settlement/settlementSummary';
 import useBuildingLocks from '../../hooks/useBuildingLocks';
 import './PlanHUD.css';
+import { blocksAvailable } from '../../data/pieces';
 
 export const DELETE_TOOL = '__DELETE__';
 
@@ -38,7 +39,7 @@ const ALERT_COLORS = { danger: '#ff6b6b', warning: '#ffb347', info: '#8ab4ff' };
 const REFRESH_MS = 1000;
 
 const canAfford = (building, materials) =>
-  Object.entries(building.cost).every(([m, q]) => (materials?.[m] || 0) >= q);
+  Object.entries(building.cost).every(([m, q]) => blocksAvailable(materials, m) >= q - 1e-9);
 
 const costText = (cost) =>
   Object.entries(cost)
@@ -226,7 +227,7 @@ export default function PlanHUD() {
       : `${placing.name}: click to place · right-click or Esc to cancel`;
     const short = Object.fromEntries(
       Object.entries(placing.cost)
-        .map(([m, q]) => [m, q - (materials?.[m] || 0)])
+        .map(([m, q]) => [m, Math.ceil(q - blocksAvailable(materials, m) - 1e-9)])
         .filter(([, q]) => q > 0)
     );
     if (Object.keys(short).length) hint += ` · short ${costText(short)}: settlers haul it from a stockpile`;

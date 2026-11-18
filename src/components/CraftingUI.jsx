@@ -9,6 +9,7 @@ import BagFrame, { useIsMobile } from './ui/BagFrame';
 import { artUrl, itemArt, materialArt, rarityClass, RARITY_INK } from './ui/art';
 import { CRAFTING_RECIPES, ITEM_TYPES, canCraft } from '../data/craftingRecipes';
 import { recipeLock } from '../data/unlocks';
+import { PIECE_RECIPES, pieceRecipeTimes, applyPieceRecipe, materialName, blocksAvailable, formatBlocks } from '../data/pieces';
 import { MaterialCraftingSystem, QUALITY_TIERS } from '../modules/crafting/MaterialCraftingSystem';
 
 const CATEGORIES = [
@@ -17,6 +18,7 @@ const CATEGORIES = [
   { id: ITEM_TYPES.WEAPON, name: 'Weapons', icon: 'sword' },
   { id: ITEM_TYPES.ARMOR, name: 'Armor', icon: 'armor' },
   { id: ITEM_TYPES.CONSUMABLE, name: 'Potions', icon: 'flask' },
+  { id: 'pieces', name: 'Pieces', icon: 'box' },
 ];
 
 const titleCase = (stat) => stat.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
@@ -143,6 +145,9 @@ const CraftingUI = () => {
           ))}
         </nav>
 
+        {selectedCategory === 'pieces' ? (
+          <PiecesCraft materials={inventory.materials} isMobile={isMobile} />
+        ) : (<>
         <div className="craft__list">
           <h3 className="vx-h">Recipes ({filteredRecipes.length})</h3>
           {filteredRecipes.map((recipe) => {
@@ -201,14 +206,14 @@ const CraftingUI = () => {
               <div className="detail__rows craft__need">
                 <h4 className="vx-h">Materials</h4>
                 {Object.entries(selectedRecipe.requirements).map(([material, required]) => {
-                  const available = inventory.materials[material] || 0;
+                  const available = blocksAvailable(inventory.materials, material); // planks and slabs count
                   const url = materialArt(material);
                   return (
                     <div key={material} className="vx-stat">
                       <span className="vx-slot">{url && <img src={url} alt="" />}</span>
                       <span>{materialLabel(material)}</span>
                       <span className="vx-stat__dots" />
-                      <strong className={available >= required ? 'good' : 'bad'}>{available} / {required}</strong>
+                      <strong className={available >= required - 1e-9 ? 'good' : 'bad'}>{formatBlocks(available)} / {required}</strong>
                     </div>
                   );
                 })}
@@ -240,9 +245,97 @@ const CraftingUI = () => {
             <p className="detail__empty">Select a recipe to see what it needs.</p>
           )}
         </aside>
+        </>)}
       </div>
     </BagFrame>
   );
 };
+
+/**
+ * Craft → Pieces: combine pieces into a block (2 slabs → 1 stone block) or
+ * split a block into pieces. Exact shapes; the only place pieces combine.
+ */
+function PiecesCraft({ materials, isMobile }) {
+  const [selectedId, setSelectedId] = useState(PIECE_RECIPES[0].id);
+  const detailRef = useRef(null);
+  const recipe = PIECE_RECIPES.find((r) => r.id === selectedId);
+  const times = pieceRecipeTimes(recipe, materials);
+  const [[fromKey, fromQty]] = Object.entries(recipe.from);
+  const [[toKey, toQty]] = Object.entries(recipe.to);
+
+  const run = (n) => {
+    const next = applyPieceRecipe(recipe, useGameStore.getState().inventory.materials, n);
+    if (!next) return;
+    useGameStore.getState().setMaterials(next);
+    useGameStore.getState().addPickupText(`+${toQty * n} ${materialName(toKey, toQty * n)}`, '#44ff44');
+  };
+  const pick = (id) => {
+    setSelectedId(id);
+    if (isMobile) setTimeout(() => detailRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }), 0);
+  };
+
+  return (
+    <>
+      <div className="craft__list">
+        <h3 className="vx-h">Combine and split</h3>
+        {PIECE_RECIPES.map((r) => {
+          const n = pieceRecipeTimes(r, materials);
+          const [[fk, fq]] = Object.entries(r.from);
+          const [[tk]] = Object.entries(r.to);
+          return (
+            <button
+              key={r.id}
+              type="button"
+              className={`recipe${r.id === selectedId ? ' is-selected' : ''}`}
+              onClick={() => pick(r.id)}
+            >
+              <span className="vx-slot"><img src={materialArt(tk)} alt="" /></span>
+              <span className="recipe__text">
+                <span className="recipe__name">{r.kind === 'combine' ? materialName(tk) : `Split ${materialName(fk).toLowerCase()}`}</span>
+                <span className="recipe__sub">from {fq} {materialName(fk, fq).toLowerCase()}</span>
+              </span>
+              {n > 0 ? <span className="vx-tag vx-tag--ready">×{n}</span> : <span className="vx-tag vx-tag--need">Need {fq}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <aside className="vx-parch detail" aria-label="Piece recipe" ref={detailRef}>
+        <div className="detail__top">
+          <div className="vx-slot"><img src={materialArt(toKey)} alt="" /></div>
+          <div>
+            <h3 className="detail__name">{toQty > 1 ? `${toQty} ${materialName(toKey, toQty).toLowerCase()}` : materialName(toKey)}</h3>
+            <div className="detail__sub">{recipe.kind === 'combine' ? 'Combine pieces' : 'Split a block'}</div>
+          </div>
+        </div>
+        <p className="detail__desc">
+          {recipe.kind === 'combine'
+            ? `Fit ${fromQty} ${materialName(fromKey, fromQty).toLowerCase()} together into one block you can place.`
+            : `Break a block into ${toQty} ${materialName(toKey, toQty).toLowerCase()}. Buildings and recipes take pieces as they are.`}
+        </p>
+        <div className="detail__rows craft__need">
+          <h4 className="vx-h">Uses</h4>
+          <div className="vx-stat">
+            <span className="vx-slot"><img src={materialArt(fromKey)} alt="" /></span>
+            <span>{materialName(fromKey, fromQty)}</span>
+            <span className="vx-stat__dots" />
+            <strong className={times > 0 ? 'good' : 'bad'}>{materials?.[fromKey] || 0} / {fromQty}</strong>
+          </div>
+        </div>
+        <div className="detail__fill" />
+        <div className="detail__actions">
+          <button type="button" className={`vx-pbtn vx-pbtn--block${times > 0 ? '' : ' vx-pbtn--stone'}`} disabled={times < 1} onClick={() => run(1)}>
+            {times > 0 ? (recipe.kind === 'combine' ? 'Combine' : 'Split') : `Need ${fromQty} ${materialName(fromKey, fromQty).toLowerCase()}`}
+          </button>
+          {times > 1 && (
+            <button type="button" className="vx-pbtn vx-pbtn--stone vx-pbtn--block" onClick={() => run(times)}>
+              {recipe.kind === 'combine' ? 'Combine' : 'Split'} all (×{times})
+            </button>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
 
 export default CraftingUI;

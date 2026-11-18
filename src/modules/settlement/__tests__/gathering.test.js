@@ -118,7 +118,7 @@ describe('settlers at work', () => {
     const after = work(npc, ctx);
     expect(after.state).toBe('IDLE');
     expect(cm.getBlock(c(30), c(5), c(30))).toBe(BlockTypes.AIR);
-    expect(host.getZones()[0].storage.items.wood).toBeGreaterThanOrEqual(3);
+    expect(host.getZones()[0].storage.items.wood_plank).toBeGreaterThanOrEqual(3); // logs break into planks
   });
 
   test('with food low they pick the bush: berries to the stockpile', () => {

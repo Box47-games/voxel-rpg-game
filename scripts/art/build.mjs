@@ -19,7 +19,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
-import { PALETTE, VOXEL, FLAT, MONO, ICONS, BLOCKS } from './sprites.mjs';
+import { PALETTE, VOXEL, FLAT, MONO, ICONS, BLOCKS, PIECE_ICONS } from './sprites.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = join(ROOT, 'src/assets/art');
@@ -130,11 +130,11 @@ function renderMono(rows) {
 
 // ── blocks: isometric cube, 8×8 texels per face ──────────────────────────
 
-function faceTexture(block, face, rand) {
+function faceTexture(block, face, rand, size = 8) {
   const tex = [];
-  for (let v = 0; v < 8; v++) {
+  for (let v = 0; v < size; v++) {
     const row = [];
-    for (let u = 0; u < 8; u++) {
+    for (let u = 0; u < size; u++) {
       let col = face === 'top' ? block.top : block.side;
       for (const [speck, p] of block.specks || []) if (rand() < p) col = speck;
       if (block.rings && face === 'top') {
@@ -151,29 +151,41 @@ function faceTexture(block, face, rand) {
   return tex;
 }
 
-function renderBlock(block) {
+/**
+ * An isometric box X wide (along +u), Y tall, Z deep (along +v), in texels
+ * (a block is 8×8×8). Blocks, slabs, planks and cubes all use it.
+ */
+function renderBox(block, X = 8, Y = 8, Z = 8) {
   const rand = rng(block.id);
   const s = 2;
   const a = Math.cos(Math.PI / 6) * s;
   const b = 0.5 * s;
-  const N = 8;
-  const top = faceTexture(block, 'top', rand);
-  const left = faceTexture(block, 'left', rand);
-  const right = faceTexture(block, 'right', rand);
+  const T = Math.max(X, Y, Z);
+  const top = faceTexture(block, 'top', rand, T);
+  const left = faceTexture(block, 'left', rand, T);
+  const right = faceTexture(block, 'right', rand, T);
   const polys = [];
   const quad = (p0, du, dv, col) => {
     const p = [p0, [p0[0] + du[0], p0[1] + du[1]], [p0[0] + du[0] + dv[0], p0[1] + du[1] + dv[1]], [p0[0] + dv[0], p0[1] + dv[1]]];
     polys.push(`<polygon points="${pts(p)}" fill="${col}" stroke="${col}" stroke-width="0.08"/>`);
   };
-  for (let v = 0; v < N; v++) for (let u = 0; u < N; u++) {
-    quad([u * a - v * a, u * b + v * b], [a, b], [-a, b], shade(top[v][u], 1.12));
-    quad([-N * a + u * a, N * b + u * b + v * s], [a, b], [0, s], shade(left[v][u], 0.86));
-    quad([u * a, 2 * N * b - u * b + v * s], [a, -b], [0, s], shade(right[v][u], 0.66));
-  }
-  const W = 2 * N * a;
-  const H = 2 * N * b + N * s;
-  const outline = `<polygon points="${pts([[0, 0], [N * a, N * b], [N * a, N * b + N * s], [0, 2 * N * b + N * s], [-N * a, N * b + N * s], [-N * a, N * b]])}" fill="none" stroke="${OUTLINE}" stroke-width="0.9" stroke-linejoin="round"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${(-W / 2 - 1).toFixed(2)} -1.5 ${(W + 2).toFixed(2)} ${(H + 3).toFixed(2)}" width="128" height="128">${polys.join('')}${outline}</svg>`;
+  for (let v = 0; v < Z; v++) for (let u = 0; u < X; u++) quad([u * a - v * a, u * b + v * b], [a, b], [-a, b], shade(top[v][u], 1.12));
+  for (let h = 0; h < Y; h++) for (let u = 0; u < X; u++) quad([-Z * a + u * a, Z * b + u * b + h * s], [a, b], [0, s], shade(left[h][u], 0.86));
+  for (let h = 0; h < Y; h++) for (let w = 0; w < Z; w++) quad([X * a - Z * a + w * a, X * b + Z * b - w * b + h * s], [a, -b], [0, s], shade(right[h][w], 0.66));
+  const hex = [[0, 0], [X * a, X * b], [X * a, X * b + Y * s], [X * a - Z * a, X * b + Z * b + Y * s], [-Z * a, Z * b + Y * s], [-Z * a, Z * b]];
+  const outline = `<polygon points="${pts(hex)}" fill="none" stroke="${OUTLINE}" stroke-width="0.9" stroke-linejoin="round"/>`;
+  // Square view, centred, same scale as a full block so pieces read smaller
+  const full = 2 * 8 * a + 2;
+  const minX = -Z * a; const maxX = X * a;
+  const minY = 0; const maxY = X * b + Z * b + Y * s;
+  const side = Math.max(full, maxX - minX + 2, maxY - minY + 3);
+  const vx = (minX + maxX) / 2 - side / 2;
+  const vy = (minY + maxY) / 2 - side / 2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx.toFixed(2)} ${vy.toFixed(2)} ${side.toFixed(2)} ${side.toFixed(2)}" width="128" height="128">${polys.join('')}${outline}</svg>`;
+}
+
+function renderBlock(block) {
+  return renderBox(block, 8, 8, 8);
 }
 
 // ── buildings: their real blueprints as isometric voxels ─────────────────
@@ -304,7 +316,7 @@ async function loadGameData() {
 
 async function main() {
   // Clear only what this script writes (portraits.mjs owns portraits/)
-  for (const dir of [...Object.keys(ICONS), 'blocks', 'buildings', 'textures']) rmSync(join(OUT, dir), { recursive: true, force: true });
+  for (const dir of [...Object.keys(ICONS), 'blocks', 'pieces', 'buildings', 'textures']) rmSync(join(OUT, dir), { recursive: true, force: true });
   const manifest = [];
   const write = (group, id, label, svg, extra = {}) => {
     const file = `${group}/${id}.svg`;
@@ -326,6 +338,7 @@ async function main() {
     }
   }
   for (const block of BLOCKS) write('blocks', block.id, block.label, renderBlock(block));
+  for (const piece of PIECE_ICONS) write('pieces', piece.id, piece.label, renderBox(piece, ...piece.dims));
 
   const { buildings, blockTypes } = await loadGameData();
   const colorOf = (type) => {

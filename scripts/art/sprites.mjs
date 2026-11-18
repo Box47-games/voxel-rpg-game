@@ -285,3 +285,16 @@ export const BLOCKS = [
   { id: 'SNOW', label: 'Snow', top: '#f4f8fa', side: '#e4eef2', noise: 0.03, specks: [['#d4e2ea', 0.12]] },
   { id: 'ICE', label: 'Ice', top: '#a8dcf0', side: '#8ccbe6', noise: 0.04, specks: [['#d8f2fb', 0.12]], streak: '#e8f8ff' },
 ];
+
+// ── Block pieces (data/pieces.js): boxes in texels, a block being 8×8×8 ──
+// Plank 4×1×1 units, slab 2×1×2, cube 1×1×1 (a unit is 4 texels).
+const blockLook = (id) => BLOCKS.find((b) => b.id === id);
+const pieceOf = (id, label, from, dims, extra = {}) => ({ ...blockLook(from), id, label, dims, rings: undefined, bark: undefined, ...extra });
+export const PIECE_ICONS = [
+  pieceOf('wood_plank', 'Wood plank', 'WOOD', [16, 4, 4], { top: '#c99358', side: '#b9824a', specks: [['#9a6435', 0.14]] }),
+  pieceOf('stone_slab', 'Stone slab', 'STONE', [8, 4, 8]),
+  pieceOf('dirt_cube', 'Dirt cube', 'DIRT', [4, 4, 4]),
+  pieceOf('sand_cube', 'Sand cube', 'SAND', [4, 4, 4]),
+  pieceOf('snow_cube', 'Snow cube', 'SNOW', [4, 4, 4]),
+  pieceOf('clay_cube', 'Clay cube', 'CLAY', [4, 4, 4]),
+];

@@ -30,9 +30,17 @@ export function itemArt(item) {
   return artUrl('items', item.id) || artUrl('items', item.recipeId);
 }
 
-/** Icon for an inventory material key. */
+// Building materials are held as blocks (and pieces): show the block
+const BLOCK_ART = { wood: 'WOOD', stone: 'STONE', dirt: 'DIRT', sand: 'SAND', snow: 'SNOW', clay: 'CLAY' };
+
+/** Icon for an inventory material key: a piece, a block, or a material. */
 export function materialArt(key) {
-  return artUrl('materials', key) || artUrl('materials', MATERIAL_ALIASES[key]);
+  return (
+    artUrl('pieces', key) ||
+    artUrl('blocks', BLOCK_ART[key]) ||
+    artUrl('materials', key) ||
+    artUrl('materials', MATERIAL_ALIASES[key])
+  );
 }
 
 /** Slot border class for an item's rarity. */

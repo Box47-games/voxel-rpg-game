@@ -462,7 +462,7 @@ describe('work loop', () => {
     }
 
     expect(game.chunkManager.setBlock).toHaveBeenCalledWith(101, 5, 101, BlockTypes.AIR);
-    expect(game.host.state.materials.stone).toBe(1);
+    expect(game.host.state.materials.stone_slab).toBeGreaterThanOrEqual(1); // stone breaks into slabs
     expect(npcOf(game)).toMatchObject({ state: 'IDLE', currentTaskId: null, workTimer: 0 });
     expect(npcOf(game).skills.mining).toBe(1.0); // capped
   });

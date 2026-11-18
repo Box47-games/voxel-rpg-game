@@ -113,7 +113,8 @@ WorkerPool (`src/systems/workers/WorkerPool.js`) caps at `Math.min(navigator.har
 
 - **`src/data/tuning.js`** — Single source of truth for ALL balance constants (day length, hunger rates, mining speeds, immigration thresholds, rift spawning, etc.). Never hardcode gameplay numbers.
 - **`src/data/zoneTypes.js`** — Zone type definitions (MINING, STOCKPILE, FARMING, BUILDING, RESTRICTED).
-- **`src/data/blockDrops.js`** — Block → loot tables, calculated via `calculateDrops(blockType, toolTier)`. Also defines `BLOCK_PLACEMENT_COSTS`.
+- **`src/data/blockDrops.js`** — Block → loot tables, calculated via `calculateDrops(blockType, toolTier, pieceTiers)`.
+- **`src/data/pieces.js`** — Blocks break into pieces (`wood_plank`, `stone_slab`, `dirt_cube`, ...; a block is 8 units). Placing a block takes a real block; costs in blocks (recipes, blueprints, repairs, hauling) are paid by volume with `spendByVolume` / `payVolume`. Plan: `.claude/plans/block-pieces.md`. Also defines `BLOCK_PLACEMENT_COSTS`.
 - **`src/data/spells.js`** — Spell definitions with cooldowns and mana costs.
 - **`src/data/buildings.js`** — Building blueprints for the construction system.
 - **`src/data/craftingRecipes.js`** — Crafting recipe definitions.

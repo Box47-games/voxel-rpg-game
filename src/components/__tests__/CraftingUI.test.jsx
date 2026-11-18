@@ -32,3 +32,29 @@ describe('CraftingUI unlocks', () => {
     expect(screen.getByRole('button', { name: 'Need materials' })).toBeDisabled();
   });
 });
+
+describe('CraftingUI pieces', () => {
+  beforeEach(() => {
+    s().reset();
+    useGameStore.setState({ inventory: { ...s().inventory, materials: { wood_plank: 7, stone: 1 } } });
+  });
+
+  test('combine planks into a wood block, then all the rest', () => {
+    render(<CraftingUI />);
+    act(() => s().togglePanel('crafting'));
+    fireEvent.click(screen.getByRole('button', { name: /Pieces/ }));
+    // First recipe: wood block from 2 planks
+    fireEvent.click(screen.getByRole('button', { name: 'Combine' }));
+    expect(s().inventory.materials).toMatchObject({ wood_plank: 5, wood: 1 });
+    fireEvent.click(screen.getByRole('button', { name: /Combine all/ }));
+    expect(s().inventory.materials).toMatchObject({ wood_plank: 1, wood: 3 });
+  });
+
+  test('gear recipes count planks toward wood', () => {
+    useGameStore.setState({ player: { ...s().player, level: 1 }, inventory: { ...s().inventory, materials: { wood_plank: 6, stone_slab: 10 } } }); // 3 wood, 5 stone by volume
+    render(<CraftingUI />);
+    act(() => s().togglePanel('crafting'));
+    fireEvent.click(screen.getByText('Stone Pickaxe'));
+    expect(screen.getByRole('button', { name: 'Craft Item' })).not.toBeDisabled();
+  });
+});

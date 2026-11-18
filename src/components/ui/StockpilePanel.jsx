@@ -5,10 +5,12 @@
 
 import React, { useCallback, useEffect } from 'react';
 import useGameStore from '../../stores/useGameStore';
+import { materialName } from '../../data/pieces';
 
 // Ordered list of materials to display
 const MATERIAL_ORDER = [
-  'wood', 'stone', 'iron', 'coal', 'dirt', 'sand', 'clay',
+  'wood', 'wood_plank', 'stone', 'stone_slab', 'iron', 'coal', 'dirt', 'dirt_cube', 'sand', 'sand_cube',
+  'snow', 'snow_cube', 'clay', 'clay_cube',
   'gold_ore', 'leather', 'crystal', 'berry', 'vegetable', 'seed', 'meat', 'bone', 'fiber',
 ];
 
@@ -17,6 +19,8 @@ const MATERIAL_COLORS = {
   dirt: '#654321', sand: '#F4A460', clay: '#CC7744', gold_ore: '#FFD700',
   leather: '#8B6914', crystal: '#88CCFF', berry: '#CC2244', meat: '#E8967A',
   bone: '#F5F5DC', fiber: '#98FB98', vegetable: '#FF8C00', seed: '#C8B560',
+  wood_plank: '#C99358', stone_slab: '#9A9EA6', dirt_cube: '#7A5232', sand_cube: '#E3CC8E',
+  snow: '#F4F8FA', snow_cube: '#E4EEF2', clay_cube: '#A9B4C2',
 };
 
 function MaterialRow({ material, stockpileQty, playerQty, zoneId }) {
@@ -43,8 +47,8 @@ function MaterialRow({ material, stockpileQty, playerQty, zoneId }) {
         background: MATERIAL_COLORS[material] || '#888',
         flexShrink: 0,
       }} />
-      <div style={{ width: 70, fontWeight: 'bold', textTransform: 'capitalize', fontSize: 13 }}>
-        {material.replace('_', ' ')}
+      <div style={{ width: 92, fontWeight: 'bold', fontSize: 13 }}>
+        {materialName(material, 2)}
       </div>
       <div style={{ width: 45, textAlign: 'right', color: '#aaa', fontSize: 12 }}>
         inv:{playerQty}

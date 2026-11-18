@@ -44,6 +44,7 @@ import { getBuildingById, parseLayers } from '../data/buildings';
 import { getPlacedBlocks, getDemolishRefund, getUpgradeProblem } from '../modules/settlement/buildingInfo';
 import { isSettled } from '../modules/settlement/housing';
 import { buildingLock } from '../data/unlocks';
+import { spendByVolume, payVolume, addVolume, volumeOf, baseMaterial } from '../data/pieces';
 
 // Action history for replay/rollback/debugging
 export const actionHistory = new ActionHistory(1000);
@@ -1354,6 +1355,18 @@ const useGameStore = create((rawSet, get, api) => {
       },
     })),
 
+  /** Replace the whole materials map (after a by-volume payment or a piece recipe). */
+  setMaterials: (materials) =>
+    set((state) => ({ inventory: { ...state.inventory, materials } })),
+
+  /** Pay a cost in blocks by volume (pieces first; data/pieces.js). @returns {boolean} paid */
+  spendMaterials: (cost) => {
+    const next = spendByVolume(get().inventory.materials, cost);
+    if (!next) return false;
+    set((state) => ({ inventory: { ...state.inventory, materials: next } }));
+    return true;
+  },
+
   removeMaterial: (materialType, amount) =>
     set((state) => {
       const currentAmount = state.inventory.materials[materialType] || 0;
@@ -1392,8 +1405,8 @@ const useGameStore = create((rawSet, get, api) => {
     const item = target?.slot ? state.equipment[target.slot] : state.inventory.items[target?.index];
     const cost = getRepairCost(item);
     if (!cost || !canAffordRepair(item, state.inventory.materials)) return false;
-    const materials = { ...state.inventory.materials };
-    for (const [m, n] of Object.entries(cost)) materials[m] -= n;
+    const materials = spendByVolume(state.inventory.materials, cost);
+    if (!materials) return false;
     const fixed = repairedTool(item);
     if (target.slot) {
       set({
@@ -1623,13 +1636,15 @@ const useGameStore = create((rawSet, get, api) => {
     if (!zone?.storage) return state;
     const available = state.inventory.materials[materialType] || 0;
     const spaceLeft = zone.storage.capacity - zone.storage.usedCapacity;
-    const toDeposit = Math.min(amount, available, spaceLeft);
+    // Capacity counts volume: a slab takes half a block's room, a cube an eighth
+    const per = volumeOf(materialType, 1);
+    const toDeposit = Math.min(amount, available, Math.floor(spaceLeft / per + 1e-9));
     if (toDeposit <= 0) return state;
     const newItems = { ...zone.storage.items };
     newItems[materialType] = (newItems[materialType] || 0) + toDeposit;
     return {
       zones: state.zones.map(z => z.id === zoneId ? {
-        ...z, storage: { ...z.storage, items: newItems, usedCapacity: zone.storage.usedCapacity + toDeposit }
+        ...z, storage: { ...z.storage, items: newItems, usedCapacity: zone.storage.usedCapacity + toDeposit * per }
       } : z),
       inventory: { ...state.inventory, materials: {
         ...state.inventory.materials, [materialType]: available - toDeposit,
@@ -1648,7 +1663,7 @@ const useGameStore = create((rawSet, get, api) => {
     if (newItems[materialType] <= 0) delete newItems[materialType];
     return {
       zones: state.zones.map(z => z.id === zoneId ? {
-        ...z, storage: { ...z.storage, items: newItems, usedCapacity: Math.max(0, zone.storage.usedCapacity - toWithdraw) }
+        ...z, storage: { ...z.storage, items: newItems, usedCapacity: Math.max(0, zone.storage.usedCapacity - volumeOf(materialType, toWithdraw)) }
       } : z),
       inventory: { ...state.inventory, materials: {
         ...state.inventory.materials, [materialType]: (state.inventory.materials[materialType] || 0) + toWithdraw,
@@ -1667,7 +1682,7 @@ const useGameStore = create((rawSet, get, api) => {
     if (newItems[materialType] <= 0) delete newItems[materialType];
     return {
       zones: state.zones.map(z => z.id === zoneId ? {
-        ...z, storage: { ...z.storage, items: newItems, usedCapacity: Math.max(0, zone.storage.usedCapacity - toConsume) }
+        ...z, storage: { ...z.storage, items: newItems, usedCapacity: Math.max(0, zone.storage.usedCapacity - volumeOf(materialType, toConsume)) }
       } : z),
     };
   }),
@@ -1695,12 +1710,9 @@ const useGameStore = create((rawSet, get, api) => {
     const materialsDelivered = {};
     let allMet = true;
     for (const [mat, req] of Object.entries(materialsRequired)) {
-      const paid = Math.min(req, materials[mat] || 0);
-      if (paid > 0) {
-        materialsDelivered[mat] = paid;
-        materials[mat] -= paid;
-      }
-      if (paid < req) allMet = false;
+      const paid = payVolume(materials, mat, req); // pieces count by volume
+      if (paid > 0) materialsDelivered[mat] = paid;
+      if (paid < req - 1e-9) allMet = false;
     }
     return {
       constructionSites: [...state.constructionSites, {
@@ -1795,9 +1807,9 @@ const useGameStore = create((rawSet, get, api) => {
   deliverToConstruction: (siteId, material, amount) => set((state) => {
     const site = state.constructionSites.find(s => s.id === siteId);
     if (!site || site.status === 'COMPLETE') return state;
-    const available = state.inventory.materials[material] || 0;
     const needed = (site.materialsRequired[material] || 0) - (site.materialsDelivered[material] || 0);
-    const toDeliver = Math.min(amount, available, needed);
+    const materials = { ...state.inventory.materials };
+    const toDeliver = payVolume(materials, material, Math.min(amount, needed)); // pieces count by volume
     if (toDeliver <= 0) return state;
 
     const newDelivered = { ...site.materialsDelivered, [material]: (site.materialsDelivered[material] || 0) + toDeliver };
@@ -1805,7 +1817,7 @@ const useGameStore = create((rawSet, get, api) => {
     // Check if all materials are now met
     let allMet = true;
     for (const [mat, req] of Object.entries(site.materialsRequired)) {
-      if ((newDelivered[mat] || 0) < req) { allMet = false; break; }
+      if ((newDelivered[mat] || 0) < req - 1e-9) { allMet = false; break; }
     }
 
     return {
@@ -1814,32 +1826,46 @@ const useGameStore = create((rawSet, get, api) => {
         materialsDelivered: newDelivered,
         status: allMet ? 'BUILDING' : s.status,
       } : s),
-      inventory: {
-        ...state.inventory,
-        materials: {
-          ...state.inventory.materials,
-          [material]: available - toDeliver,
-        },
-      },
+      inventory: { ...state.inventory, materials },
     };
   }),
 
-  // NPC delivers materials from stockpile (does NOT deduct from player inventory)
-  npcDeliverToConstruction: (siteId, material, amount) => set((state) => {
+  /**
+   * NPC delivers materials from a stockpile (does NOT deduct from the player).
+   * `material` may be a piece key (stone_slab): it counts toward its block
+   * material by volume. Anything past what the site needs goes back to
+   * `returnZoneId`'s stockpile as pieces (a block broken for a half-block need).
+   */
+  npcDeliverToConstruction: (siteId, material, amount, returnZoneId = null) => set((state) => {
     const site = state.constructionSites.find(s => s.id === siteId);
     if (!site || site.status === 'COMPLETE') return state;
-    const needed = (site.materialsRequired[material] || 0) - (site.materialsDelivered[material] || 0);
-    const toDeliver = Math.min(amount, needed);
+    const base = baseMaterial(material);
+    const needed = (site.materialsRequired[base] || 0) - (site.materialsDelivered[base] || 0);
+    const carried = volumeOf(material, amount); // in blocks of `base`
+    const toDeliver = Math.min(carried, needed);
     if (toDeliver <= 0) return state;
 
-    const newDelivered = { ...site.materialsDelivered, [material]: (site.materialsDelivered[material] || 0) + toDeliver };
+    const newDelivered = { ...site.materialsDelivered, [base]: (site.materialsDelivered[base] || 0) + toDeliver };
 
     let allMet = true;
     for (const [mat, req] of Object.entries(site.materialsRequired)) {
-      if ((newDelivered[mat] || 0) < req) { allMet = false; break; }
+      if ((newDelivered[mat] || 0) < req - 1e-9) { allMet = false; break; }
+    }
+
+    // Change from a broken block goes back to the stockpile it came from
+    let zones = state.zones;
+    const change = carried - toDeliver;
+    if (change > 1e-9 && returnZoneId) {
+      zones = zones.map((z) => {
+        if (z.id !== returnZoneId || !z.storage) return z;
+        const items = { ...z.storage.items };
+        addVolume(items, base, change);
+        return { ...z, storage: { ...z.storage, items, usedCapacity: z.storage.usedCapacity + change } };
+      });
     }
 
     return {
+      zones,
       constructionSites: state.constructionSites.map(s => s.id === siteId ? {
         ...s,
         materialsDelivered: newDelivered,
@@ -1885,7 +1911,7 @@ const useGameStore = create((rawSet, get, api) => {
 
     const refund = getDemolishRefund(building);
     const materials = { ...state.inventory.materials };
-    for (const [mat, qty] of Object.entries(refund)) materials[mat] = (materials[mat] || 0) + qty;
+    for (const [mat, qty] of Object.entries(refund)) addVolume(materials, mat, qty);
     set({
       constructionSites: state.constructionSites.filter((s) => s.id !== siteId),
       inventory: { ...state.inventory, materials },
@@ -1937,7 +1963,7 @@ const useGameStore = create((rawSet, get, api) => {
     // Return delivered materials to player
     const newMaterials = { ...state.inventory.materials };
     for (const [mat, qty] of Object.entries(site.materialsDelivered)) {
-      if (qty > 0) newMaterials[mat] = (newMaterials[mat] || 0) + qty;
+      if (qty > 0) addVolume(newMaterials, mat, qty); // fractional = pieces
     }
     if (site.upgradeFrom) {
       // Back to the building that is still standing

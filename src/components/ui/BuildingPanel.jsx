@@ -16,6 +16,7 @@ import {
   getUpgradeProblem,
 } from '../../modules/settlement/buildingInfo';
 import { isSettled } from '../../modules/settlement/housing';
+import { blocksAvailable, formatBlocks } from '../../data/pieces';
 
 const MATERIAL_COLORS = {
   wood: '#8B4513', stone: '#808080', iron: '#C0C0C0', coal: '#333333',
@@ -57,10 +58,10 @@ function MaterialDeliveryRow({ material, required, delivered, playerQty, siteId 
         {material}
       </div>
       <div style={{ width: 65, textAlign: 'right', fontSize: 12, color: delivered >= required ? '#44ff44' : '#ffaa00' }}>
-        {delivered}/{required}
+        {formatBlocks(delivered)}/{required}
       </div>
       <div style={{ width: 45, textAlign: 'right', color: '#aaa', fontSize: 12 }}>
-        inv:{playerQty}
+        inv:{formatBlocks(playerQty)}
       </div>
 
       <button style={btnStyle(canDeliver)} onClick={() => deliverToConstruction(siteId, material, 1)} disabled={!canDeliver}>+1</button>
@@ -276,7 +277,7 @@ export default function BuildingPanel() {
     for (const [mat, required] of Object.entries(site.materialsRequired)) {
       const delivered = site.materialsDelivered[mat] || 0;
       const remaining = required - delivered;
-      const available = materials[mat] || 0;
+      const available = blocksAvailable(materials, mat); // planks and slabs count
       if (remaining > 0 && available > 0) {
         deliverToConstruction(activeSiteId, mat, Math.min(remaining, available));
       }
@@ -399,7 +400,7 @@ export default function BuildingPanel() {
                   material={mat}
                   required={req}
                   delivered={site.materialsDelivered[mat] || 0}
-                  playerQty={materials?.[mat] || 0}
+                  playerQty={blocksAvailable(materials, mat)}
                   siteId={activeSiteId}
                 />
               ))}

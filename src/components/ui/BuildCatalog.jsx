@@ -15,9 +15,11 @@ import {
   PLACEABLE_BLOCKS,
   getPlacementCost,
   countPlaceable,
+  placementByVolume,
 } from '../../data/blockDrops';
 import useBuildingLocks from '../../hooks/useBuildingLocks';
 import './BuildCatalog.css';
+import { blocksAvailable, formatBlocks } from '../../data/pieces';
 
 const TABS = [
   { id: 'blocks', label: 'Blocks', key: '1' },
@@ -39,11 +41,12 @@ const MATERIAL_COLORS = {
 const rgbToCSS = ([r, g, b]) =>
   `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
 
-function Cost({ cost, materials }) {
+/** Cost chips. byVolume: planks, slabs and cubes count toward blocks. */
+function Cost({ cost, materials, byVolume = true }) {
   return (
     <span className="bc-cost">
       {Object.entries(cost).map(([mat, qty]) => {
-        const have = materials?.[mat] || 0;
+        const have = byVolume ? blocksAvailable(materials, mat) : materials?.[mat] || 0;
         return (
           <span
             key={mat}
@@ -54,7 +57,7 @@ function Cost({ cost, materials }) {
               style={{ background: MATERIAL_COLORS[mat] || '#888' }}
               aria-hidden="true"
             />
-            {have}/{qty} {mat}
+            {formatBlocks(have)}/{qty} {mat}
           </span>
         );
       })}
@@ -84,7 +87,7 @@ function BlocksTab({ materials, selected, onPick }) {
               <span className="bc-block__count">{count}</span>
             </span>
             <span className="bc-block__name">{props.name}</span>
-            <Cost cost={getPlacementCost(type)} materials={materials} />
+            <Cost cost={getPlacementCost(type)} materials={materials} byVolume={placementByVolume(type)} />
           </button>
         );
       })}
@@ -94,7 +97,7 @@ function BlocksTab({ materials, selected, onPick }) {
 
 function BuildingCard({ building, materials, onPlace, lock }) {
   const canAfford = Object.entries(building.cost).every(
-    ([mat, qty]) => (materials?.[mat] || 0) >= qty
+    ([mat, qty]) => blocksAvailable(materials, mat) >= qty - 1e-9
   );
   const { housing = 0, attractiveness = 0 } = building.effects || {};
   return (

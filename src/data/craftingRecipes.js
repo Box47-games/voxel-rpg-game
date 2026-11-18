@@ -4,6 +4,7 @@
  */
 
 import { DURABILITY_STONE, DURABILITY_IRON, DURABILITY_STEEL } from './tuning';
+import { canAffordByVolume, spendByVolume } from './pieces';
 
 export const ITEM_TYPES = {
   WEAPON: 'weapon',
@@ -493,28 +494,14 @@ export const getRecipesByType = (type) => {
   return Object.values(CRAFTING_RECIPES).filter((recipe) => recipe.type === type);
 };
 
-// Helper function to check if player can craft an item
+// Can the player craft it? Wood, stone, etc. count by volume (planks and slabs too).
 export const canCraft = (recipe, inventory) => {
   if (!recipe.requirements) return true;
-
-  for (const [material, required] of Object.entries(recipe.requirements)) {
-    const available = inventory.materials[material] || 0;
-    if (available < required) {
-      return false;
-    }
-  }
-  return true;
+  return canAffordByVolume(inventory.materials, recipe.requirements);
 };
 
-// Helper function to consume materials for crafting
+// Materials after paying for a recipe (pieces first, then blocks; data/pieces.js)
 export const consumeMaterials = (recipe, inventory) => {
-  const newMaterials = { ...inventory.materials };
-
-  if (!recipe.requirements) return newMaterials;
-
-  for (const [material, required] of Object.entries(recipe.requirements)) {
-    newMaterials[material] = (newMaterials[material] || 0) - required;
-  }
-
-  return newMaterials;
+  if (!recipe.requirements) return { ...inventory.materials };
+  return spendByVolume(inventory.materials, recipe.requirements) || { ...inventory.materials };
 };

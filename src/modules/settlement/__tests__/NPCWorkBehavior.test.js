@@ -233,7 +233,8 @@ describe('WORKING_MINE', () => {
 
     tickNPC(npc, 2, ctx);
 
-    expect(ctx.host.addMaterial).toHaveBeenCalledWith('stone', 1);
+    // Stone breaks into slabs (settlers mine as if with stone tools: 1 slab, maybe 2)
+    expect(ctx.host.addMaterial).toHaveBeenCalledWith('stone_slab', expect.any(Number));
   });
 
   test('a full (or zero-capacity) stockpile is skipped in favour of the inventory', () => {
@@ -244,7 +245,7 @@ describe('WORKING_MINE', () => {
 
     tickNPC(npc, 2, ctx);
 
-    expect(ctx.host.addMaterial).toHaveBeenCalledWith('stone', 1);
+    expect(ctx.host.addMaterial).toHaveBeenCalledWith('stone_slab', expect.any(Number));
     expect(ctx.host.getZones()[1].storage.items).toEqual({});
   });
 
@@ -258,7 +259,9 @@ describe('WORKING_MINE', () => {
     tickNPC(npc, 2, ctx);
 
     const zones = ctx.host.getZones();
-    expect(zones.find((z) => z.id === 'open').storage).toMatchObject({ items: { stone: 1 }, usedCapacity: 1 });
+    const openStorage = zones.find((z) => z.id === 'open').storage;
+    expect(openStorage.items.stone_slab).toBeGreaterThanOrEqual(1);
+    expect(openStorage.usedCapacity).toBe(openStorage.items.stone_slab / 2); // capacity counts volume: a slab is half a block
     expect(zones.find((z) => z.id === 'full').storage.usedCapacity).toBe(5);
     expect(ctx.host.addMaterial).not.toHaveBeenCalled();
   });
@@ -277,7 +280,9 @@ describe('WORKING_MINE', () => {
     tickNPC(b, 2, ctx);
 
     // ctx.zones is still the tick-start snapshot; the second deposit must build on the first.
-    expect(ctx.host.getZones()[1].storage).toMatchObject({ items: { stone: 2 }, usedCapacity: 2 });
+    const storage = ctx.host.getZones()[1].storage;
+    expect(storage.items.stone_slab).toBeGreaterThanOrEqual(2);
+    expect(storage.usedCapacity).toBe(storage.items.stone_slab / 2);
   });
 
   test('marks the zone task done and queues the block exposed underneath', () => {
@@ -402,7 +407,7 @@ describe('WORKING_HAUL', () => {
 
     const { updates, taskCompleted } = tickNPC(npc, 2, ctx);
 
-    expect(ctx.host.npcDeliverToConstruction).toHaveBeenCalledWith('site_1', 'wood', 4);
+    expect(ctx.host.npcDeliverToConstruction.mock.calls[0].slice(0, 3)).toEqual(['site_1', 'wood', 4]);
     expect(ctx.host.getConstructionSites()[0].status).toBe('BUILDING');
     expect(taskCompleted).toBe(true);
     expect(getTask(working.currentTaskId)).toBeNull();
