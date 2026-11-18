@@ -6,7 +6,7 @@ import useGameStore from '../../stores/useGameStore';
 import { useKeyboard } from '../../hooks/useKeyboard';
 import { calculateEquipmentStats } from '../../utils/equipmentStats';
 import { isTouchDevice } from '../../utils/deviceDetection';
-import { AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_JUMP_MIN_SPEED, JUMP_IMPULSE, JUMP_STAMINA_COST, JUMP_GROUNDED_THRESHOLD, SCAFFOLD_GROUNDED_VY, JUMP_COOLDOWN_MS, NAV_WAYPOINT_ARRIVAL, NAV_STUCK_TIMEOUT,
+import { STEP_UP_CLEARANCE, STEP_UP_COOLDOWN_MS, AUTO_JUMP_COOLDOWN_MS, AUTO_JUMP_DETECT_RANGE, AUTO_JUMP_IMPULSE, AUTO_JUMP_MIN_SPEED, JUMP_IMPULSE, JUMP_STAMINA_COST, JUMP_GROUNDED_THRESHOLD, SCAFFOLD_GROUNDED_VY, JUMP_COOLDOWN_MS, NAV_WAYPOINT_ARRIVAL, NAV_STUCK_TIMEOUT,
   PLAYER_SPRINT_SPEED_MULT, PLAYER_STAMINA_SPRINT_DRAIN, PLAYER_STAMINA_BLOCK_DRAIN, PLAYER_STAMINA_REGEN,
   PLAYER_MANA_REGEN, PLAYER_MOVE_SMOOTHING, CAMERA_FOLLOW_SMOOTHING,
   DODGE_STAMINA_COST, DODGE_DURATION, DODGE_SPEED, DODGE_DOUBLE_TAP_MS,
@@ -18,6 +18,7 @@ import { createHumanoidInstance, PLAYER_LOOK } from './characters/humanoidModel'
 import { getActiveScaffoldRoutes, scaffoldHeightAt } from '../../systems/construction/scaffoldRoute';
 import { createHumanoidAnimState, stepHumanoidAnimation, triggerAction } from './characters/humanoidAnimation';
 import { getLastPlayerAction } from '../../systems/playerActions';
+import { solidAt, stepUpAhead } from '../../systems/movement/stepUp';
 
 // Mining keeps reporting while the button is held; it counts as ongoing this long after
 const MINE_ACTION_WINDOW_MS = 200;
@@ -37,7 +38,7 @@ function blockUnderFeet(cm, pos, depth) {
   const r = 0.45;
   const samples = [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]];
   for (const [ox, oz] of samples) {
-    if (isBlockSolid(cm.getBlock(pos.x + ox, footY, pos.z + oz))) return true;
+    if (solidAt(cm, pos.x + ox, footY, pos.z + oz)) return true;
   }
   return false;
 }
@@ -114,6 +115,7 @@ const Player = () => {
   // Auto-jump state (mobile/touch devices)
   const isMobileDevice = useRef(isTouchDevice());
   const lastAutoJump = useRef(0);
+  const lastStepUp = useRef(0);
   const lastJumpTime = useRef(0); // Cooldown to prevent hold-to-spam
 
   // Stuck detection for navPath following
@@ -368,13 +370,29 @@ const Player = () => {
           const footY = currentPos.y + 0.5;
           const headY = currentPos.y + 2.5;
           if (cm) {
-            const footBlock = cm.getBlock(checkX, footY, checkZ);
-            const headBlock = cm.getBlock(checkX, headY, checkZ);
-            if (isBlockSolid(footBlock) && !isBlockSolid(headBlock)) {
+            // A full block's height in the way (a half step is left to the step-up below)
+            const footSolid = solidAt(cm, checkX, footY, checkZ) && solidAt(cm, checkX, currentPos.y + 1.5, checkZ);
+            if (footSolid && !solidAt(cm, checkX, headY, checkZ)) {
               velocity.y = AUTO_JUMP_IMPULSE;
               lastAutoJump.current = now;
             }
           }
+        }
+      }
+    }
+
+    // Step-up: walking into a half-block step hops onto it (any input)
+    if (cm && grounded && !isDodging.current && isMoving && velocity.y < 1) {
+      const xzSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+      const now = Date.now();
+      if (xzSpeed > AUTO_JUMP_MIN_SPEED && now - lastStepUp.current > STEP_UP_COOLDOWN_MS) {
+        const top = stepUpAhead(cm, currentPos, velocity.x / xzSpeed, velocity.z / xzSpeed);
+        if (top != null) {
+          // Onto the step directly: a hop is unreliable at low frame rates
+          body.setTranslation({ x: currentPos.x, y: top + STEP_UP_CLEARANCE, z: currentPos.z }, true);
+          currentPos.y = top + STEP_UP_CLEARANCE;
+          velocity.y = Math.max(0, velocity.y);
+          lastStepUp.current = now;
         }
       }
     }

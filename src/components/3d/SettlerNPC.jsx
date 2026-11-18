@@ -76,6 +76,8 @@ const STATUS_COLORS = {
 
 function getTerrainY(chunkManager, wx, wz) {
   if (!chunkManager) return null;
+  // Pieces: a slab is a half-block step
+  if (chunkManager.standingHeight) return chunkManager.standingHeight(wx, wz) ?? 2;
   for (let vy = CHUNK_SIZE_Y - 1; vy >= 0; vy--) {
     const worldY = vy * VOXEL_SIZE + VOXEL_SIZE / 2;
     const block = chunkManager.getBlock(wx, worldY, wz);
@@ -211,14 +213,21 @@ const SettlerNPC = React.memo(({ npcData }) => {
         if (chunkMgr && !onScaffold.current) {
           const feetY = terrainY.current + VOXEL_SIZE / 2;
           const torsoY = terrainY.current + VOXEL_SIZE + VOXEL_SIZE / 2;
-          const feetSolid = isSolid(chunkMgr.getBlock(newX, feetY, newZ));
-          const torsoSolid = isSolid(chunkMgr.getBlock(newX, torsoY, newZ));
+          const solidAt = (x, y, z) => (chunkMgr.isSolidAt
+            ? chunkMgr.isSolidAt(x, y, z)
+            : isSolid(chunkMgr.getBlock(x, y, z)));
+          // Feet: anything up to one block above the ground here (a slab is a half step)
+          const feetSolid = solidAt(newX, feetY, newZ) || solidAt(newX, terrainY.current + 0.5, newZ);
+          const torsoSolid = solidAt(newX, torsoY, newZ);
 
           if (feetSolid && !torsoSolid) {
-            // 1-block obstacle — check if headroom is clear above the step
-            const aboveStepY = terrainY.current + VOXEL_SIZE * 2 + VOXEL_SIZE / 2;
-            if (!isSolid(chunkMgr.getBlock(newX, aboveStepY, newZ))) {
-              stepUp = true; // auto-step up
+            // Step of up to one block — where its top is, and headroom above it
+            const top = chunkMgr.standingHeight
+              ? chunkMgr.standingHeight(newX, newZ, terrainY.current + VOXEL_SIZE)
+              : terrainY.current + VOXEL_SIZE;
+            const stepTop = top != null && top > terrainY.current ? top : terrainY.current + VOXEL_SIZE;
+            if (!solidAt(newX, stepTop + VOXEL_SIZE + VOXEL_SIZE / 2, newZ)) {
+              stepUp = stepTop; // auto-step up
             } else {
               blocked = true;
             }
@@ -230,8 +239,8 @@ const SettlerNPC = React.memo(({ npcData }) => {
         if (!blocked) {
           moving = true;
           moveSpeed = speed;
-          const moveY = stepUp ? terrainY.current + VOXEL_SIZE : terrainY.current;
-          if (stepUp) terrainY.current = moveY;
+          const moveY = stepUp !== false ? stepUp : terrainY.current;
+          if (stepUp !== false) terrainY.current = moveY;
 
           rb.setNextKinematicTranslation({
             x: newX,

@@ -208,6 +208,10 @@ export const AUTO_JUMP_COOLDOWN_MS = 250;
 export const AUTO_JUMP_DETECT_RANGE = 2.5;     // World units ahead of player (~1.25 blocks)
 export const AUTO_JUMP_IMPULSE = 10;           // Slightly less than manual jump (12)
 export const AUTO_JUMP_MIN_SPEED = 0.5;        // Min XZ velocity to trigger
+// Step-up: walking into a half-block step (a slab) moves onto it, any input
+export const STEP_UP_CLEARANCE = 0.05;         // Lifted this far above the step's top
+export const STEP_UP_DETECT_RANGE = 0.8;       // World units ahead of the player's centre (radius 0.6)
+export const STEP_UP_COOLDOWN_MS = 250;
 
 export const CAMERA_MIN_DISTANCE = 4;
 export const CAMERA_MAX_DISTANCE = 30;

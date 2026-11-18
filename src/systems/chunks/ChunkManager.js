@@ -15,7 +15,8 @@ import {
   CHUNK_SIZE_Y,
   VOXEL_SIZE,
 } from './coordinates.js';
-import { BlockTypes } from './blockTypes.js';
+import { BlockTypes, isSolid } from './blockTypes.js';
+import { subCubeOf, subFilled, columnTop } from './cellShape.js';
 
 // Campfire glow extends this many blocks — neighbors must rebuild when
 // a campfire is placed/removed within this distance of a chunk edge.
@@ -328,6 +329,7 @@ export class ChunkManager {
         // Restore previously modified chunk instead of regenerating it
         chunk = new Chunk(chunkX, chunkZ);
         chunk.blocks = cached.blocks;
+        chunk.shapes = cached.shapes || null;
         chunk.lastModified = cached.lastModified;
         chunk.isDirty = true;
         chunk.rebuildHeightMap();
@@ -368,6 +370,7 @@ export class ChunkManager {
       const savedWhileLoading = this.modifiedChunkCache.get(key);
       if (savedWhileLoading) {
         chunk.blocks = savedWhileLoading.blocks;
+        chunk.shapes = savedWhileLoading.shapes || null;
         chunk.lastModified = savedWhileLoading.lastModified;
         chunk.isDirty = true;
         chunk.rebuildHeightMap();
@@ -421,6 +424,7 @@ export class ChunkManager {
     if (chunk && chunk.blocks && chunk.lastModified > 0) {
       this.modifiedChunkCache.set(chunk.key, {
         blocks: chunk.blocks,
+        shapes: chunk.hasShapes() ? chunk.shapes : null,
         lastModified: chunk.lastModified,
       });
     }
@@ -428,19 +432,24 @@ export class ChunkManager {
 
   /**
    * All chunks containing world edits, loaded or not (for saving).
-   * @returns {Array<{ key: string, x: number, z: number, blocks: Uint8Array, lastModified: number }>}
+   * `shapes` is present only for chunks with shaped cells (pieces).
+   * @returns {Array<{ key: string, x: number, z: number, blocks: Uint8Array, shapes?: Uint16Array, lastModified: number }>}
    */
   getModifiedChunks() {
     const result = [];
     for (const chunk of this.chunks.values()) {
       if (chunk.blocks && chunk.lastModified > 0) {
-        result.push({ key: chunk.key, x: chunk.x, z: chunk.z, blocks: chunk.blocks, lastModified: chunk.lastModified });
+        const entry = { key: chunk.key, x: chunk.x, z: chunk.z, blocks: chunk.blocks, lastModified: chunk.lastModified };
+        if (chunk.hasShapes()) entry.shapes = chunk.shapes;
+        result.push(entry);
       }
     }
     for (const [key, data] of this.modifiedChunkCache) {
       if (this.chunks.has(key)) continue;
       const [x, z] = key.split(',').map(Number);
-      result.push({ key, x, z, blocks: data.blocks, lastModified: data.lastModified });
+      const entry = { key, x, z, blocks: data.blocks, lastModified: data.lastModified };
+      if (data.shapes) entry.shapes = data.shapes;
+      result.push(entry);
     }
     return result;
   }
@@ -459,15 +468,17 @@ export class ChunkManager {
       const key = chunkKey(data.x, data.z);
       savedKeys.add(key);
       const blocks = new Uint8Array(data.blocks); // copy: never alias saved buffers
+      const shapes = data.shapes ? new Uint16Array(data.shapes) : null;
       const chunk = this.chunks.get(key);
       if (chunk) {
         chunk.blocks = blocks;
+        chunk.shapes = shapes;
         chunk.lastModified = data.lastModified || Date.now();
         chunk.isDirty = true;
         chunk.rebuildHeightMap();
         this._markChunkAndNeighborsDirty(chunk);
       } else {
-        this.modifiedChunkCache.set(key, { blocks, lastModified: data.lastModified || Date.now() });
+        this.modifiedChunkCache.set(key, { blocks, shapes, lastModified: data.lastModified || Date.now() });
       }
     }
 
@@ -680,54 +691,117 @@ export class ChunkManager {
    * @returns {boolean} True if block was set
    */
   setBlock(worldX, worldY, worldZ, blockType) {
+    const at = this._locate(worldX, worldY, worldZ);
+    if (!at) return false; // unloaded chunk, or above/below the world
+    const result = at.chunk.setBlock(at.x, at.y, at.z, blockType);
+    if (result) this._cellChanged(at.chunk, at.x, at.z, blockType);
+    return result;
+  }
+
+  /**
+   * The loaded chunk and local cell holding a world point, or null when the
+   * chunk isn't loaded or the point is above or below the world.
+   * @returns {{ chunk: Chunk, x: number, y: number, z: number } | null}
+   */
+  _locate(worldX, worldY, worldZ) {
     const { chunkX, chunkZ } = worldToChunk(worldX, worldZ);
     const chunk = this.getChunk(chunkX, chunkZ);
-
-    if (!chunk) return false; // Can't modify unloaded chunks
-
-    // Convert to local coordinates
-    const voxelX = Math.floor(worldX / VOXEL_SIZE);
+    if (!chunk) return null;
     const voxelY = Math.floor(worldY / VOXEL_SIZE);
+    if (voxelY < 0 || voxelY >= CHUNK_SIZE_Y) return null;
+    const voxelX = Math.floor(worldX / VOXEL_SIZE);
     const voxelZ = Math.floor(worldZ / VOXEL_SIZE);
+    return {
+      chunk,
+      x: ((voxelX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
+      y: voxelY,
+      z: ((voxelZ % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
+    };
+  }
 
-    // Out-of-world writes are rejected (previously clamped onto bedrock/top layer)
-    if (voxelY < 0 || voxelY >= CHUNK_SIZE_Y) return false;
+  /** Queue mesh rebuilds after a cell changed (and the neighbours it touches). */
+  _cellChanged(chunk, localX, localZ, blockType) {
+    // Mark chunk as dirty so ChunkRenderer will rebuild its mesh
+    chunk.meshDirty = true;
+    this.meshRebuildQueue.add(chunk.key);
 
-    const localX = ((voxelX % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    const localY = voxelY;
-    const localZ = ((voxelZ % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    // Campfire glow extends across chunk boundaries — use wider margin
+    const edgeMargin = (blockType === BlockTypes.CAMPFIRE || blockType === BlockTypes.AIR)
+      ? CAMPFIRE_GLOW_RADIUS : 0;
 
-    const result = chunk.setBlock(localX, localY, localZ, blockType);
+    // Check if we need to rebuild neighbor meshes (edge block or glow radius)
+    const dirty = (n) => {
+      if (!n) return;
+      n.meshDirty = true;
+      this.meshRebuildQueue.add(n.key);
+    };
+    if (localX < 1 + edgeMargin) dirty(chunk.neighbors.west);
+    if (localX > CHUNK_SIZE - 2 - edgeMargin) dirty(chunk.neighbors.east);
+    if (localZ < 1 + edgeMargin) dirty(chunk.neighbors.south);
+    if (localZ > CHUNK_SIZE - 2 - edgeMargin) dirty(chunk.neighbors.north);
+  }
 
-    if (result) {
-      // Mark chunk as dirty so ChunkRenderer will rebuild its mesh
-      chunk.meshDirty = true;
-      this.meshRebuildQueue.add(chunk.key);
+  /**
+   * Shape of the cell at world coordinates (see cellShape.js; 0 = full block or air).
+   * @returns {number}
+   */
+  getShape(worldX, worldY, worldZ) {
+    const at = this._locate(worldX, worldY, worldZ);
+    return at ? at.chunk.getShape(at.x, at.y, at.z) : 0;
+  }
 
-      // Campfire glow extends across chunk boundaries — use wider margin
-      const edgeMargin = (blockType === BlockTypes.CAMPFIRE || blockType === BlockTypes.AIR)
-        ? CAMPFIRE_GLOW_RADIUS : 0;
-
-      // Check if we need to rebuild neighbor meshes (edge block or glow radius)
-      if (localX < 1 + edgeMargin && chunk.neighbors.west) {
-        chunk.neighbors.west.meshDirty = true;
-        this.meshRebuildQueue.add(chunk.neighbors.west.key);
-      }
-      if (localX > CHUNK_SIZE - 2 - edgeMargin && chunk.neighbors.east) {
-        chunk.neighbors.east.meshDirty = true;
-        this.meshRebuildQueue.add(chunk.neighbors.east.key);
-      }
-      if (localZ < 1 + edgeMargin && chunk.neighbors.south) {
-        chunk.neighbors.south.meshDirty = true;
-        this.meshRebuildQueue.add(chunk.neighbors.south.key);
-      }
-      if (localZ > CHUNK_SIZE - 2 - edgeMargin && chunk.neighbors.north) {
-        chunk.neighbors.north.meshDirty = true;
-        this.meshRebuildQueue.add(chunk.neighbors.north.key);
-      }
-    }
-
+  /**
+   * Set a cell's type and shape at world coordinates (shape 0 = full block).
+   * @returns {boolean} True if the cell changed
+   */
+  setCell(worldX, worldY, worldZ, blockType, shape = 0) {
+    const at = this._locate(worldX, worldY, worldZ);
+    if (!at) return false;
+    const result = at.chunk.setCell(at.x, at.y, at.z, blockType, shape);
+    if (result) this._cellChanged(at.chunk, at.x, at.z, blockType);
     return result;
+  }
+
+  /**
+   * Is the exact point inside something solid? Like isSolid(getBlock(...)),
+   * but a shaped cell counts only where it has a filled sub-cube.
+   * @returns {boolean}
+   */
+  isSolidAt(worldX, worldY, worldZ) {
+    const at = this._locate(worldX, worldY, worldZ);
+    if (!at) return false;
+    if (!isSolid(at.chunk.getBlock(at.x, at.y, at.z))) return false;
+    const shape = at.chunk.getShape(at.x, at.y, at.z);
+    if (!shape) return true;
+    const [sx, sy, sz] = subCubeOf(worldX, worldY, worldZ, VOXEL_SIZE);
+    return subFilled(shape, sx, sy, sz);
+  }
+
+  /**
+   * Height of the walkable surface under a point: the top of the highest solid
+   * cell or piece at (worldX, worldZ) at or below `fromY` (a bottom slab is a
+   * half-block step). Null if there is none (chunk not loaded or open void).
+   * @param {number} worldX
+   * @param {number} worldZ
+   * @param {number} [fromY] - search downward from here (default: top of the world)
+   * @returns {number | null}
+   */
+  standingHeight(worldX, worldZ, fromY = CHUNK_SIZE_Y * VOXEL_SIZE) {
+    const { chunkX, chunkZ } = worldToChunk(worldX, worldZ);
+    const chunk = this.getChunk(chunkX, chunkZ);
+    if (!chunk) return null;
+    const lx = ((Math.floor(worldX / VOXEL_SIZE) % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const lz = ((Math.floor(worldZ / VOXEL_SIZE) % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const [sx, , sz] = subCubeOf(worldX, 0, worldZ, VOXEL_SIZE);
+    const startY = Math.min(CHUNK_SIZE_Y - 1, Math.floor(fromY / VOXEL_SIZE));
+    for (let vy = startY; vy >= 0; vy--) {
+      if (!isSolid(chunk.getBlock(lx, vy, lz))) continue;
+      const top = columnTop(chunk.getShape(lx, vy, lz), sx, sz);
+      if (top < 0) continue;
+      const h = vy * VOXEL_SIZE + top * (VOXEL_SIZE / 2);
+      if (h <= fromY + 1e-6) return h;
+    }
+    return null;
   }
 
   /**

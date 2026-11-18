@@ -135,6 +135,12 @@ function buildMeshRequest(chunk, lodLevel) {
       neighborSouth: chunk.neighbors.south?.blocks || null,
       neighborEast: chunk.neighbors.east?.blocks || null,
       neighborWest: chunk.neighbors.west?.blocks || null,
+      // Shaped cells (pieces); null for chunks without any
+      shapes: chunk.shapes || null,
+      shapesNorth: chunk.neighbors.north?.shapes || null,
+      shapesSouth: chunk.neighbors.south?.shapes || null,
+      shapesEast: chunk.neighbors.east?.shapes || null,
+      shapesWest: chunk.neighbors.west?.shapes || null,
     };
   }
   return {

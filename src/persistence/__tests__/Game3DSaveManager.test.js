@@ -8,6 +8,7 @@ import { ChunkManager } from '../../systems/chunks/ChunkManager';
 import { getStockpileCapacity } from '../../data/zoneTypes';
 import { scanForTasks, findBestTask, claimTask } from '../../systems/settlement/TaskAssignmentEngine';
 import { RiftManager, RiftState } from '../../systems/survival/RiftManager';
+import { shapes as SHAPE, AXIS } from '../../systems/chunks/cellShape';
 
 async function loadChunksAround(cm, x, z) {
   cm.updatePlayerPosition(x, z);
@@ -87,6 +88,27 @@ describe('Game3DSaveManager', () => {
     // The unloaded edit comes back when the player returns
     await loadChunksAround(cm, 0, 0);
     expect(cm.getBlock(1, 61, 1)).toBe(5);
+  });
+
+  test('saves and restores shaped cells (pieces), loaded and unloaded', async () => {
+    const cm = new ChunkManager({ seed: 7, viewDistance: 2 });
+    await loadChunksAround(cm, 0, 0);
+    const slab = SHAPE.slab(AXIS.Y, [0]);
+    const cubes = SHAPE.cubes(0b10010110);
+    expect(cm.setCell(1, 61, 1, 3, slab)).toBe(true);
+    await loadChunksAround(cm, 5000, 5000);
+    expect(cm.setCell(5001, 61, 5001, 4, cubes)).toBe(true);
+    expect((await manager.saveGame(useGameStore, cm, 'shapes1')).success).toBe(true);
+
+    // Change both after the save; loading puts the shapes back
+    cm.setBlock(5001, 61, 5001, 0);
+    expect((await manager.loadGame(useGameStore, cm, 'shapes1')).success).toBe(true);
+    await loadChunksAround(cm, 5000, 5000);
+    expect(cm.getBlock(5001, 61, 5001)).toBe(4);
+    expect(cm.getShape(5001, 61, 5001)).toBe(cubes);
+    await loadChunksAround(cm, 0, 0);
+    expect(cm.getBlock(1, 61, 1)).toBe(3);
+    expect(cm.getShape(1, 61, 1)).toBe(slab);
   });
 
   test('loading repairs stockpiles saved with zero capacity', async () => {

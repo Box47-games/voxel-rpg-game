@@ -44,6 +44,10 @@ export class Chunk {
     // Block data - flat Uint8Array (4KB for 16³)
     this.blocks = new Uint8Array(CHUNK_SIZE_CUBED);
 
+    // Shaped cells (pieces): one 16-bit shape per cell, see cellShape.js.
+    // null until the chunk holds a shaped cell; 0 in a cell = a full block.
+    this.shapes = null;
+
     // Heightmap for fast surface queries (256 bytes for 16x16)
     this.heightMap = new Uint8Array(CHUNK_SIZE_SQ);
 
@@ -96,9 +100,11 @@ export class Chunk {
 
     const index = blockIndex(x, y, z);
     const oldBlock = this.blocks[index];
+    const hadShape = this.shapes !== null && this.shapes[index] !== 0;
 
-    if (oldBlock !== blockType) {
+    if (oldBlock !== blockType || hadShape) {
       this.blocks[index] = blockType;
+      if (hadShape) this.shapes[index] = 0; // setBlock always means a full block
       this.isDirty = true;
       this.meshDirty = true;
       this.lastModified = Date.now();
@@ -108,6 +114,44 @@ export class Chunk {
 
       return true;
     }
+    return false;
+  }
+
+  /**
+   * Shape of the cell at local coordinates (0 = full block or air).
+   * @returns {number}
+   */
+  getShape(x, y, z) {
+    if (this.shapes === null || !isInBounds(x, y, z)) return 0;
+    return this.shapes[blockIndex(x, y, z)];
+  }
+
+  /**
+   * Set a cell's block type and shape (shape 0 = full block). To empty a
+   * cell, set it to air.
+   * @returns {boolean} True if the cell changed
+   */
+  setCell(x, y, z, blockType, shape = 0) {
+    if (!isInBounds(x, y, z)) return false;
+    if (!shape || blockType === BlockTypes.AIR) {
+      return this.setBlock(x, y, z, blockType);
+    }
+    const index = blockIndex(x, y, z);
+    if (this.blocks[index] === blockType && this.getShape(x, y, z) === shape) return false;
+    if (this.shapes === null) this.shapes = new Uint16Array(CHUNK_SIZE_CUBED);
+    this.blocks[index] = blockType;
+    this.shapes[index] = shape;
+    this.isDirty = true;
+    this.meshDirty = true;
+    this.lastModified = Date.now();
+    this.updateHeightMapColumn(x, z);
+    return true;
+  }
+
+  /** True when any cell of this chunk is shaped. */
+  hasShapes() {
+    if (this.shapes === null) return false;
+    for (let i = 0; i < this.shapes.length; i++) if (this.shapes[i] !== 0) return true;
     return false;
   }
 
@@ -133,6 +177,7 @@ export class Chunk {
    */
   fill(blockType) {
     this.blocks.fill(blockType);
+    this.shapes = null;
     this.isDirty = true;
     this.meshDirty = true;
     this.rebuildHeightMap();
@@ -220,6 +265,7 @@ export class Chunk {
       // Convert Uint8Array to regular array for JSON
       blocks: Array.from(this.blocks),
       heightMap: Array.from(this.heightMap),
+      ...(this.hasShapes() ? { shapes: Array.from(this.shapes) } : {}),
       lastModified: this.lastModified,
     };
   }
@@ -258,6 +304,7 @@ export class Chunk {
     const chunk = new Chunk(data.x, data.z);
     chunk.blocks = new Uint8Array(data.blocks);
     chunk.heightMap = new Uint8Array(data.heightMap);
+    chunk.shapes = data.shapes ? new Uint16Array(data.shapes) : null;
     chunk.lastModified = data.lastModified || 0;
     chunk.state = ChunkState.READY;
     chunk.isDirty = false;
@@ -355,6 +402,7 @@ export class Chunk {
 
     // Help GC
     this.blocks = null;
+    this.shapes = null;
     this.heightMap = null;
     this.state = ChunkState.UNLOADING;
   }

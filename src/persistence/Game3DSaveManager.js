@@ -219,6 +219,8 @@ class Game3DSaveManager {
           slot,
           chunkKey: c.key,
           binaryData: chunk.serializeBinary(), // Compact ArrayBuffer (copies blocks)
+          // Shaped cells (pieces), only for chunks that have any; older saves have none
+          ...(c.shapes ? { shapes: new Uint16Array(c.shapes).buffer } : {}),
           lastModified: c.lastModified,
         };
       });
@@ -459,7 +461,9 @@ class Game3DSaveManager {
       try {
         if (record.binaryData) {
           const restored = Chunk.deserializeBinary(record.binaryData);
-          modified.push({ x: restored.x, z: restored.z, blocks: restored.blocks, lastModified: record.lastModified });
+          const entry = { x: restored.x, z: restored.z, blocks: restored.blocks, lastModified: record.lastModified };
+          if (record.shapes) entry.shapes = new Uint16Array(record.shapes);
+          modified.push(entry);
         } else if (record.blocks && Number.isFinite(record.x) && Number.isFinite(record.z)) {
           // Legacy JSON array format
           modified.push({ x: record.x, z: record.z, blocks: new Uint8Array(record.blocks), lastModified: record.lastModified });

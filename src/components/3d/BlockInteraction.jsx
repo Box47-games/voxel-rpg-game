@@ -23,6 +23,8 @@ import { performMeleeAttack, MELEE_COOLDOWN } from '../../data/meleeAttack';
 import { audioManager } from '../../utils/AudioManager';
 import { getQuestManager } from '../../systems/QuestManager';
 import { isTouchDevice } from '../../utils/deviceDetection';
+import { subCubeOf, subFilled } from '../../systems/chunks/cellShape';
+import { targetPiece, minePiece, pieceMiningFraction, cellCenter } from '../../systems/chunks/pieceMining';
 
 // Maximum reach distance for block interaction
 const REACH_DISTANCE = 12;
@@ -36,6 +38,26 @@ const REACH_DISTANCE_THIRD_PERSON = 50;
 const RAY_STEP = 0.25;
 
 // Long press settings for mobile block interaction
+
+/**
+ * Does a ray point hit something minable? A shaped cell (pieces) only where a
+ * piece is, so rays pass through its empty part.
+ */
+function hitsSolid(chunkManager, x, y, z, blockType) {
+  if (!isSolid(blockType)) return false;
+  const shape = chunkManager.getShape ? chunkManager.getShape(x, y, z) : 0;
+  if (!shape) return true;
+  const [sx, sy, sz] = subCubeOf(x, y, z, VOXEL_SIZE);
+  return subFilled(shape, sx, sy, sz);
+}
+
+/** What the aim is on: the cell, plus which piece in a shaped cell. */
+function aimKey(chunkManager, point) {
+  if (!point) return null;
+  const cell = `${Math.floor(point.x / VOXEL_SIZE)},${Math.floor(point.y / VOXEL_SIZE)},${Math.floor(point.z / VOXEL_SIZE)}`;
+  const t = targetPiece(chunkManager, point);
+  return t ? `${cell}:${t.piece.index}` : cell;
+}
 
 // Mining progress geometry (flat bar above the block)
 const miningBarBgGeometry = new THREE.PlaneGeometry(VOXEL_SIZE * 1.2, 0.3);
@@ -231,11 +253,11 @@ function _executeUseAction(action, wx, wy, wz, blockType, chunkManager, store) {
 /**
  * BlockHighlight - Wireframe cube showing selected block
  */
-function BlockHighlight({ position, visible }) {
+function BlockHighlight({ position, visible, scale }) {
   if (!visible || !position) return null;
 
   return (
-    <group position={position}>
+    <group position={position} scale={scale || [1, 1, 1]}>
       <lineSegments geometry={highlightEdgesGeometry}>
         <lineBasicMaterial color="#ffffff" linewidth={2} />
       </lineSegments>
@@ -329,7 +351,8 @@ export function BlockInteraction({ chunkManager }) {
   // Progressive mining state
   const isHoldingMine = useRef(false);
   const miningAccum = useRef(0);
-  const miningBlockKey = useRef(null); // "x,y,z" of block being mined
+  const miningBlockKey = useRef(null); // "x,y,z" (+ ":piece") of what is being mined
+  const miningPoint = useRef(null); // world point being mined
   const touchRetarget = useRef(null); // touch: re-aim under the held finger after a block breaks
 
   // Track if we're on mobile
@@ -358,13 +381,30 @@ export function BlockInteraction({ chunkManager }) {
   const highlightPosition = useMemo(() => {
     if (!targetBlock) return null;
 
+    // A piece: the centre of that piece
+    const piece = targetPiece(chunkManager, targetBlock);
+    if (piece) {
+      const [cx, cy, cz] = piece.center;
+      const b = piece.box;
+      const half = VOXEL_SIZE / 2;
+      return [cx - half + (b[0] + b[3]) / 2, cy - half + (b[1] + b[4]) / 2, cz - half + (b[2] + b[5]) / 2];
+    }
+
     // Block center = floor to grid + half voxel size
     const x = Math.floor(targetBlock.x / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
     const y = Math.floor(targetBlock.y / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
     const z = Math.floor(targetBlock.z / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
 
     return [x, y, z];
-  }, [targetBlock]);
+  }, [targetBlock, chunkManager]);
+
+  // Highlight size: a piece's box, or the whole block
+  const highlightScale = useMemo(() => {
+    const piece = targetBlock ? targetPiece(chunkManager, targetBlock) : null;
+    if (!piece) return null;
+    const b = piece.box;
+    return [(b[3] - b[0]) / 2, (b[4] - b[1]) / 2, (b[5] - b[2]) / 2];
+  }, [targetBlock, chunkManager]);
 
   // Calculate placement preview position (where block will be placed)
   // Show in placement mode OR in first-person (where right-click always places)
@@ -430,7 +470,7 @@ export function BlockInteraction({ chunkManager }) {
 
       const blockType = chunkManager.getBlock(cx, cy, cz);
 
-      if (isSolid(blockType)) {
+      if (hitsSolid(chunkManager, cx, cy, cz, blockType)) {
         // Found a solid block - determine which face was hit
         let face = null;
         if (hasLastAir) {
@@ -567,13 +607,8 @@ export function BlockInteraction({ chunkManager }) {
     const prev = prevTargetRef.current;
 
     // Only update state if target actually changed (avoid re-renders)
-    const blockChanged =
-      (result.block === null) !== (prev.block === null) ||
-      (result.block &&
-        prev.block &&
-        (Math.floor(result.block.x / VOXEL_SIZE) !== Math.floor(prev.block.x / VOXEL_SIZE) ||
-          Math.floor(result.block.y / VOXEL_SIZE) !== Math.floor(prev.block.y / VOXEL_SIZE) ||
-          Math.floor(result.block.z / VOXEL_SIZE) !== Math.floor(prev.block.z / VOXEL_SIZE)));
+    // (another piece in the same cell counts as a new target)
+    const blockChanged = aimKey(chunkManager, result.block) !== aimKey(chunkManager, prev.block);
 
     if (blockChanged || result.face !== prev.face) {
       setTargetBlock(result.block);
@@ -601,12 +636,13 @@ export function BlockInteraction({ chunkManager }) {
       return;
     }
 
-    const bx = targetBlock ? Math.floor(targetBlock.x / VOXEL_SIZE) : null;
-    const by = targetBlock ? Math.floor(targetBlock.y / VOXEL_SIZE) : null;
-    const bz = targetBlock ? Math.floor(targetBlock.z / VOXEL_SIZE) : null;
-    const blockKey = targetBlock ? `${bx},${by},${bz}` : miningBlockKey.current;
+    // The point being mined (kept while the aim briefly misses)
+    if (targetBlock) miningPoint.current = targetBlock;
+    const point = miningPoint.current;
+    if (!point) return;
+    const blockKey = aimKey(chunkManager, point);
 
-    // Reset if target block changed (but not if target temporarily went null)
+    // Reset if the target changed: another block, or another piece of a cell
     if (targetBlock && miningBlockKey.current && miningBlockKey.current !== blockKey) {
       miningAccum.current = 0;
       miningBlockKey.current = blockKey;
@@ -614,26 +650,18 @@ export function BlockInteraction({ chunkManager }) {
       miningBlockKey.current = blockKey;
     }
 
-    // Get block hardness — parse from blockKey if target went null
-    let worldX, worldY, worldZ;
-    if (bx !== null) {
-      worldX = bx * VOXEL_SIZE + VOXEL_SIZE / 2;
-      worldY = by * VOXEL_SIZE + VOXEL_SIZE / 2;
-      worldZ = bz * VOXEL_SIZE + VOXEL_SIZE / 2;
-    } else {
-      const parts = miningBlockKey.current.split(',');
-      worldX = Number(parts[0]) * VOXEL_SIZE + VOXEL_SIZE / 2;
-      worldY = Number(parts[1]) * VOXEL_SIZE + VOXEL_SIZE / 2;
-      worldZ = Number(parts[2]) * VOXEL_SIZE + VOXEL_SIZE / 2;
-    }
+    const [worldX, worldY, worldZ] = cellCenter(point.x, point.y, point.z);
     const blockType = chunkManager.getBlock(worldX, worldY, worldZ);
     if (!blockType || blockType === BlockTypes.AIR || blockType === BlockTypes.BEDROCK) return;
+    // A piece takes part of a block's time (a slab or plank half)
+    const piece = targetPiece(chunkManager, point);
+    const sizeFactor = piece ? pieceMiningFraction(piece.kind) : 1;
 
     const hardness = getBlockHardness(blockType);
     const store = useGameStore.getState();
     const equippedTool = usableTool(store.equipment?.weapon); // broken = bare hands
     const harvestSpeed = equippedTool?.stats?.harvestSpeed || HARVEST_SPEED_BARE_HANDS;
-    const breakTime = hardness / harvestSpeed;
+    const breakTime = (hardness / harvestSpeed) * sizeFactor;
 
     // Accumulate mining progress
     miningAccum.current += delta;
@@ -658,9 +686,7 @@ export function BlockInteraction({ chunkManager }) {
   const mineBlock = useCallback(() => {
     if (!targetBlock || !chunkManager) return false;
 
-    const blockX = Math.floor(targetBlock.x / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
-    const blockY = Math.floor(targetBlock.y / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
-    const blockZ = Math.floor(targetBlock.z / VOXEL_SIZE) * VOXEL_SIZE + VOXEL_SIZE / 2;
+    const [blockX, blockY, blockZ] = cellCenter(targetBlock.x, targetBlock.y, targetBlock.z);
 
     // Get current block type before destroying (for future inventory)
     const currentBlock = chunkManager.getBlock(blockX, blockY, blockZ);
@@ -668,8 +694,11 @@ export function BlockInteraction({ chunkManager }) {
     // Don't allow breaking bedrock
     if (currentBlock === BlockTypes.BEDROCK) return false;
 
-    // Set block to air
-    const success = chunkManager.setBlock(blockX, blockY, blockZ, BlockTypes.AIR);
+    // A shaped cell gives back just the piece that was hit (both halves of a plank)
+    const mined = minePiece(chunkManager, targetBlock);
+
+    // Otherwise the whole block goes
+    const success = mined ? true : chunkManager.setBlock(blockX, blockY, blockZ, BlockTypes.AIR);
 
     if (success) {
       // Force immediate raycast to update target for consecutive mining
@@ -686,10 +715,11 @@ export function BlockInteraction({ chunkManager }) {
       const store = useGameStore.getState();
       const equippedTool = usableTool(store.equipment?.weapon);
       const toolTier = equippedTool?.stats?.toolTier || 0;
-      const drops = calculateDrops(currentBlock, toolTier, pieceTiers(equippedTool));
+      const drops = mined ? mined.drops : calculateDrops(currentBlock, toolTier, pieceTiers(equippedTool));
 
-      // Mining wears the tool, harder blocks more
-      if (equippedTool && store.wearEquippedTool(getBlockHardness(currentBlock))) {
+      // Mining wears the tool, harder blocks more (a piece wears it less)
+      const wear = getBlockHardness(currentBlock) * (mined ? pieceMiningFraction(mined.kind) : 1);
+      if (equippedTool && store.wearEquippedTool(wear)) {
         store.addPickupText(`${equippedTool.name} broke! Repair it in the inventory`, '#ff6b6b');
         audioManager.play('error');
       }
@@ -1298,6 +1328,7 @@ export function BlockInteraction({ chunkManager }) {
       {(!touchPlacing || firstPerson) && (
         <BlockHighlight
           position={highlightPosition}
+          scale={highlightScale}
           visible={targetBlock !== null}
         />
       )}

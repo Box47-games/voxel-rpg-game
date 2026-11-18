@@ -401,6 +401,17 @@ function WorldTab({ state, onStatus }) {
         ))}
       </Section>
 
+      <Section title="Block pieces">
+        <div style={s.btnRow}>
+          <Btn
+            onClick={() => onStatus(`Placed ${dev.placeTestShapes()} test shapes`)}
+            title="A row of slabs, planks and cubes in front of you, to walk on and mine"
+          >
+            Place test shapes
+          </Btn>
+        </div>
+      </Section>
+
       <Section title="Save">
         <div style={s.btnRow}>
           <Btn onClick={() => runSave(dev.quickSave, 'Quick save')}>Quick save</Btn>

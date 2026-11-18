@@ -14,6 +14,9 @@ import {
 import { generateNPCIdentity } from '../../data/npcIdentity';
 import { MONSTER_TYPES } from '../../systems/survival/RiftManager';
 import { game3DSaveManager } from '../../persistence/Game3DSaveManager';
+import { BlockTypes } from '../../systems/chunks/blockTypes';
+import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
+import { shapes as SHAPE, AXIS } from '../../systems/chunks/cellShape';
 
 export const DEV_SAVE_SLOT = 'dev-quicksave';
 
@@ -112,6 +115,56 @@ export function spawnEnemy(type = 'slime') {
   const id = `dev_${type}_${Date.now()}_${++_devEnemyCounter}`;
   s.addRiftEnemy(makeEnemy(type, id, [p[0] + Math.sin(yaw) * 6, p[1] + 3, p[2] + Math.cos(yaw) * 6]));
   return id;
+}
+
+/**
+ * Block pieces phase 2 test shapes: a row of shaped cells on the ground a few
+ * blocks in front of the player (the facing snapped to the nearest axis), to
+ * walk on and mine. Left to right: a floor slab, two slabs in one cell, a wall
+ * slab, a plank over two cells, loose dirt cubes, a half layer of sand cubes,
+ * and a slab staircase (slab, block, slab on the block).
+ * @returns {number} cells placed
+ */
+export function placeTestShapes() {
+  const s = store();
+  const cm = s._chunkManager;
+  if (!cm?.setCell) return 0;
+  const p = s.player.position;
+  const yaw = s.player.facingAngle || 0;
+  // Forward and sideways, snapped to the grid axes
+  const fx = Math.abs(Math.sin(yaw)) >= Math.abs(Math.cos(yaw)) ? Math.sign(Math.sin(yaw)) : 0;
+  const fz = fx === 0 ? Math.sign(Math.cos(yaw)) || 1 : 0;
+  const sx = -fz, sz = fx;
+  const fwdAxis = fx !== 0 ? AXIS.X : AXIS.Z;
+  const sideAxis = fx !== 0 ? AXIS.Z : AXIS.X;
+  const cx = Math.floor(p[0] / VOXEL_SIZE);
+  const cz = Math.floor(p[2] / VOXEL_SIZE);
+  let placed = 0;
+
+  // Cell (ahead, side) on the ground, `up` cells above the surface
+  const put = (ahead, side, up, type, shape) => {
+    const wx = (cx + fx * ahead + sx * side) * VOXEL_SIZE + VOXEL_SIZE / 2;
+    const wz = (cz + fz * ahead + sz * side) * VOXEL_SIZE + VOXEL_SIZE / 2;
+    const ground = cm.standingHeight ? cm.standingHeight(wx, wz, p[1] + VOXEL_SIZE * 2) : p[1];
+    if (ground == null) return;
+    const wy = (Math.ceil(ground / VOXEL_SIZE - 1e-6) + up) * VOXEL_SIZE + VOXEL_SIZE / 2;
+    if (cm.setCell(wx, wy, wz, type, shape)) placed++;
+  };
+  // The plank's partner side: + when sideways points along the + axis
+  const plus = (sideAxis === AXIS.X ? sx : sz) > 0;
+
+  put(3, -6, 0, BlockTypes.STONE, SHAPE.slab(AXIS.Y, [0]));
+  put(3, -4, 0, BlockTypes.STONE, SHAPE.slab(AXIS.Y, [0, 1]));
+  put(3, -2, 0, BlockTypes.STONE, SHAPE.slab(fwdAxis, [0]));
+  put(3, 0, 0, BlockTypes.WOOD, SHAPE.plank(sideAxis, [0], plus));
+  put(3, 1, 0, BlockTypes.WOOD, SHAPE.plank(sideAxis, [0], !plus));
+  put(3, 3, 0, BlockTypes.DIRT, SHAPE.cubes(0b10010110));
+  put(3, 5, 0, BlockTypes.SAND, SHAPE.cubes(0b00110011));
+  // Staircase: slab, then a block with a slab on it
+  put(3, 7, 0, BlockTypes.STONE, SHAPE.slab(AXIS.Y, [0]));
+  put(4, 7, 0, BlockTypes.STONE, 0);
+  put(4, 7, 0, BlockTypes.STONE, SHAPE.slab(AXIS.Y, [0])); // on top of the new block
+  return placed;
 }
 
 const STRESS_PREFIX = 'stress_';

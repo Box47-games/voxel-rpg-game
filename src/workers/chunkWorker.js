@@ -772,8 +772,98 @@ function generateTree(blocks, x, baseY, z, random) {
 // MESH BUILDING
 // ============================================================================
 
+// Shaped cells (pieces). A copy of the cutting code in
+// src/systems/chunks/cellShape.js (this classic worker can't import it);
+// a test checks the two agree. Shape: bits 0-7 fill mask (bit sx + sy*2 + sz*4),
+// bits 8-9 kind (1 slab, 2 plank, 3 cubes), bits 10-11 axis.
+const SHAPE_SLAB = 1;
+const SHAPE_PLANK = 2;
+const SHAPE_CUBES = 3;
+// Gap left around each piece so pieces read as pieces (world units)
+const PIECE_SEAM = 0.04;
+
+function shapeSlotBoxes(kind, axis) {
+  const boxes = [];
+  if (kind === SHAPE_CUBES) {
+    for (let i = 0; i < 8; i++) {
+      const sx = i & 1, sy = (i >> 1) & 1, sz = (i >> 2) & 1;
+      boxes.push([sx, sy, sz, sx + 1, sy + 1, sz + 1]);
+    }
+  } else if (kind === SHAPE_SLAB) {
+    for (let h = 0; h < 2; h++) {
+      const box = [0, 0, 0, 2, 2, 2];
+      box[axis] = h;
+      box[axis + 3] = h + 1;
+      boxes.push(box);
+    }
+  } else if (kind === SHAPE_PLANK) {
+    const u = axis === 0 ? 1 : 0;
+    const v = axis === 2 ? 1 : 2;
+    for (let b = 0; b < 4; b++) {
+      const box = [0, 0, 0, 2, 2, 2];
+      box[u] = b & 1;
+      box[u + 3] = (b & 1) + 1;
+      box[v] = b >> 1;
+      box[v + 3] = (b >> 1) + 1;
+      boxes.push(box);
+    }
+  }
+  return boxes;
+}
+
+function boxMaskOf(box) {
+  let m = 0;
+  for (let sz = box[2]; sz < box[5]; sz++) {
+    for (let sy = box[1]; sy < box[4]; sy++) {
+      for (let sx = box[0]; sx < box[3]; sx++) m |= 1 << (sx + sy * 2 + sz * 4);
+    }
+  }
+  return m;
+}
+
+/** Boxes ([x0, y0, z0, x1, y1, z1] in half-cell units) of the pieces in a shaped cell. */
+function shapePieceBoxes(shape) {
+  const mask = shape & 0xff;
+  const kind = (shape >> 8) & 3;
+  const axis = (shape >> 10) & 3;
+  const out = [];
+  const boxes = shapeSlotBoxes(kind, axis);
+  for (let i = 0; i < boxes.length; i++) {
+    const m = boxMaskOf(boxes[i]);
+    if ((mask & m) === m) out.push(boxes[i]);
+  }
+  return out;
+}
+
+/** Bar index (0-3) of a plank box: its position on the two axes across the plank. */
+function plankBarIndex(box, axis) {
+  const u = axis === 0 ? 1 : 0;
+  const v = axis === 2 ? 1 : 2;
+  return box[u] + box[v] * 2;
+}
+
+// Which box side lies on each face, and the neighbour cell across it
+const FACE_SIDE = {
+  top: { axis: 1, max: true, d: [0, 1, 0] },
+  bottom: { axis: 1, max: false, d: [0, -1, 0] },
+  north: { axis: 2, max: true, d: [0, 0, 1] },
+  south: { axis: 2, max: false, d: [0, 0, -1] },
+  east: { axis: 0, max: true, d: [1, 0, 0] },
+  west: { axis: 0, max: false, d: [-1, 0, 0] },
+};
+const FACE_NAMES = ['top', 'bottom', 'north', 'south', 'east', 'west'];
+const SEAM_ALL = [PIECE_SEAM, PIECE_SEAM, PIECE_SEAM, PIECE_SEAM, PIECE_SEAM, PIECE_SEAM];
+
 function buildChunkMesh(params) {
   const { blocks, neighborNorth, neighborSouth, neighborEast, neighborWest } = params;
+  // Shaped cells (pieces): null when a chunk has none
+  const shapes = params.shapes || null;
+  const shapesNorth = params.shapesNorth || null;
+  const shapesSouth = params.shapesSouth || null;
+  const shapesEast = params.shapesEast || null;
+  const shapesWest = params.shapesWest || null;
+  // Plain terrain (no pieces here or next door) skips every shape lookup
+  const anyShapes = !!(shapes || shapesNorth || shapesSouth || shapesEast || shapesWest);
   // World block offset of this chunk (colors and decorations use world coordinates)
   const baseX = (params.chunkX || 0) * CHUNK_SIZE;
   const baseZ = (params.chunkZ || 0) * CHUNK_SIZE;
@@ -809,6 +899,22 @@ function buildChunkMesh(params) {
     return blocks[x + (z << 4) + (y << 8)];
   }
 
+  function getShape(x, y, z) {
+    if (y < 0 || y >= CHUNK_SIZE_Y) return 0;
+    if (x < 0) return shapesWest ? shapesWest[(CHUNK_SIZE - 1) + (z << 4) + (y << 8)] : 0;
+    if (x >= CHUNK_SIZE) return shapesEast ? shapesEast[0 + (z << 4) + (y << 8)] : 0;
+    if (z < 0) return shapesSouth ? shapesSouth[x + ((CHUNK_SIZE - 1) << 4) + (y << 8)] : 0;
+    if (z >= CHUNK_SIZE) return shapesNorth ? shapesNorth[x + (0 << 4) + (y << 8)] : 0;
+    return shapes ? shapes[x + (z << 4) + (y << 8)] : 0;
+  }
+
+  /** Face of a full block toward (nx, ny, nz): open neighbours, and shaped cells (pieces leave gaps). */
+  function fullFaceVisible(blockType, nx, ny, nz) {
+    const adjacent = getBlock(nx, ny, nz);
+    if (shouldRenderFace(blockType, adjacent)) return true;
+    return anyShapes && adjacent !== BlockTypes.AIR && getShape(nx, ny, nz) !== 0;
+  }
+
   function shouldRenderFace(blockType, adjacentType) {
     if (blockType === BlockTypes.AIR) return false;
     if (TransparentBlocks.has(adjacentType)) {
@@ -819,6 +925,7 @@ function buildChunkMesh(params) {
   }
 
   function isSolidForAO(x, y, z) {
+    if (anyShapes && getShape(x, y, z) !== 0) return false; // pieces are thinner than a block
     const b = getBlock(x, y, z);
     return b !== BlockTypes.AIR && b !== BlockTypes.WATER && b !== BlockTypes.LEAVES && b !== BlockTypes.ICE && b !== BlockTypes.DEAD_LEAVES;
   }
@@ -948,7 +1055,10 @@ function buildChunkMesh(params) {
     return glow;
   }
 
-  function addFace(x, y, z, face, blockType) {
+  // box: optional piece box [x0, y0, z0, x1, y1, z1] in half-cell units
+  // (0..2) — the face is drawn on that box, shrunk by PIECE_SEAM, without AO.
+  // inset: optional per-side shrink [x0, y0, z0, x1, y1, z1] (default PIECE_SEAM)
+  function addFace(x, y, z, face, blockType, box, inset) {
     if (vertexCount + 4 > maxVertices) return;
 
     const faceData = FACES[face];
@@ -978,21 +1088,36 @@ function buildChunkMesh(params) {
       const v = faceData.vertices[i];
       const idx = vertexCount * 3;
 
-      positions[idx] = (x + v[0]) * VOXEL_SIZE;
-      positions[idx + 1] = (y + v[1]) * VOXEL_SIZE;
-      positions[idx + 2] = (z + v[2]) * VOXEL_SIZE;
+      // Vertex position in cells (fractional on a piece)
+      let fx = v[0], fy = v[1], fz = v[2];
+      if (box) {
+        fx = (v[0] ? box[3] : box[0]) / 2;
+        fy = (v[1] ? box[4] : box[1]) / 2;
+        fz = (v[2] ? box[5] : box[2]) / 2;
+        const ins = inset || SEAM_ALL;
+        positions[idx] = (x + fx) * VOXEL_SIZE + (v[0] ? -ins[3] : ins[0]);
+        positions[idx + 1] = (y + fy) * VOXEL_SIZE + (v[1] ? -ins[4] : ins[1]);
+        positions[idx + 2] = (z + fz) * VOXEL_SIZE + (v[2] ? -ins[5] : ins[2]);
+      } else {
+        positions[idx] = (x + v[0]) * VOXEL_SIZE;
+        positions[idx + 1] = (y + v[1]) * VOXEL_SIZE;
+        positions[idx + 2] = (z + v[2]) * VOXEL_SIZE;
+      }
 
       normals[idx] = faceData.normal[0];
       normals[idx + 1] = faceData.normal[1];
       normals[idx + 2] = faceData.normal[2];
 
       // Compute per-vertex AO
-      const offsets = aoOffsets[i];
-      const s1 = isSolidForAO(x + offsets[0][0], y + offsets[0][1], z + offsets[0][2]);
-      const s2 = isSolidForAO(x + offsets[1][0], y + offsets[1][1], z + offsets[1][2]);
-      const cn = isSolidForAO(x + offsets[2][0], y + offsets[2][1], z + offsets[2][2]);
-      const ao = (s1 && s2) ? 0 : 3 - (s1 + s2 + cn);
-      const aoMod = AO_BRIGHTNESS[ao];
+      let aoMod = 1;
+      if (!box) {
+        const offsets = aoOffsets[i];
+        const s1 = isSolidForAO(x + offsets[0][0], y + offsets[0][1], z + offsets[0][2]);
+        const s2 = isSolidForAO(x + offsets[1][0], y + offsets[1][1], z + offsets[1][2]);
+        const cn = isSolidForAO(x + offsets[2][0], y + offsets[2][1], z + offsets[2][2]);
+        const ao = (s1 && s2) ? 0 : 3 - (s1 + s2 + cn);
+        aoMod = AO_BRIGHTNESS[ao];
+      }
 
       // Campfire blocks glow — skip darkening, boost brightness with flicker
       if (blockType === BlockTypes.CAMPFIRE) {
@@ -1009,7 +1134,7 @@ function buildChunkMesh(params) {
         colors[idx + 1] = Math.min(1, srgbToLinear(0.05) * finalMod);
         colors[idx + 2] = Math.min(1, srgbToLinear(0.15 + vein) * finalMod);
       } else {
-        const color = vertexBaseColor(blockType, face, v[1] === 1, wx, y, wz, wx + v[0], y + v[1], wz + v[2], vertexColor);
+        const color = vertexBaseColor(blockType, face, v[1] === 1, wx, y, wz, wx + fx, y + fy, wz + fz, vertexColor);
         const finalMod = lightMod * aoMod * heightMod * noiseMod;
         let r = color[0] * finalMod;
         let g = color[1] * finalMod;
@@ -1037,18 +1162,69 @@ function buildChunkMesh(params) {
     );
   }
 
+  /**
+   * Draw each piece of a shaped cell as its own box, a little smaller than its
+   * space so a seam shows between pieces. Sides inside the cell are always
+   * drawn (they are the seams); sides on the cell's edge are skipped only
+   * against a full opaque block.
+   */
+  function addShapedCell(x, y, z, blockType, shape) {
+    const boxes = shapePieceBoxes(shape);
+    const kind = (shape >> 8) & 3;
+    const axis = (shape >> 10) & 3;
+    for (let b = 0; b < boxes.length; b++) {
+      const box = boxes[b];
+      // A plank half joins its other half in the next cell: no seam or end face there
+      let joined = null;
+      if (kind === SHAPE_PLANK) {
+        const plus = (shape >> (12 + plankBarIndex(box, axis))) & 1;
+        const d = [0, 0, 0];
+        d[axis] = plus ? 1 : -1;
+        const px = x + d[0], py = y + d[1], pz = z + d[2];
+        const other = getShape(px, py, pz);
+        if (getBlock(px, py, pz) === blockType && ((other >> 8) & 3) === SHAPE_PLANK &&
+            ((other >> 10) & 3) === axis && (other & boxMaskOf(box)) === boxMaskOf(box)) {
+          joined = { side: plus ? axis + 3 : axis };
+        }
+      }
+      let inset = SEAM_ALL;
+      if (joined) {
+        inset = SEAM_ALL.slice();
+        inset[joined.side] = 0;
+      }
+      for (let f = 0; f < FACE_NAMES.length; f++) {
+        const face = FACE_NAMES[f];
+        const side = FACE_SIDE[face];
+        if (joined && side.axis === axis && (side.max ? axis + 3 : axis) === joined.side) continue;
+        const onEdge = side.max ? box[side.axis + 3] === 2 : box[side.axis] === 0;
+        if (onEdge) {
+          const nx = x + side.d[0], ny = y + side.d[1], nz = z + side.d[2];
+          const adjacent = getBlock(nx, ny, nz);
+          if (!TransparentBlocks.has(adjacent) && getShape(nx, ny, nz) === 0) continue;
+        }
+        addFace(x, y, z, face, blockType, box, inset);
+      }
+    }
+  }
+
   for (let y = 0; y < CHUNK_SIZE_Y; y++) {
     for (let z = 0; z < CHUNK_SIZE; z++) {
       for (let x = 0; x < CHUNK_SIZE; x++) {
         const blockType = blocks[x + (z << 4) + (y << 8)];
         if (blockType === BlockTypes.AIR) continue;
 
-        if (shouldRenderFace(blockType, getBlock(x, y + 1, z))) addFace(x, y, z, 'top', blockType);
-        if (shouldRenderFace(blockType, getBlock(x, y - 1, z))) addFace(x, y, z, 'bottom', blockType);
-        if (shouldRenderFace(blockType, getBlock(x, y, z + 1))) addFace(x, y, z, 'north', blockType);
-        if (shouldRenderFace(blockType, getBlock(x, y, z - 1))) addFace(x, y, z, 'south', blockType);
-        if (shouldRenderFace(blockType, getBlock(x + 1, y, z))) addFace(x, y, z, 'east', blockType);
-        if (shouldRenderFace(blockType, getBlock(x - 1, y, z))) addFace(x, y, z, 'west', blockType);
+        const shape = shapes ? shapes[x + (z << 4) + (y << 8)] : 0;
+        if (shape !== 0) {
+          addShapedCell(x, y, z, blockType, shape);
+          continue; // no grass tufts or pebbles on pieces
+        }
+
+        if (fullFaceVisible(blockType, x, y + 1, z)) addFace(x, y, z, 'top', blockType);
+        if (fullFaceVisible(blockType, x, y - 1, z)) addFace(x, y, z, 'bottom', blockType);
+        if (fullFaceVisible(blockType, x, y, z + 1)) addFace(x, y, z, 'north', blockType);
+        if (fullFaceVisible(blockType, x, y, z - 1)) addFace(x, y, z, 'south', blockType);
+        if (fullFaceVisible(blockType, x + 1, y, z)) addFace(x, y, z, 'east', blockType);
+        if (fullFaceVisible(blockType, x - 1, y, z)) addFace(x, y, z, 'west', blockType);
         decorateBlock(decor, blockType, getBlock(x, y + 1, z), x, y, z, baseX + x, y, baseZ + z);
       }
     }

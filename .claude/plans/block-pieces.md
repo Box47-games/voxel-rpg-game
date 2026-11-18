@@ -1,6 +1,6 @@
 # Block pieces: blocks break into placeable pieces
 
-Status: planned (not started). Decisions from the user on 2026-11-18 are marked **[decided]**;
+Status: phase 1 (pieces in the bag) and the hotbar merged; phase 2 (shaped cells in the world) built on branch `block-pieces-2`. Decisions from the user on 2026-11-18 are marked **[decided]**;
 my proposals still to confirm are marked **[proposed]**.
 
 ## The idea
@@ -113,6 +113,15 @@ one plank; 8 = two). The rest is lost as rubble or splinters.
    - Placement is still full blocks; a dev-overlay tool places test shapes.
    - Check: mesher unit tests per mask; walk on and mine test shapes; frame time on a phone
      profile stays inside budget.
+   - Built: one 16-bit shape per cell instead of two byte arrays (`cellShape.js`: mask, kind,
+     axis, plank partner side). Pieces are drawn as separate boxes inset 0.04 so seams show;
+     a plank's two halves join without a seam. Mining a placed piece gives that piece back whole
+     (a lone plank half gives nothing). Mining a piece takes half a block's time (a cube a quarter).
+     The player is lifted onto half steps (a physics hop was unreliable at low frame rates);
+     settlers step by standing height.
+   - Checked: mesher tests for every mask of every kind and axis; walking up a half-step
+     staircase and mining two slabs one at a time in the browser; meshing plain terrain costs the
+     same as before (shape lookups skipped when a chunk and its neighbours have none).
 3. **Placing pieces.**
    - Changes: shape picker, rotation, sub-grid ghost preview, filling free space in a matching
      cell (never fusing), one piece per placement. Desktop and touch.
