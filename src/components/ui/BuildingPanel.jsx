@@ -4,13 +4,16 @@
  * building, see what it does and who lives there, and demolish it.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
 import { getBuildingById } from '../../data/buildings';
 import { getTask } from '../../systems/settlement/TaskAssignmentEngine';
 import {
   getConstructionEta,
+  siteStage,
+  needsMaterials,
+  nextCellShortfall,
   getDemolishRefund,
   getFarmsPoweredBy,
   getUpgradeProblem,
@@ -22,10 +25,11 @@ const MATERIAL_COLORS = {
   wood: '#8B4513', stone: '#808080', iron: '#C0C0C0', coal: '#333333',
 };
 
-const STATUS_COLORS = {
-  PLACED: '#ffaa00',
-  BUILDING: '#44aaff',
-  COMPLETE: '#44ff44',
+// Badge per stage: a site builds as materials arrive, so it can be waiting part way
+const STAGE_BADGE = {
+  waiting: { text: 'WAITING', color: '#ffaa00' },
+  building: { text: 'BUILDING', color: '#44aaff' },
+  complete: { text: 'COMPLETE', color: '#44ff44' },
 };
 
 function MaterialDeliveryRow({ material, required, delivered, playerQty, siteId }) {
@@ -253,18 +257,6 @@ export default function BuildingPanel() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [activeSiteId, closePanel]);
 
-  // Auto-close and notify when the last material arrives (PLACED → BUILDING),
-  // not when the panel is opened on a site that is already being built
-  const prevStatus = useRef(null);
-  useEffect(() => {
-    const prev = prevStatus.current;
-    prevStatus.current = site ? `${activeSiteId}:${site.status}` : null;
-    if (site?.status === 'BUILDING' && prev === `${activeSiteId}:PLACED`) {
-      addPickupText('Construction started!', '#44aaff');
-      closePanel();
-    }
-  }, [site, site?.status, activeSiteId, addPickupText, closePanel]);
-
   const handleDemolished = useCallback((refund) => {
     if (!refund) return;
     const back = formatMaterials(refund);
@@ -294,17 +286,15 @@ export default function BuildingPanel() {
 
   if (!activeSiteId || !site || !building) return null;
 
-  // Calculate overall delivery progress
-  let totalRequired = 0;
-  let totalDelivered = 0;
-  for (const [mat, req] of Object.entries(site.materialsRequired)) {
-    totalRequired += req;
-    totalDelivered += Math.min(site.materialsDelivered[mat] || 0, req);
-  }
-  const deliveryPct = totalRequired > 0 ? totalDelivered / totalRequired : 0;
-
-  // Block progress for BUILDING status
-  const blockPct = site.totalBlocks > 0 ? site.blocksPlaced / site.totalBlocks : 0;
+  // One bar: how much is built. It builds as materials arrive.
+  const stage = siteStage(site);
+  const badge = STAGE_BADGE[stage];
+  const blockPct = site.status === 'COMPLETE' ? 1 : site.totalBlocks > 0 ? site.blocksPlaced / site.totalBlocks : 0;
+  const stillNeeded = needsMaterials(site);
+  const short = stage === 'waiting' ? nextCellShortfall(site) : null;
+  const shortText = short && Object.keys(short).length
+    ? Object.entries(short).map(([m, n]) => `${formatBlocks(n)} ${m}`).join(', ')
+    : null;
 
   return (
     <div
@@ -353,11 +343,11 @@ export default function BuildingPanel() {
               fontSize: 11,
               padding: '2px 6px',
               borderRadius: 3,
-              background: STATUS_COLORS[site.status] || '#555',
+              background: badge.color,
               color: '#000',
               fontWeight: 'bold',
             }}>
-              {site.status}
+              {badge.text}
             </span>
           </div>
           <button
@@ -375,23 +365,21 @@ export default function BuildingPanel() {
         {/* Progress bar */}
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 12, color: '#aaa', marginBottom: 3 }}>
-            {site.status === 'PLACED' ? `Materials: ${totalDelivered}/${totalRequired}` :
-             site.status === 'BUILDING' ? `Blocks: ${site.blocksPlaced}/${site.totalBlocks}` :
-             'Complete!'}
+            {site.status === 'COMPLETE' ? 'Complete!' : `Built: ${site.blocksPlaced}/${site.totalBlocks}`}
           </div>
           <div style={{ width: '100%', height: 8, background: '#222', borderRadius: 4, overflow: 'hidden' }}>
             <div style={{
-              width: `${(site.status === 'BUILDING' ? blockPct : deliveryPct) * 100}%`,
+              width: `${blockPct * 100}%`,
               height: '100%',
-              background: site.status === 'COMPLETE' ? '#44ff44' : site.status === 'BUILDING' ? '#44aaff' : '#ffaa00',
+              background: badge.color,
               borderRadius: 4,
               transition: 'width 0.2s',
             }} />
           </div>
         </div>
 
-        {/* Material delivery (only for PLACED status) */}
-        {site.status === 'PLACED' && (
+        {/* Material delivery: while anything is still to come (building goes on meanwhile) */}
+        {stillNeeded && (
           <>
             <div style={{ overflowY: 'auto', maxHeight: '40vh' }}>
               {Object.entries(site.materialsRequired).map(([mat, req]) => (
@@ -420,12 +408,18 @@ export default function BuildingPanel() {
           </>
         )}
 
-        {site.status === 'BUILDING' && (() => {
+        {stage === 'waiting' && shortText && (
+          <div style={{ padding: 10, color: '#ffaa00', fontSize: 13, textAlign: 'center' }}>
+            {site.blocksPlaced > 0 ? 'Paused' : 'Not started'}: the next {site.blocksPlaced > 0 ? 'piece' : 'block'} needs {shortText} more
+          </div>
+        )}
+
+        {stage === 'building' && (() => {
           const [builderName, skill] = builder ? builder.split('|') : [null, null];
           const eta = formatEta(getConstructionEta(site, builder ? Number(skill) : null));
           return (
             <div style={{ padding: 10, color: '#44aaff', fontSize: 13, textAlign: 'center' }}>
-              <div>Construction in progress ({site.blocksPlaced}/{site.totalBlocks} blocks){eta ? `, ${eta} left` : ''}</div>
+              <div>Building as materials arrive ({site.blocksPlaced}/{site.totalBlocks} placed){eta ? `, ${eta} left` : ''}</div>
               <div style={{ color: '#aaa', fontSize: 12, marginTop: 4 }}>
                 {builderName ? `Builder: ${builderName}` : 'No settler building it: it builds itself slowly'}
               </div>

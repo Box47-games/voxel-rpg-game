@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import useGameStore from '../../stores/useGameStore';
 import { getBuildingById, parseLayers, cellBox } from '../../data/buildings';
+import { buildProgress, canPlaceNext } from '../../modules/settlement/buildingInfo';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { getBlockColor } from '../../systems/chunks/blockTypes';
 import { getScaffoldRoute, segmentBox } from '../../systems/construction/scaffoldRoute';
@@ -109,21 +110,10 @@ function ConstructionSiteVisual({ site }) {
   }, [building, blocks, site.position, site.blocksPlaced, site.status]);
   nextScaleRef.current = ghostBlocks[0]?.scale || ONE;
 
-  // Progress calculation
-  const progress = useMemo(() => {
-    if (site.status === 'PLACED') {
-      let totalReq = 0, totalDel = 0;
-      for (const [mat, req] of Object.entries(site.materialsRequired)) {
-        totalReq += req;
-        totalDel += Math.min(site.materialsDelivered[mat] || 0, req);
-      }
-      return totalReq > 0 ? totalDel / totalReq : 0;
-    }
-    if (site.status === 'BUILDING') {
-      return site.totalBlocks > 0 ? site.blocksPlaced / site.totalBlocks : 0;
-    }
-    return 1;
-  }, [site.status, site.materialsRequired, site.materialsDelivered, site.blocksPlaced, site.totalBlocks]);
+  // Progress: how much is built (it builds as materials arrive);
+  // `paid`: the next block or piece has its materials, so it can go in now
+  const progress = buildProgress(site);
+  const paid = canPlaceNext(site);
 
   const posts = useMemo(
     () => (building ? scaffoldPosts(site, building.size) : []),
@@ -149,18 +139,18 @@ function ConstructionSiteVisual({ site }) {
   const barX = site.position[0] + (building.size.width * VOXEL_SIZE) / 2;
   const barZ = site.position[2] + (building.size.depth * VOXEL_SIZE) / 2;
 
-  // Same colours as the HUD: gold while materials arrive, blue while building
-  const barColor = site.status === 'BUILDING' ? '#4dabf7' : '#f2c14e';
+  // Same colours as the HUD: blue while building, gold while waiting for materials
+  const barColor = paid ? '#4dabf7' : '#f2c14e';
   const barWidth = 4 * Math.min(1, progress);
 
   return (
     <>
       {/* Blueprint of the blocks still to place; the next one pulses */}
       <GhostBlocks blocks={ghostBlocks.slice(1)} />
-      {ghostBlocks[0] && site.status === 'BUILDING' && (
+      {ghostBlocks[0] && paid && (
         <mesh ref={nextRef} geometry={boxGeo} material={nextMat} position={ghostBlocks[0].position} />
       )}
-      {ghostBlocks[0] && site.status !== 'BUILDING' && <GhostBlocks blocks={ghostBlocks.slice(0, 1)} />}
+      {ghostBlocks[0] && !paid && <GhostBlocks blocks={ghostBlocks.slice(0, 1)} />}
 
       {/* Wooden scaffolding: corner posts and a ramp spiralling up to the top */}
       <Scaffold posts={posts} route={route} />

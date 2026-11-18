@@ -147,8 +147,17 @@ one plank; 8 = two). The rest is lost as rubble or splinters.
      Stone House has a plank floor and a slab roof, the Storage Shed a plank roof, the
      Watchtower a slab roof; their costs dropped with the volume saved (house stone 40→31,
      wood 10→11; shed wood 15→11; tower stone 25→22).
-   - Not done: paying per piece while building. Sites still collect all their materials
-     before building starts; mixing hauling and building is a bigger settler-AI change.
+   - Paying per piece while building (done after phase 4, `buildingInfo.paymentSchedule`):
+     a site stays PLACED until its first cell goes in, then builds whenever delivered
+     materials cover the cost up to the next cell. Each material is spread over its own
+     cells by volume (a slab costs half a block's share; the last cell takes the rest).
+     Settlers get a BUILD task only when the next cell is paid for, release it when it isn't,
+     and keep hauling for any unfinished site. Deliveries a site no longer needs go back to
+     the stockpile; cancelling a part-built site removes its blocks and refunds everything
+     delivered. Panels show "% built", "paused" or "waiting", and what the next piece needs.
+     Checked in the browser: one settler with only 15 stone of 31 built 4 cells, paused,
+     then finished after a top-up; two settlers with full stock built while one chopped
+     wood. 56/56 cells matched each time.
    - Fixed: hauling pieces lost the load (phase 1 bug). A haul task was keyed by the piece
      ('stone_slab') when claims were kept but by the material ('stone') when scanned, so every
      rescan dropped the settler's task and the carried load with it. Now keyed by material, and

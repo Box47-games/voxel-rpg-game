@@ -76,8 +76,8 @@ describe('buildings', () => {
     ]);
     expect(b.completed).toEqual([{ name: 'Wooden Shelter', count: 2 }]);
     expect(b.inProgress).toEqual([
-      { id: 'c', name: 'Stone House', status: 'PLACED', progress: 0, missing: { stone: 25 } },
-      { id: 'd', name: 'Farm Plot', status: 'BUILDING', progress: 0.25, missing: {} },
+      { id: 'c', name: 'Stone House', status: 'PLACED', stage: 'building', progress: 0, missing: { stone: 25 } },
+      { id: 'd', name: 'Farm Plot', status: 'BUILDING', stage: 'building', progress: 0.25, missing: {} },
     ]);
   });
 });

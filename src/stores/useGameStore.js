@@ -1767,18 +1767,17 @@ const useGameStore = create((rawSet, get, api) => {
   placeConstructionSite: (buildingId, position, materialsRequired, totalBlocks) => set((state) => {
     const materials = { ...state.inventory.materials };
     const materialsDelivered = {};
-    let allMet = true;
     for (const [mat, req] of Object.entries(materialsRequired)) {
       const paid = payVolume(materials, mat, req); // pieces count by volume
       if (paid > 0) materialsDelivered[mat] = paid;
-      if (paid < req - 1e-9) allMet = false;
     }
     return {
       constructionSites: [...state.constructionSites, {
         id: `cs_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         buildingId,
         position,
-        status: allMet ? 'BUILDING' : 'PLACED',
+        // PLACED until its first block goes in; it builds as materials arrive
+        status: 'PLACED',
         materialsDelivered,
         materialsRequired,
         blocksPlaced: 0,
@@ -1877,17 +1876,11 @@ const useGameStore = create((rawSet, get, api) => {
 
     const newDelivered = { ...site.materialsDelivered, [material]: (site.materialsDelivered[material] || 0) + toDeliver };
 
-    // Check if all materials are now met
-    let allMet = true;
-    for (const [mat, req] of Object.entries(site.materialsRequired)) {
-      if ((newDelivered[mat] || 0) < req - 1e-9) { allMet = false; break; }
-    }
-
+    // Building goes on as materials arrive (see canPlaceNext)
     return {
       constructionSites: state.constructionSites.map(s => s.id === siteId ? {
         ...s,
         materialsDelivered: newDelivered,
-        status: allMet ? 'BUILDING' : s.status,
       } : s),
       inventory: { ...state.inventory, materials },
     };
@@ -1901,21 +1894,14 @@ const useGameStore = create((rawSet, get, api) => {
    */
   npcDeliverToConstruction: (siteId, material, amount, returnZoneId = null) => set((state) => {
     const site = state.constructionSites.find(s => s.id === siteId);
-    if (!site || site.status === 'COMPLETE') return state;
+    const open = site && site.status !== 'COMPLETE'; // gone or finished: it all goes back
     const base = baseMaterial(material);
-    const needed = (site.materialsRequired[base] || 0) - (site.materialsDelivered[base] || 0);
+    const needed = open ? (site.materialsRequired[base] || 0) - (site.materialsDelivered?.[base] || 0) : 0;
     const carried = volumeOf(material, amount); // in blocks of `base`
-    const toDeliver = Math.min(carried, needed);
-    if (toDeliver <= 0) return state;
+    const toDeliver = Math.max(0, Math.min(carried, needed));
 
-    const newDelivered = { ...site.materialsDelivered, [base]: (site.materialsDelivered[base] || 0) + toDeliver };
-
-    let allMet = true;
-    for (const [mat, req] of Object.entries(site.materialsRequired)) {
-      if ((newDelivered[mat] || 0) < req - 1e-9) { allMet = false; break; }
-    }
-
-    // Change from a broken block goes back to the stockpile it came from
+    // Change from a broken block (or anything the site no longer needs) goes
+    // back to the stockpile it came from
     let zones = state.zones;
     const change = carried - toDeliver;
     if (change > 1e-9 && returnZoneId) {
@@ -1927,19 +1913,21 @@ const useGameStore = create((rawSet, get, api) => {
       });
     }
 
+    if (toDeliver <= 0) return { zones }; // nothing needed: it all went back
+    const newDelivered = { ...site.materialsDelivered, [base]: (site.materialsDelivered[base] || 0) + toDeliver };
     return {
       zones,
       constructionSites: state.constructionSites.map(s => s.id === siteId ? {
         ...s,
         materialsDelivered: newDelivered,
-        status: allMet ? 'BUILDING' : s.status,
       } : s),
     };
   }),
 
   advanceConstruction: (siteId) => set((state) => {
     const site = state.constructionSites.find(s => s.id === siteId);
-    if (!site || site.status !== 'BUILDING') return state;
+    // A fresh site (PLACED) starts building with its first block
+    if (!site || site.status === 'COMPLETE') return state;
     const newBlocksPlaced = site.blocksPlaced + 1;
     const isComplete = newBlocksPlaced >= site.totalBlocks;
     return {
@@ -2048,6 +2036,14 @@ const useGameStore = create((rawSet, get, api) => {
         }),
         inventory: { ...state.inventory, materials: newMaterials },
       };
+    }
+    // Part built: take down what went up (it was paid from the delivered
+    // materials, which all come back above)
+    const chunkManager = state._chunkManager;
+    if (chunkManager && site.blocksPlaced > 0) {
+      for (const b of getPlacedBlocks(site)) {
+        if (chunkManager.getBlock(b.x, b.y, b.z) === b.blockType) chunkManager.setBlock(b.x, b.y, b.z, 0);
+      }
     }
     return {
       constructionSites: state.constructionSites.filter(s => s.id !== siteId),

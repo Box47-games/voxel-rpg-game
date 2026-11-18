@@ -145,13 +145,15 @@ export function makeStockpile(overrides = {}) {
 }
 
 export function makeSite(overrides = {}) {
+  const materialsRequired = overrides.materialsRequired || { wood: 4 };
   return {
     id: 'site_1',
     buildingId: 'shelter',
     position: [60, 2, 60],
     status: 'PLACED',
-    materialsRequired: { wood: 4 },
-    materialsDelivered: {},
+    materialsRequired,
+    // A site being built has its materials in (sites pay as they build)
+    materialsDelivered: overrides.status === 'BUILDING' ? { ...materialsRequired } : {},
     blocksPlaced: 0,
     totalBlocks: 2,
     ...overrides,

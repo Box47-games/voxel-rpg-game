@@ -6,6 +6,8 @@
 
 import { getBuildingById } from '../../data/buildings.js';
 import { getHomes, getTotalBeds, getPopulationCap, isSettled } from './housing.js';
+import { siteStage, buildProgress } from './buildingInfo.js';
+import { formatBlocks } from '../../data/pieces.js';
 import {
   IMMIGRATION_THRESHOLD,
   IMMIGRATION_THRESHOLD_PER_NPC,
@@ -95,10 +97,11 @@ export function summarizeBuildings(constructionSites) {
     if (site.status === 'COMPLETE') {
       completed[name] = (completed[name] || 0) + 1;
     } else {
-      const progress = site.status === 'BUILDING' && site.totalBlocks
-        ? site.blocksPlaced / site.totalBlocks
-        : 0;
-      inProgress.push({ id: site.id, name, status: site.status, progress, missing: missingMaterials(site) });
+      // Built as materials arrive: progress is what's up; stage says if it's stalled
+      inProgress.push({
+        id: site.id, name, status: site.status, stage: siteStage(site),
+        progress: buildProgress(site), missing: missingMaterials(site),
+      });
     }
   }
   return {
@@ -156,10 +159,10 @@ export function getAlerts({ settlement, zones, constructionSites }) {
   }
 
   for (const site of summarizeBuildings(constructionSites).inProgress) {
-    if (site.status !== 'PLACED') continue;
+    if (site.stage !== 'waiting') continue;
     const missing = Object.entries(site.missing);
     if (missing.length === 0) continue;
-    const list = missing.map(([mat, n]) => `${n} ${mat.replace(/_/g, ' ')}`).join(', ');
+    const list = missing.map(([mat, n]) => `${formatBlocks(n)} ${mat.replace(/_/g, ' ')}`).join(', ');
     alerts.push({ level: 'info', text: `${site.name} is waiting for ${list}` });
   }
 

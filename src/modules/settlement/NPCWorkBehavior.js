@@ -58,7 +58,7 @@ import {
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
 import { fellTree } from '../../systems/settlement/GatherScanner';
 import { getTileStage, TileStage, withTile } from './farming';
-import { placeNextBlock, getNextBlock } from './buildingInfo';
+import { placeNextBlock, getNextBlock, canPlaceNext } from './buildingInfo';
 import {
   getScaffoldRoute,
   projectOnRoute,
@@ -436,19 +436,24 @@ function tickBuild(npc, tickDelta, updates, ctx) {
     return true;
   }
 
+  // The next piece isn't paid for yet: let go, so this settler can haul.
+  // The build task comes back once enough has been delivered.
+  if (!canPlaceNext(site)) {
+    completeTask(npc.currentTaskId);
+    goIdle(updates);
+    return false;
+  }
+
   // High blocks are built from the scaffolding ramp; the rest from the ground,
   // standing just outside the wall. Either way builders walk round the
   // outside of the footprint, never over the walls they're putting up.
-  const high = site.status === 'BUILDING' && scaffoldTarget(site);
+  const high = scaffoldTarget(site);
   const move = high ? scaffoldApproach(npc, high, site) : groundApproach(npc, site);
   if (move) {
     updates.targetPosition = move;
     return false;
   }
   updates.targetPosition = null; // in place: stand still and work
-
-  // Site not ready yet (still PLACED)
-  if (site.status !== 'BUILDING') return false;
 
   const buildSkill = npc.skills?.building || NPC_WORK_SKILL_FALLBACK;
   const adjustedDuration = NPC_BUILD_DURATION / buildSkill;

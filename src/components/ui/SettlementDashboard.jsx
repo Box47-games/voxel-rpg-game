@@ -17,6 +17,7 @@ import {
   getAlerts,
 } from '../../modules/settlement/settlementSummary';
 import { isSettled } from '../../modules/settlement/housing';
+import { formatBlocks } from '../../data/pieces';
 
 const REFRESH_MS = 1000;
 const TABS = [
@@ -194,12 +195,12 @@ function BuildingsTab({ data }) {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>{site.name}</span>
               <span style={{ color: C.dim }}>
-                {site.status === 'BUILDING' ? `${Math.round(site.progress * 100)}% built` : 'Collecting materials'}
+                {`${Math.round(site.progress * 100)}% built`}{site.stage === 'waiting' ? (site.progress > 0 ? ', paused' : ', waiting') : ''}
               </span>
             </div>
-            {site.status === 'PLACED' && missing.length > 0 && (
+            {missing.length > 0 && (
               <div style={{ color: C.dim, fontSize: 12 }}>
-                Needs {missing.map(([m, n]) => `${n} ${m.replace(/_/g, ' ')}`).join(', ')}
+                Still needs {missing.map(([m, n]) => `${formatBlocks(n)} ${m.replace(/_/g, ' ')}`).join(', ')}
               </div>
             )}
           </div>

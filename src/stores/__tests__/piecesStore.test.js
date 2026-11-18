@@ -21,9 +21,19 @@ describe('block pieces in the store', () => {
     useGameStore.setState({ zones: [stockpile({}, 0)], constructionSites: [site({ stone: 1 }, { stone: 0.5 })] });
     s().npcDeliverToConstruction('cs', 'stone', 1, 'sp');
     expect(s().constructionSites[0].materialsDelivered.stone).toBe(1);
-    expect(s().constructionSites[0].status).toBe('BUILDING');
     expect(s().zones[0].storage.items).toEqual({ stone_slab: 1 });
     expect(s().zones[0].storage.usedCapacity).toBe(0.5);
+  });
+
+  test('a delivery the site no longer needs goes back to the stockpile', () => {
+    useGameStore.setState({ zones: [stockpile({}, 0)], constructionSites: [site({ stone: 1 }, { stone: 1 })] });
+    s().npcDeliverToConstruction('cs', 'stone_slab', 2, 'sp');
+    expect(s().constructionSites[0].materialsDelivered.stone).toBe(1);
+    expect(s().zones[0].storage.usedCapacity).toBe(1);
+    // and to a site that has gone
+    useGameStore.setState({ constructionSites: [] });
+    s().npcDeliverToConstruction('cs', 'stone', 1, 'sp');
+    expect(s().zones[0].storage.usedCapacity).toBe(2);
   });
 
   test('settlers haul slabs before blocks, and only what is needed', () => {

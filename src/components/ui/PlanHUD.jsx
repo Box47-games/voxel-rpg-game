@@ -23,7 +23,7 @@ import {
 } from '../../modules/settlement/settlementSummary';
 import useBuildingLocks from '../../hooks/useBuildingLocks';
 import './PlanHUD.css';
-import { blocksAvailable } from '../../data/pieces';
+import { blocksAvailable, formatBlocks } from '../../data/pieces';
 
 export const DELETE_TOOL = '__DELETE__';
 
@@ -43,7 +43,7 @@ const canAfford = (building, materials) =>
 
 const costText = (cost) =>
   Object.entries(cost)
-    .map(([m, q]) => `${q} ${m}`)
+    .map(([m, q]) => `${Number.isInteger(q) ? q : formatBlocks(q)} ${m}`)
     .join(', ');
 
 function selectTool(type) {
@@ -147,11 +147,9 @@ function PlanOverview() {
                   <li key={site.id}>
                     <span>{site.name}</span>
                     <span className="plan-overview__dim">
-                      {site.status === 'BUILDING'
+                      {site.stage === 'building' || !Object.keys(site.missing).length
                         ? `${Math.round(site.progress * 100)}%`
-                        : Object.keys(site.missing).length
-                          ? `needs ${costText(site.missing)}`
-                          : 'waiting'}
+                        : `${Math.round(site.progress * 100)}%, needs ${costText(site.missing)}`}
                     </span>
                   </li>
                 ))}

@@ -428,6 +428,20 @@ describe('WORKING_HAUL', () => {
     expect(ctx.host.getZones()[0].storage.items.wood).toBe(14); // not lost
   });
 
+  test('taking the last of a material: the task survives the rescan that finds the stockpile empty', () => {
+    const stockpile = makeStockpile({ storage: { items: { wood: 4 }, capacity: 100, usedCapacity: 4 } });
+    const sites = [makeSite()];
+    const ctx = setup({ zones: [stockpile], constructionSites: sites });
+    const npc = { ...startWork(makeNPC(), ctx), position: [44, 2, 44] };
+    const carrying = { ...npc, ...tickNPC(npc, 2, ctx).updates };
+    expect(carrying.carryingItem).toEqual({ material: 'wood', amount: 4 });
+    scanForTasks(ctx.host.getZones(), sites, ctx.chunkAdapter); // the stockpile is empty now
+    expect(getTask(carrying.currentTaskId)).not.toBeNull();
+    const { updates } = tickNPC({ ...carrying, position: [60, 2, 61] }, 2, ctx);
+    expect(ctx.host.npcDeliverToConstruction).toHaveBeenCalled();
+    expect(updates.state).toBe('IDLE');
+  });
+
   test('hauling pieces: the task keeps its id across rescans (the load is never dropped)', () => {
     const stockpile = makeStockpile({ storage: { items: { wood_plank: 10 }, capacity: 100, usedCapacity: 5 } });
     const zones = [stockpile];
@@ -570,15 +584,16 @@ describe('WORKING_BUILD', () => {
     expect(updates.skills.building).toBeCloseTo(0.5 + NPC_SKILL_GROWTH, 10);
   });
 
-  test('waits at a site that is not in BUILDING status', () => {
+  test('lets go of the site when the next block is not paid for, so they can haul', () => {
     const ctx = buildWorld();
-    const npc = { ...startWork(makeNPC(), ctx), position: AT_SITE, workTimer: ALMOST };
-    ctx.constructionSites = [makeSite({ status: 'PLACED' })];
+    const working = { ...startWork(makeNPC(), ctx), position: AT_SITE, workTimer: ALMOST };
+    ctx.constructionSites = [makeSite({ status: 'BUILDING', blocksPlaced: 1, materialsDelivered: { wood: 1 } })];
 
-    const { updates } = tickNPC(npc, 2, ctx);
+    const { updates } = tickNPC(working, 2, ctx);
 
-    expect(updates.workTimer).toBeUndefined();
     expect(ctx.host.advanceConstruction).not.toHaveBeenCalled();
+    expect(getTask(working.currentTaskId)).toBeNull();
+    expect(updates).toMatchObject({ state: 'IDLE', currentTaskId: null });
   });
 
   test.each([

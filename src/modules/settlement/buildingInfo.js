@@ -4,8 +4,9 @@
  * ETA, and which farms a Farm Plot powers. Pure functions of store state.
  */
 
-import { getBuildingById, parseLayers } from '../../data/buildings.js';
-import { isSolid } from '../../systems/chunks/blockTypes.js';
+import { getBuildingById, parseLayers, cellUnits } from '../../data/buildings.js';
+import { isSolid, BlockTypes } from '../../systems/chunks/blockTypes.js';
+import { MATERIAL_BLOCK } from '../../data/blockDrops.js';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates.js';
 import { getFarmPlots, hasFarmPlotNear } from './farming.js';
 import {
@@ -13,6 +14,109 @@ import {
   CONSTRUCTION_BLOCK_INTERVAL,
   NPC_BUILD_DURATION,
 } from '../../data/tuning.js';
+
+// ── Paying as you build ───────────────────────────────────────────────
+// A site collects its materials while it is being built: each block or piece
+// takes its share of the cost when it is placed. A material's cost is spread
+// over the blueprint cells of that material by volume (a slab is half a
+// block's share); a cost no cell uses (or an upgrade's) is spread over every
+// cell. Building waits only when the next cell's share hasn't arrived.
+
+/** The cost material a blueprint cell's block counts toward ('wood', 'stone', 'iron'). */
+const MATERIAL_OF_BLOCK = {
+  ...Object.fromEntries(Object.entries(MATERIAL_BLOCK).map(([mat, type]) => [type, mat])),
+  [BlockTypes.IRON_ORE]: 'iron',
+};
+
+const EPS = 1e-6;
+const _schedules = new Map();
+
+/**
+ * Cumulative materials needed to have placed the first k cells, for k = 1..n.
+ * @returns {Array<Object<string, number>>} index k-1 → { material: amount }
+ */
+export function paymentSchedule(site, building = getBuildingById(site.buildingId)) {
+  if (!building) return [];
+  const required = site.materialsRequired || {};
+  const key = `${building.id}|${JSON.stringify(required)}`;
+  const cached = _schedules.get(key);
+  if (cached) return cached;
+
+  const cells = parseLayers(building);
+  const weights = {}; // material → per-cell weights
+  for (const mat of Object.keys(required)) {
+    const own = cells.map((c) => (MATERIAL_OF_BLOCK[c.blockType] === mat ? cellUnits(c) : 0));
+    weights[mat] = own.some((w) => w > 0) ? own : cells.map(cellUnits);
+  }
+  const totals = Object.fromEntries(Object.entries(weights).map(([m, w]) => [m, w.reduce((a, b) => a + b, 0)]));
+  const run = Object.fromEntries(Object.keys(required).map((m) => [m, 0]));
+  const schedule = cells.map((_, i) => {
+    const step = {};
+    for (const mat of Object.keys(required)) {
+      run[mat] += weights[mat][i];
+      // The last cell takes exactly the rest (no rounding left over)
+      step[mat] = i === cells.length - 1 ? required[mat] : (required[mat] * run[mat]) / (totals[mat] || 1);
+    }
+    return step;
+  });
+  if (_schedules.size > 64) _schedules.clear();
+  _schedules.set(key, schedule);
+  return schedule;
+}
+
+/** Materials the cells placed so far have used: { material: amount }. */
+export function materialsUsed(site, building = getBuildingById(site.buildingId)) {
+  const n = site.status === 'COMPLETE' ? (site.totalBlocks || 0) : site.blocksPlaced || 0;
+  if (n <= 0) return {};
+  return { ...(paymentSchedule(site, building)[n - 1] || site.materialsRequired) };
+}
+
+/**
+ * What the next cell still needs before it can go in: { material: amount }
+ * (empty when it is paid for). Null when the site has nothing left to place.
+ */
+export function nextCellShortfall(site, building = getBuildingById(site.buildingId)) {
+  if (!building || site.status === 'COMPLETE') return null;
+  const n = site.blocksPlaced || 0;
+  const step = paymentSchedule(site, building)[n];
+  if (!step) return null;
+  const short = {};
+  for (const [mat, need] of Object.entries(step)) {
+    const missing = need - (site.materialsDelivered?.[mat] || 0);
+    if (missing > EPS) short[mat] = missing;
+  }
+  return short;
+}
+
+/** Can the next block or piece be placed now (its share of the cost is in)? */
+export function canPlaceNext(site, building = getBuildingById(site.buildingId)) {
+  // No blueprint to pay along: build once everything has arrived
+  if (!building) return site.status !== 'COMPLETE' && (site.blocksPlaced || 0) < (site.totalBlocks || 0) && !needsMaterials(site);
+  const short = nextCellShortfall(site, building);
+  return short != null && Object.keys(short).length === 0;
+}
+
+/** Does the site still need deliveries (anything required not yet delivered)? */
+export function needsMaterials(site) {
+  if (site.status === 'COMPLETE') return false;
+  return Object.entries(site.materialsRequired || {})
+    .some(([mat, req]) => (site.materialsDelivered?.[mat] || 0) < req - EPS);
+}
+
+/**
+ * Where a site is, for labels: 'complete', 'building' (the next piece is paid
+ * for), or 'waiting' (for materials; nothing placed yet or stalled part way).
+ */
+export function siteStage(site) {
+  if (site.status === 'COMPLETE') return 'complete';
+  return canPlaceNext(site) ? 'building' : 'waiting';
+}
+
+/** Fraction built (placed cells over all cells). */
+export function buildProgress(site) {
+  if (site.status === 'COMPLETE') return 1;
+  return site.totalBlocks > 0 ? Math.min(1, (site.blocksPlaced || 0) / site.totalBlocks) : 0;
+}
 
 /** Centre of the building's footprint on the ground. */
 export function getSiteCenter(site, building = getBuildingById(site.buildingId)) {
@@ -52,12 +156,13 @@ export function getDemolishRefund(building) {
 }
 
 /**
- * Rough seconds until a BUILDING site finishes: a settler builder places a
+ * Rough seconds until a site with all its materials finishes: a settler builder places a
  * block every NPC_BUILD_DURATION (scaled by skill), otherwise the site builds
  * itself every CONSTRUCTION_BLOCK_INTERVAL. Null when not being built.
  */
 export function getConstructionEta(site, builderSkill = null) {
-  if (site.status !== 'BUILDING' || !site.totalBlocks) return null;
+  // Only while it can keep going: a site waiting on materials has no ETA
+  if (site.status === 'COMPLETE' || !site.totalBlocks || needsMaterials(site) || !canPlaceNext(site)) return null;
   const remaining = Math.max(0, site.totalBlocks - (site.blocksPlaced || 0));
   const perBlock = builderSkill ? NPC_BUILD_DURATION / builderSkill : CONSTRUCTION_BLOCK_INTERVAL;
   return remaining * perBlock;

@@ -64,7 +64,7 @@ describe('BuildingPanel', () => {
     const s = useGameStore.getState();
     open([site], { settlement: { ...s.settlement, npcs: [npc('b', 'Bria', { state: 'WORKING_BUILD', currentTaskId: task.id })] } });
     expect(screen.getByRole('dialog')).toBeInTheDocument(); // not auto-closed
-    expect(screen.getByText(/20\/24 blocks\), ~24s left/)).toBeInTheDocument();
+    expect(screen.getByText(/20\/24 placed\), ~24s left/)).toBeInTheDocument();
     expect(screen.getByText('Builder: Bria')).toBeInTheDocument();
   });
 
@@ -90,10 +90,12 @@ describe('BuildingPanel', () => {
     expect(screen.queryByRole('button', { name: /Cancel/ })).toBeNull();
   });
 
-  test('closes with a notice when the last material arrives', () => {
-    const site = { id: 'c1', buildingId: 'wooden_shelter', status: 'PLACED', position: [0, 0, 0], blocksPlaced: 0, totalBlocks: 24, materialsRequired: { wood: 25 }, materialsDelivered: { wood: 24 } };
+  test('part built and short: shows what is up, what the next piece needs, and still takes deliveries', () => {
+    const site = { id: 'c1', buildingId: 'wooden_shelter', status: 'BUILDING', position: [0, 0, 0], blocksPlaced: 5, totalBlocks: 22, materialsRequired: { wood: 25 }, materialsDelivered: { wood: 5 } };
     open([site]);
-    act(() => useGameStore.setState({ constructionSites: [{ ...site, status: 'BUILDING', materialsDelivered: { wood: 25 } }] }));
-    expect(useGameStore.getState().activeConstructionSiteId).toBeNull();
+    expect(screen.getByText('WAITING')).toBeInTheDocument();
+    expect(screen.getByText('Built: 5/22')).toBeInTheDocument();
+    expect(screen.getByText(/Paused: the next piece needs .* wood more/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deliver All' })).toBeInTheDocument();
   });
 });

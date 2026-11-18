@@ -5,9 +5,17 @@ import {
   getConstructionEta,
   getFarmsPoweredBy,
   getResidents,
+  paymentSchedule,
+  canPlaceNext,
+  nextCellShortfall,
+  needsMaterials,
+  siteStage,
+  materialsUsed,
+  buildProgress,
 } from '../buildingInfo';
 import { getBuildingById, parseLayers } from '../../../data/buildings';
 import { VOXEL_SIZE } from '../../../systems/chunks/coordinates';
+import { BlockTypes } from '../../../systems/chunks/blockTypes';
 import {
   BUILDING_DEMOLISH_REFUND,
   CONSTRUCTION_BLOCK_INTERVAL,
@@ -54,10 +62,12 @@ describe('demolish refund', () => {
 
 describe('construction ETA', () => {
   test('self-building pace without a builder, settler pace with one', () => {
-    const building = site({ status: 'BUILDING', blocksPlaced: 10, totalBlocks: 14 });
+    const paid = { materialsRequired: { ...shelter.cost }, materialsDelivered: { ...shelter.cost } };
+    const building = site({ status: 'BUILDING', blocksPlaced: 10, totalBlocks: 14, ...paid });
     expect(getConstructionEta(building)).toBe(4 * CONSTRUCTION_BLOCK_INTERVAL);
     expect(getConstructionEta(building, 0.5)).toBe(4 * NPC_BUILD_DURATION / 0.5);
-    expect(getConstructionEta(site({ status: 'PLACED' }))).toBeNull();
+    // Still waiting for materials: no ETA
+    expect(getConstructionEta(site({ status: 'PLACED', materialsRequired: { ...shelter.cost }, materialsDelivered: {} }))).toBeNull();
   });
 });
 
@@ -116,5 +126,51 @@ describe('demolishBuilding (store)', () => {
     useGameStore.setState({ constructionSites: [site({ status: 'BUILDING' })] });
     expect(useGameStore.getState().demolishBuilding('s1')).toBeNull();
     expect(useGameStore.getState().constructionSites).toHaveLength(1);
+  });
+});
+
+describe('paying as you build', () => {
+  const house = getBuildingById('stone_house');
+  const cells = parseLayers(house);
+  const houseSite = (over = {}) => ({
+    id: 'h', buildingId: 'stone_house', status: 'PLACED', position: [0, 0, 0],
+    materialsRequired: { ...house.cost }, materialsDelivered: {}, blocksPlaced: 0, totalBlocks: cells.length, ...over,
+  });
+
+  test('each material is spread over its own cells by volume; the last cell takes the rest', () => {
+    const schedule = paymentSchedule(houseSite());
+    expect(schedule).toHaveLength(cells.length);
+    expect(schedule[cells.length - 1]).toEqual(house.cost);
+    // Stone only goes up on stone cells; a slab costs half what a stone block does
+    const stoneStep = (i) => schedule[i].stone - (i ? schedule[i - 1].stone : 0);
+    const block = cells.findIndex((c) => c.blockType === BlockTypes.STONE && !c.shape);
+    const slab = cells.findIndex((c) => c.blockType === BlockTypes.STONE && c.shape);
+    const wood = cells.findIndex((c) => c.blockType === BlockTypes.WOOD);
+    expect(stoneStep(slab)).toBeCloseTo(stoneStep(block) / 2, 9);
+    expect(stoneStep(wood)).toBe(0);
+  });
+
+  test('a cost no cell uses is spread over every cell', () => {
+    const s = paymentSchedule({ ...houseSite(), materialsRequired: { iron: 10 } });
+    expect(s[0].iron).toBeGreaterThan(0);
+    expect(s[s.length - 1].iron).toBe(10);
+  });
+
+  test('builds while the next cell is paid for; says what it is short', () => {
+    expect(canPlaceNext(houseSite())).toBe(false);
+    expect(siteStage(houseSite())).toBe('waiting');
+    const first = paymentSchedule(houseSite())[0];
+    const ready = houseSite({ materialsDelivered: { ...first } });
+    expect(canPlaceNext(ready)).toBe(true);
+    expect(siteStage(ready)).toBe('building');
+    expect(Object.keys(nextCellShortfall(houseSite()))).toEqual(['stone']);
+    expect(needsMaterials(ready)).toBe(true);
+    expect(needsMaterials(houseSite({ materialsDelivered: { ...house.cost } }))).toBe(false);
+  });
+
+  test('materials used follow what is built', () => {
+    expect(materialsUsed(houseSite())).toEqual({});
+    expect(materialsUsed(houseSite({ status: 'COMPLETE' }))).toEqual(house.cost);
+    expect(buildProgress(houseSite({ status: 'BUILDING', blocksPlaced: cells.length / 2 }))).toBe(0.5);
   });
 });

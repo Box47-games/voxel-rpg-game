@@ -42,7 +42,7 @@ export function assessGather({ zones, constructionSites, inventory, scan }) {
   const wood = stocked(zones, 'wood');
   let siteWood = 0;
   for (const site of constructionSites || []) {
-    if (site.status !== 'PLACED') continue;
+    if (site.status === 'COMPLETE') continue;
     siteWood += Math.max(0, (site.materialsRequired?.wood || 0) - (site.materialsDelivered?.wood || 0));
   }
   const needWood = siteWood > wood ? 'site' : wood < GATHER_WOOD_TARGET ? 'stock' : false;

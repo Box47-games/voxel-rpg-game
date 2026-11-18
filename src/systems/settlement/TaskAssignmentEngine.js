@@ -16,6 +16,7 @@ import {
   MAX_FARMERS_PER_ZONE,
 } from '../../data/tuning';
 import { getActiveFarms, getTileStage, TileStage } from '../../modules/settlement/farming';
+import { canPlaceNext } from '../../modules/settlement/buildingInfo';
 import { PIECES, BLOCK_UNITS } from '../../data/pieces';
 
 /**
@@ -83,7 +84,7 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
   const claimedTasks = new Map();
   for (const [id, task] of _tasks) {
     if (task.claimedBy) {
-      claimedTasks.set(taskKey(task), { id, claimedBy: task.claimedBy });
+      claimedTasks.set(taskKey(task), { id, claimedBy: task.claimedBy, task });
     }
   }
 
@@ -121,16 +122,22 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
 
   // ── HAUL tasks: construction sites needing materials from stockpiles ──
   const stockpiles = zones.filter(z => z.type === 'STOCKPILE' && z.storage);
+  // Hauling goes on while a site is being built (it pays as it builds)
   for (const site of constructionSites) {
-    if (site.status !== 'PLACED') continue;
-    for (const [mat, required] of Object.entries(site.materialsRequired)) {
-      const delivered = site.materialsDelivered[mat] || 0;
+    if (site.status === 'COMPLETE') continue;
+    for (const [mat, required] of Object.entries(site.materialsRequired || {})) {
+      const delivered = site.materialsDelivered?.[mat] || 0;
       const needed = required - delivered;
-      if (needed <= 0) continue;
+      // A settler already carrying this keeps their task, even when the
+      // stockpile is now empty (they took the last of it) or the need is met
+      // (what the site doesn't need goes back to the stockpile on delivery)
+      const inFlight = claimedTasks.get(`HAUL:${site.id}:${mat}`);
+      const keep = () => { if (inFlight) _tasks.set(inFlight.id, inFlight.task); };
+      if (needed <= 0) { keep(); continue; }
       // A stockpile with this material: pieces first (planks, slabs, cubes count
       // by volume), whole blocks once a block or more is needed
       const source = findHaulSource(stockpiles, mat, needed);
-      if (!source) continue;
+      if (!source) { keep(); continue; }
       const { zone: sourceZone, key: haulKey, amount } = source;
       const cx = (sourceZone.bounds.minX + sourceZone.bounds.maxX) / 2;
       const cz = (sourceZone.bounds.minZ + sourceZone.bounds.maxZ) / 2;
@@ -191,9 +198,10 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
     }
   }
 
-  // ── BUILD tasks: construction sites in BUILDING status ──
+  // ── BUILD tasks: sites whose next block or piece is paid for ──
+  // (a site waiting on materials offers none, so its builder goes hauling)
   for (const site of constructionSites) {
-    if (site.status !== 'BUILDING') continue;
+    if (site.status === 'COMPLETE' || !canPlaceNext(site)) continue;
     const key = `BUILD:${site.id}`;
     const existing = claimedTasks.get(key);
     const id = existing ? existing.id : makeTaskId();
