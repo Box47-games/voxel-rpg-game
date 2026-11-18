@@ -20,8 +20,8 @@
   }
 }
 
-/* Phones held sideways: span the screen so a toast can sit in the centre */
-@media (max-height: 500px) {
+/* Phones: span the screen so a toast can sit in the centre */
+@media (max-height: 500px), (max-width: 768px) {
   .notification-system {
     left: 0;
     max-width: none;

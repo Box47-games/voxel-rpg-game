@@ -1,15 +1,17 @@
 /**
- * StatBarWithTooltip.jsx — A HUD vital (health, mana, ...): icon tile plus a
- * segmented bar with the value inside. Hovering shows the stat breakdown
- * when one is given.
+ * StatBarWithTooltip.jsx — A HUD vital (health, mana, ...): a pixel icon
+ * tile plus a notched bar with the value inside. Hovering shows the stat
+ * breakdown when one is given. `art` names an icon in assets/art/hud.
  */
 
 import React, { useState } from 'react';
 import StatTooltip from './StatTooltip';
+import { artUrl } from './art';
 import './StatBarWithTooltip.css';
 
 const StatBarWithTooltip = ({
   icon,
+  art,
   iconColor,
   label,
   current,
@@ -40,15 +42,15 @@ const StatBarWithTooltip = ({
       aria-valuemin={0}
       aria-valuemax={max}
     >
-      <span className="stat-bar-icon" aria-hidden="true">
-        {icon}
+      <span className="stat-bar-icon vx-icontile" aria-hidden="true">
+        {art && artUrl('hud', art) ? <img src={artUrl('hud', art)} alt="" /> : icon}
       </span>
       <div
-        className={`stat-bar-track vx-bar${low ? ' vx-bar--low' : ''}`}
-        style={{ '--fill': `${percentage}%`, boxShadow: glow ? `0 0 10px ${color}` : undefined }}
+        className={`stat-bar-track vx-nbar${low ? ' is-low' : ''}${glow ? ' is-full' : ''}`}
+        style={{ '--c': color }}
       >
-        <div className="vx-bar__fill stat-bar-fill" />
-        <span className="stat-bar-value">
+        <i className="stat-bar-fill" style={{ width: `${percentage}%` }} />
+        <span className="stat-bar-value vx-nbar__text">
           {Math.round(current)} / {Math.round(max)}
         </span>
       </div>

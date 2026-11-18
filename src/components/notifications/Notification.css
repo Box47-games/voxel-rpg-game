@@ -107,9 +107,9 @@
 /* Stack: each toast below the one before */
 .notification { top: calc(12px + var(--i, 0) * 96px); }
 
-/* Phones held sideways: one small strip at the top centre, under the HUD
-   buttons, so the sides (stats, clock, touch buttons) and the player stay clear */
-@media (max-height: 500px) {
+/* Phones: one small strip at the top centre, clear of the HUD panels and the
+   touch buttons. Sideways: under the Tools button. Upright: under the stats. */
+@media (max-height: 500px), (max-width: 768px) {
   .notification {
     left: 50%;
     right: auto;
@@ -138,4 +138,12 @@
   .notification-extra { -webkit-line-clamp: 1; }
   .notification-reward { display: none; }
   .notification-close { top: 3px; right: 3px; width: 20px; height: 20px; }
+}
+
+/* Upright phones: the stats panel fills the top ~165px (with tool wear and shelter rows) */
+@media (max-width: 768px) and (min-height: 501px) {
+  .notification {
+    top: calc(172px + env(safe-area-inset-top, 0px));
+    width: min(360px, calc(100vw - 24px));
+  }
 }

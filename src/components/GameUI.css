@@ -436,3 +436,92 @@
     left: max(50%, calc(var(--safe-l, 0px) + 770px));
   }
 }
+
+/* ══ Art pass 2: stone and wood HUD ══════════════════════════════════
+   Panels use .vx-hudpanel (stone in a thin wood frame), icons are the
+   generated pixel art, text is Pixelify Sans / Silkscreen. */
+
+.hud-vitals.vx-hudpanel { padding: 6px 8px 2px; }
+.hud--compact .hud-vitals.vx-hudpanel { padding: 4px 6px 0; border-width: 6px; border-image-width: 9px; }
+.hud-info.vx-hudpanel { padding: 6px 8px; }
+.hud--compact .hud-info.vx-hudpanel { padding: 4px 6px; border-width: 6px; border-image-width: 9px; }
+
+/* Level: gold medal, Silkscreen label, purple XP bar */
+.hud-level__badge.vx-medal { transform: none; border-radius: 0; background: #f2c14e; }
+.hud--compact .hud-level__badge.vx-medal { width: 26px; height: 26px; font-size: 14px; border-width: 2px; box-shadow: inset 2px 2px 0 #ffe08a, inset -2px -2px 0 #b07e26; }
+.hud-level__label { font-family: var(--vx-font-display); font-weight: 400; font-size: 12px; letter-spacing: 0.06em; color: #ffe08a; text-shadow: 2px 2px 0 #07080b; }
+.hud-level__xp { font-family: var(--vx-font-pixel); font-size: 12px; letter-spacing: 0; color: var(--vx-cream-dim); text-shadow: 1px 1px 0 #07080b; }
+.hud-level__bar.vx-nbar { height: 10px; border-width: 2px; }
+.hud-level__bar.vx-nbar > i { background: repeating-linear-gradient(90deg, var(--c) 0 6px, rgba(0, 0, 0, 0.35) 6px 8px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3); }
+
+/* Shelter and tool wear under the bars */
+.hud-shelter.vx-tag { margin: 1px 0 6px; font-size: 10px; padding: 2px 6px 3px; border-width: 2px; }
+.hud-shelter img { width: 12px; height: 12px; }
+.hud-tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 0 6px;
+  font-family: var(--vx-font-pixel);
+  font-size: 13px;
+}
+.hud-tool__icon { width: 22px; height: 22px; flex: none; }
+.hud-tool__bar.vx-nbar { position: relative; flex: 1; height: 10px; border-width: 2px; }
+.hud-tool__bar.vx-nbar > i { background: repeating-linear-gradient(90deg, var(--c) 0 6px, rgba(0, 0, 0, 0.35) 6px 8px); }
+.hud-tool__broken { color: #ffb3a8; text-shadow: 1px 1px 0 #07080b; }
+.hud-tool.is-broken .hud-tool__icon { filter: grayscale(1) brightness(0.7); }
+
+/* Clock: sun/moon tile, Silkscreen day, pixel time, framed day strip */
+.hud-clock__icon.vx-icontile { width: 24px; height: 24px; }
+.hud-clock__day { font-family: var(--vx-font-display); font-weight: 400; font-size: 12px; letter-spacing: 0.06em; color: #ffe08a; text-shadow: 2px 2px 0 #07080b; }
+.hud-clock__time { font-family: var(--vx-font-display); font-weight: 400; font-size: 20px; color: var(--vx-cream); text-shadow: 2px 2px 0 #07080b; }
+.hud--compact .hud-clock__icon.vx-icontile { width: 18px; height: 18px; border-width: 1px; }
+.hud--compact .hud-clock__day { font-size: 10px; }
+.hud--compact .hud-clock__time { font-size: 14px; }
+.hud-clock__strip { height: 10px; border: 2px solid #07080b; border-radius: 0; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2); image-rendering: pixelated; }
+.hud-clock__marker { top: -5px; width: 4px; height: 16px; background: #ffe08a; border: 2px solid #07080b; box-shadow: none; margin-left: -4px; }
+
+/* Purse and combat */
+.hud-info__row--combat { border-top: 2px solid rgba(7, 8, 11, 0.6); box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06); }
+.hud-info__stat { font-family: var(--vx-font-pixel); font-weight: 600; font-size: 16px; text-shadow: 1px 1px 0 #07080b; }
+.hud-info__stat img { width: 20px; height: 20px; }
+.hud--compact .hud-info__stat { font-size: 13px; }
+.hud--compact .hud-info__stat img { width: 15px; height: 15px; }
+
+/* Plan mode badge: orange metal plate */
+.hud-mode-badge { font-weight: 400; font-size: 13px; border: 3px solid #07080b; border-radius: 0; box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.35), inset -3px -3px 0 rgba(0, 0, 0, 0.25), 0 4px 0 rgba(0, 0, 0, 0.4); }
+.hud-mode-badge img { width: 16px; height: 16px; filter: brightness(0.2); }
+.hud-mode-badge__exit { font-family: var(--vx-font-pixel); font-size: 12px; }
+.hud--compact .hud-mode-badge { font-size: 10px; }
+.hud--compact .hud-mode-badge img { width: 12px; height: 12px; }
+
+/* Mode buttons: stone keys with a coloured icon tile */
+.hud-actions.vx-hudpanel { padding: 4px; gap: 6px; border-radius: 0; }
+.hud--compact .hud-actions.vx-hudpanel { padding: 2px; border-width: 6px; border-image-width: 9px; }
+.hud-slot {
+  gap: 4px;
+  background: #23252c;
+  border: 3px solid #07080b;
+  border-radius: 0;
+  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.1), inset -3px -3px 0 rgba(0, 0, 0, 0.45);
+  transition: transform 80ms steps(2), filter 120ms steps(2);
+}
+.hud-slot__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: color-mix(in srgb, var(--slot) 55%, #07080b);
+  border: 2px solid #07080b;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.25), inset -2px -2px 0 rgba(0, 0, 0, 0.35);
+}
+.hud-slot__icon { width: 18px; height: 18px; color: inherit; filter: none; }
+.hud-slot__label { font-family: var(--vx-font-display); font-weight: 400; font-size: 9px; letter-spacing: 0.04em; color: var(--vx-cream); text-shadow: 1px 1px 0 #07080b; }
+.hud-slot__key { font-family: var(--vx-font-pixel); font-size: 11px; font-weight: 600; color: #3a2410; background: #f1e6cc; border: 2px solid #07080b; border-radius: 0; box-shadow: inset 0 -2px 0 #b9a77e; }
+.hud-slot--active { background: #5a4314; box-shadow: inset 3px 3px 0 #8a6a24, inset -3px -3px 0 #3a2a0c, 0 0 0 2px #ffe08a; }
+.hud-slot--active .hud-slot__tile { background: var(--slot); }
+.hud-slot--active .hud-slot__label { color: #ffe08a; }
+.hud--compact .hud-slot { width: 44px; height: 44px; border-width: 2px; }
+.hud--compact .hud-slot__tile { width: 30px; height: 30px; }
+.hud--compact .hud-slot__icon { width: 20px; height: 20px; }

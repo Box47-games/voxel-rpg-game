@@ -1,0 +1,39 @@
+/* Crosshair.css — pixel crosshair (first person) and the V hint (third person). */
+
+.crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+.crosshair i {
+  position: absolute;
+  background: #f1e6cc;
+  box-shadow: 0 0 0 2px #07080b;
+}
+.crosshair__arm--t, .crosshair__arm--b { left: -2px; width: 4px; height: 6px; }
+.crosshair__arm--t { top: -12px; }
+.crosshair__arm--b { top: 6px; }
+.crosshair__arm--l, .crosshair__arm--r { top: -2px; width: 6px; height: 4px; }
+.crosshair__arm--l { left: -12px; }
+.crosshair__arm--r { left: 6px; }
+.crosshair__dot { left: -1px; top: -1px; width: 2px; height: 2px; }
+
+.crosshair-hint {
+  position: fixed;
+  top: 42%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px 10px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1000;
+  animation: crosshair-hint-in 0.3s steps(3);
+}
+.crosshair-hint__title { font-family: var(--vx-font-display); font-size: 14px; color: #ffe08a; text-shadow: 2px 2px 0 #07080b; }
+.crosshair-hint__title .vx-key { font-size: 12px; margin: 0 2px; }
+.crosshair-hint__sub { margin-top: 4px; font-size: 14px; color: var(--vx-cream-dim); text-shadow: 1px 1px 0 #07080b; }
+@keyframes crosshair-hint-in { from { opacity: 0; transform: translate(-50%, 8px); } }

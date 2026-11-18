@@ -124,17 +124,17 @@ describe('HUD', () => {
       hunger: { ...s.hunger, current: 5 },
     });
     render(<GameUI />);
-    expect(screen.getByRole('meter', { name: 'Health' }).querySelector('.vx-bar--low')).not.toBeNull();
-    expect(screen.getByRole('meter', { name: 'Hunger' }).querySelector('.vx-bar--low')).not.toBeNull();
-    expect(screen.getByRole('meter', { name: 'Mana' }).querySelector('.vx-bar--low')).toBeNull();
+    expect(screen.getByRole('meter', { name: 'Health' }).querySelector('.is-low')).not.toBeNull();
+    expect(screen.getByRole('meter', { name: 'Hunger' }).querySelector('.is-low')).not.toBeNull();
+    expect(screen.getByRole('meter', { name: 'Mana' }).querySelector('.is-low')).toBeNull();
   });
 
   test('bars clamp to the track', () => {
     const s = useGameStore.getState();
     useGameStore.setState({ player: { ...s.player, health: 150, maxHealth: 100 } });
     render(<GameUI />);
-    const track = screen.getByRole('meter', { name: 'Health' }).querySelector('.vx-bar');
-    expect(track.style.getPropertyValue('--fill')).toBe('100%');
+    const track = screen.getByRole('meter', { name: 'Health' }).querySelector('.stat-bar-fill');
+    expect(track.style.width).toBe('100%');
   });
 
   test('desktop: Build opens the catalog; Plan toggles plan mode and shows the badge', () => {

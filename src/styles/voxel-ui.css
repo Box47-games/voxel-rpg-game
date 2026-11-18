@@ -486,3 +486,65 @@ button.vx-slot:hover { filter: brightness(1.25); }
 .vx-tab img, .vx-pbtn img { width: 20px; height: 20px; flex: none; }
 .vx-tag img { width: 14px; height: 14px; flex: none; vertical-align: -2px; }
 .vx-tab, .vx-pbtn, .vx-tag { gap: 8px; }
+
+/* ── HUD pieces (art pass 2) ──────────────────────────────────────────
+ * .vx-hudpanel   stone strip in a thin wood frame (HUD corners, hotbar)
+ * .vx-icontile   square coloured tile holding a pixel icon (--tile)
+ * .vx-medal      gold level badge with a hard bevel
+ */
+.vx-hudpanel {
+  color: var(--vx-cream);
+  font-family: var(--vx-font-pixel);
+  background: url('../assets/art/textures/stonewall.svg') 0 0 / 64px 64px, #2a2c33;
+  image-rendering: pixelated;
+  border: 8px solid transparent;
+  border-image: url('../assets/art/textures/frame-wood.svg') 8 / 12px stretch;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4);
+  border-radius: 0;
+}
+.vx-hudpanel img { image-rendering: pixelated; }
+
+.vx-icontile {
+  --tile: #3a3d46;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--tile);
+  border: 2px solid #07080b;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.22), inset -2px -2px 0 rgba(0, 0, 0, 0.35);
+}
+.vx-icontile img { width: 70%; height: 70%; }
+
+.vx-medal {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-family: var(--vx-font-display);
+  font-size: 18px;
+  color: #3a2410;
+  background: #f2c14e;
+  border: 3px solid #07080b;
+  box-shadow: inset 3px 3px 0 #ffe08a, inset -3px -3px 0 #b07e26;
+  text-shadow: 1px 1px 0 #ffe08a;
+}
+
+/* Pixel value printed inside a bar */
+.vx-nbar__text {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-52%);
+  z-index: 1;
+  font-family: var(--vx-font-pixel);
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 1px 0 0 #07080b, -1px 0 0 #07080b, 0 1px 0 #07080b, 0 -1px 0 #07080b;
+  pointer-events: none;
+}

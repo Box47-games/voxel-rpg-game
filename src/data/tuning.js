@@ -501,4 +501,4 @@ export const NPC_SKILL_GROWTH_BASE = 0.3;      // Skill a first completed task g
 // ── Toasts ──
 export const TOAST_DURATION_MS = 5000;     // Default time a toast stays up, counted from when it is shown
 export const TOAST_MAX_VISIBLE = 3;        // Toasts stacked at once; more wait their turn
-export const TOAST_MAX_VISIBLE_SHORT = 1;  // Same on short screens (phones held sideways)
+export const TOAST_MAX_VISIBLE_SHORT = 1;  // Same on phones (short or narrow screens)

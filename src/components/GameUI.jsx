@@ -12,30 +12,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { isTool, isBroken, getDurability } from '../systems/tools/toolDurability';
-import {
-  Heart,
-  Zap,
-  Package,
-  Activity,
-  Flame,
-  Pickaxe,
-  MapPin,
-  LayoutGrid,
-  Users,
-  Drumstick,
-  Coins,
-  FlaskConical,
-  Sun,
-  Moon,
-  Sword,
-  Shield,
-  Home,
-} from 'lucide-react';
 import useGameStore, { selectPlayerStats } from '../stores/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { getTotalStats } from '../utils/equipmentStats';
 import { isTouchDevice } from '../utils/deviceDetection';
 import StatBarWithTooltip from './ui/StatBarWithTooltip';
+import { artUrl } from './ui/art';
 import StartScreen from './ui/StartScreen';
 import { useStatBreakdown } from '../hooks/useStatBreakdown';
 import { SUNRISE_START, SUNRISE_END, SUNSET_START, SUNSET_END } from '../data/tuning';
@@ -52,6 +34,12 @@ const DAY_STRIP = `linear-gradient(90deg,
   #e9785a ${pct((SUNSET_START + SUNSET_END) / 2)},
   #1d2550 ${pct(SUNSET_END)}, #1d2550 100%)`;
 
+/** Wear colour: gold when fresh, orange when worn, red when nearly broken. */
+function toolColor(tool) {
+  const f = getDurability(tool) / tool.maxDurability;
+  return f > 0.5 ? '#e8b443' : f > 0.2 ? '#e0913a' : '#d9473f';
+}
+
 function pressKey(key) {
   window.dispatchEvent(new KeyboardEvent('keydown', { key }));
 }
@@ -61,8 +49,11 @@ function togglePlanMode() {
   useGameStore.getState().enterMode('plan');
 }
 
+/** A pixel icon from assets/art, sized by CSS. */
+const Art = ({ group = 'ui', id, className }) => <img className={className} src={artUrl(group, id)} alt="" aria-hidden="true" />;
+
 /** One square button on the action bar. */
-const ActionSlot = ({ icon: Icon, label, hotkey, color, active = false, compact, onClick }) => (
+const ActionSlot = ({ icon, label, hotkey, color, active = false, compact, onClick }) => (
   <button
     type="button"
     className={`hud-slot${active ? ' hud-slot--active' : ''}`}
@@ -72,7 +63,7 @@ const ActionSlot = ({ icon: Icon, label, hotkey, color, active = false, compact,
     aria-pressed={active}
     title={hotkey ? `${label} [${hotkey}]` : label}
   >
-    <Icon className="hud-slot__icon" aria-hidden="true" />
+    <span className="hud-slot__tile"><Art id={icon} className="hud-slot__icon" /></span>
     {!compact && <span className="hud-slot__label">{label}</span>}
     {!compact && hotkey && <kbd className="hud-slot__key">{hotkey}</kbd>}
   </button>
@@ -82,15 +73,16 @@ const ActionSlot = ({ icon: Icon, label, hotkey, color, active = false, compact,
 const Clock = ({ worldTime, compact }) => {
   const dayFraction = ((worldTime.hour ?? 0) * 60 + (worldTime.minute ?? 0)) / 1440;
   const twilight = worldTime.period === 'dawn' || worldTime.period === 'dusk';
-  const TimeIcon = worldTime.isNight ? Moon : Sun;
+
   return (
     <div className="hud-clock">
       <div className="hud-clock__row">
-        <TimeIcon
-          className="hud-clock__icon"
-          style={{ color: worldTime.isNight ? '#a9b4ff' : twilight ? '#ffaa66' : '#ffd43b' }}
-          aria-hidden="true"
-        />
+        <span
+          className="hud-clock__icon vx-icontile"
+          style={{ '--tile': worldTime.isNight ? '#2a2f6a' : twilight ? '#8a4a2a' : '#8a6a14' }}
+        >
+          <Art id={worldTime.isNight ? 'moon' : 'sun'} />
+        </span>
         <span className="hud-clock__day">Day {worldTime.dayNumber}</span>
         <span className="hud-clock__time">
           {pad2(worldTime.hour)}:{pad2(worldTime.minute)}
@@ -162,16 +154,16 @@ const GameUI = () => {
       {/* Plan mode badge: names the mode and how to leave it */}
       {inMode && (
         <div className="hud-mode-badge" style={{ '--chip': '#ff8c1a' }}>
-          <MapPin aria-hidden="true" />
+          <Art id="mapPin" />
           Plan mode
           {!isTouch && <span className="hud-mode-badge__exit">P / Esc to leave</span>}
         </div>
       )}
 
       {/* Top left: level and vitals */}
-      <section className="hud-vitals vx-panel" aria-label="Player status">
+      <section className="hud-vitals vx-hudpanel" aria-label="Player status">
         <div className="hud-level">
-          <span className="hud-level__badge" aria-label={`Level ${player.level}`}>
+          <span className="hud-level__badge vx-medal" aria-label={`Level ${player.level}`}>
             {player.level}
           </span>
           <div className="hud-level__body">
@@ -183,17 +175,14 @@ const GameUI = () => {
                 </span>
               )}
             </div>
-            <div
-              className="vx-bar vx-bar--thin"
-              style={{ '--bar': 'var(--vx-xp)', '--fill': `${xpFraction * 100}%` }}
-            >
-              <div className="vx-bar__fill" />
+            <div className="hud-level__bar vx-nbar" style={{ '--c': '#b98cff' }} aria-hidden="true">
+              <i style={{ width: `${xpFraction * 100}%` }} />
             </div>
           </div>
         </div>
 
         <StatBarWithTooltip
-          icon={<Heart />}
+          art="health"
           iconColor="#e5484d"
           label="Health"
           current={player.health}
@@ -204,7 +193,7 @@ const GameUI = () => {
           low={player.health / player.maxHealth < 0.25}
         />
         <StatBarWithTooltip
-          icon={<Zap />}
+          art="mana"
           iconColor="#4f8cf7"
           label="Mana"
           current={player.mana}
@@ -215,7 +204,7 @@ const GameUI = () => {
         />
         {!isCompact && (
           <StatBarWithTooltip
-            icon={<Activity />}
+            art="stamina"
             iconColor="#5cc36b"
             label="Stamina"
             current={player.stamina}
@@ -225,7 +214,7 @@ const GameUI = () => {
           />
         )}
         <StatBarWithTooltip
-          icon={<Drumstick />}
+          art="hunger"
           iconColor="#e0913a"
           label="Hunger"
           current={hunger.current}
@@ -235,7 +224,7 @@ const GameUI = () => {
         />
         {!isCompact && (
           <StatBarWithTooltip
-            icon={<Flame />}
+            art="rage"
             iconColor="#ff6a2b"
             label="Rage"
             current={player.rage}
@@ -246,48 +235,52 @@ const GameUI = () => {
 
         {!shelter.isExposed && (
           <span
-            className="vx-chip hud-shelter"
-            style={{ '--chip': shelter.isFullShelter ? '#5cc36b' : '#f2c14e' }}
+            className={`vx-tag hud-shelter ${shelter.isFullShelter ? 'vx-tag--ready' : 'vx-tag--lock'}`}
             title="Shelter: faster health and stamina regen, slower hunger, no rift spawns close by"
           >
-            <Home aria-hidden="true" />
+            <Art id="home" />
             {shelter.isFullShelter ? 'Sheltered' : 'Partial shelter'}
           </span>
         )}
 
         {isTool(tool) && (
           <span
-            className="vx-chip hud-tool"
-            style={{ '--chip': isBroken(tool) ? '#ff6b6b' : '#a0aec0' }}
+            className={`hud-tool${isBroken(tool) ? ' is-broken' : ''}`}
             title={`${tool.name}: ${getDurability(tool)} / ${tool.maxDurability} uses left`}
           >
-            <Pickaxe aria-hidden="true" />
-            {isBroken(tool) ? `${tool.name} broken` : `${getDurability(tool)}/${tool.maxDurability}`}
+            <Art group="items" id={tool.id} className="hud-tool__icon" />
+            {isBroken(tool) ? (
+              <span className="hud-tool__broken">{tool.name} broken</span>
+            ) : (
+              <span className="hud-tool__bar vx-nbar" style={{ '--c': toolColor(tool) }} aria-label={`${getDurability(tool)} of ${tool.maxDurability} uses left`}>
+                <i style={{ width: `${(getDurability(tool) / tool.maxDurability) * 100}%` }} />
+              </span>
+            )}
           </span>
         )}
       </section>
 
       {/* Top right: clock and purse */}
-      <section className="hud-info vx-panel" aria-label="Time and supplies">
+      <section className="hud-info vx-hudpanel" aria-label="Time and supplies">
         <Clock worldTime={worldTime} compact={isCompact} />
         <div className="hud-info__row">
           <span className="hud-info__stat hud-info__stat--gold" title="Gold">
-            <Coins aria-hidden="true" />
+            <Art group="misc" id="coin" />
             {gold}
           </span>
           <span className="hud-info__stat hud-info__stat--potion" title="Potions">
-            <FlaskConical aria-hidden="true" />
+            <Art group="items" id="healthPotion" />
             {potions}
           </span>
         </div>
         {!isCompact && (
           <div className="hud-info__row hud-info__row--combat">
             <span className="hud-info__stat" title="Total damage">
-              <Sword aria-hidden="true" />
+              <Art id="sword" />
               {totalStats.damage}
             </span>
             <span className="hud-info__stat" title="Total defense">
-              <Shield aria-hidden="true" />
+              <Art id="shield" />
               {totalStats.defense}
             </span>
           </div>
@@ -295,10 +288,10 @@ const GameUI = () => {
       </section>
 
       {/* Bottom left: action bar. Touch: one Tools button opens the tool wheel */}
-      <nav className="hud-actions" aria-label="Menus">
+      <nav className="hud-actions vx-hudpanel" aria-label="Menus">
         {isTouch ? (
           <ActionSlot
-            icon={LayoutGrid}
+            icon="grid"
             label="Tools"
             color="#f2c14e"
             active={toolsOpen}
@@ -309,7 +302,7 @@ const GameUI = () => {
           <>
             {/* Bag: Inventory, Craft and Repair are tabs of one screen (C opens Craft directly) */}
             <ActionSlot
-              icon={Package}
+              icon="bag"
               label="Bag"
               hotkey="I"
               color="#4f8cf7"
@@ -319,7 +312,7 @@ const GameUI = () => {
             />
             {/* Desktop mines and places in Play, so Build opens the catalog (blocks + buildings) */}
             <ActionSlot
-              icon={Pickaxe}
+              icon="hammer"
               label="Build"
               hotkey="B"
               color="#ffb02e"
@@ -327,9 +320,9 @@ const GameUI = () => {
               compact={isCompact}
               onClick={() => useGameStore.getState().togglePanel('buildings')}
             />
-            <ActionSlot icon={MapPin} label="Plan" hotkey="P" color="#ff8c1a" active={planMode} compact={isCompact} onClick={togglePlanMode} />
+            <ActionSlot icon="mapPin" label="Plan" hotkey="P" color="#ff8c1a" active={planMode} compact={isCompact} onClick={togglePlanMode} />
             <ActionSlot
-              icon={Users}
+              icon="people"
               label="Settlement"
               hotkey="N"
               color="#5cc36b"

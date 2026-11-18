@@ -121,6 +121,8 @@ export const VOXEL = {
   arcaneBarrage: ['', '', '..pp............', '.pZzp...........', '.pzzp.....pp....', '..pp.....pZzp...', '.........pzzp...', '....pp....pp....', '...pZzp.........', '...pzzp.........', '....pp..........'],
   waterJet: ['', '', '', '..........&&&...', '........&&AA&&..', '......&&A&&**&..', '....&&&&&****...', '..&&&&*****.....', '.&&****.........', '&&*..&...&...&..', '.......&...&....'],
   deathRay: ['', '....!!!!!!!.....', '...!ZZZZZZZ!....', '..!ZZZZZZZZZ!...', '..!Z!!ZZZ!!Z!...', '..!Z!!ZZZ!!Z!...', '..!ZZZZ!ZZZZ!...', '...!ZZZZZZZ!....', '....!Z!Z!Z!.....', '....!!!!!!!.....'],
+  // gold coin for the purse
+  coin: ['', '.....hhhhhh.....', '....hgGGGGgh....', '...hgGGggGGgh...', '..hgGGghhgGGgh..', '..hgGgGGGGhGgh..', '..hgGgGhhhgGgh..', '..hgGgGGGghGgh..', '..hgGghggggGgh..', '..hgGGgGGgGGgh..', '...hgGGggGGgh...', '....hggggggh....', '.....hhhhhh.....'],
   // portal for toasts
   rift: ['', '......pppp......', '....ppPPPPpp....', '...pPPzzzzPPp...', '...pPzzZZzzPp...', '..pPzzZZZZzzPp..', '..pPzZZZZZZzPp..', '..pPzZZZZZZzPp..', '..pPzzZZZZzzPp..', '...pPzzZZzzPp...', '...pPPzzzzPPp...', '....ppPPPPpp....', '...ssstssstss...', '..tssssssssst...'],
 };
@@ -177,6 +179,7 @@ export const MONO = {
   close: ['.##......##.', '..##....##..', '...##..##...', '....####....', '....####....', '...##..##...', '..##....##..', '.##......##.'],
   sun: ['#....#....#.', '.#...#...#..', '...#####....', '..#.....#...', '###.....###.', '..#.....#...', '...#####....', '.#...#...#..', '#....#....#.'],
   moon: ['....####....', '..###.......', '.###........', '.##.........', '##..........', '##..........', '.##.........', '.###......#.', '..########..', '....####....'],
+  home: ['.....##.....', '....####....', '...######...', '..########..', '.##########.', '############', '.#........#.', '.#..##....#.', '.#..##..###.', '.#..##..###.', '.##########.'],
   alert: ['.....##.....', '.....##.....', '.....##.....', '.....##.....', '.....##.....', '............', '.....##.....'],
 };
 
@@ -250,6 +253,7 @@ export const ICONS = {
   misc: [
     v('campfire', 'Campfire', 'campfire'),
     v('rift', 'Rift', 'rift'),
+    v('coin', 'Gold', 'coin'),
   ],
   // UI symbols, grouped by where they're used
   ui: Object.entries({
@@ -260,7 +264,7 @@ export const ICONS = {
     'Notifications': { trophy: 'Achievement', swords: 'Raid', levelUp: 'Level up', check: 'Success', warning: 'Warning', info: 'Info' },
     'Settler activities': { sleep: 'Sleeping', food: 'Hungry', talk: 'Socialising' },
     'Touch controls': { jump: 'Jump', dash: 'Sprint', wand: 'Spell', wheel: 'Tool wheel', hand: 'Hand' },
-    'General': { lock: 'Locked', close: 'Close', alert: 'Alert', sun: 'Day', moon: 'Night' },
+    'General': { lock: 'Locked', close: 'Close', alert: 'Alert', sun: 'Day', moon: 'Night', home: 'Shelter' },
   }).flatMap(([group, entries]) => Object.entries(entries).map(([sprite, label]) => ({ id: sprite, label, kind: 'mono', sprite, group }))),
 };
 

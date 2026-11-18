@@ -1,6 +1,6 @@
 /**
- * StatBarWithTooltip.css — one HUD vital: an icon tile, a segmented bar
- * (.vx-bar from styles/voxel-ui.css) and the value printed inside it.
+ * StatBarWithTooltip.css — one HUD vital: a pixel icon tile (.vx-icontile)
+ * and a notched bar (.vx-nbar) with the value printed inside.
  */
 
 .stat-bar-container {
@@ -8,74 +8,43 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .stat-bar-container[data-has-breakdown='true'] {
   cursor: help;
 }
 
-.stat-bar-icon {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  color: #fff;
-  background: color-mix(in srgb, var(--bar) 75%, black);
-  border: 2px solid var(--vx-edge, #06080d);
-  border-radius: 2px;
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+.stat-bar-icon.vx-icontile {
+  --tile: #1d1f26;
+  width: 24px;
+  height: 24px;
 }
+.stat-bar-icon svg { width: 13px; height: 13px; color: var(--bar); }
 
-.stat-bar-icon svg {
-  width: 13px;
-  height: 13px;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.5));
-}
-
-.stat-bar-track.vx-bar {
+.stat-bar-track.vx-nbar {
+  position: relative;
   flex: 1;
   height: 18px;
 }
+.stat-bar-track > i { transition: width 0.25s steps(4); }
 
-.stat-bar-value {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-  font-family: var(--vx-font-ui, inherit);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  color: #fff;
-  text-shadow:
-    1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000;
-  pointer-events: none;
-}
+/* Low: the empty part blinks red */
+.stat-bar-track.is-low { animation: stat-low 1s steps(1) infinite; }
+@keyframes stat-low { 50% { background: #5a1414; } }
+
+/* Full (rage): a gold rim */
+.stat-bar-track.is-full { border-color: #ffe08a; }
 
 .stat-bar-container--compact {
   margin-bottom: 4px;
   gap: 4px;
 }
+.stat-bar-container--compact .stat-bar-icon.vx-icontile { width: 20px; height: 20px; }
+.stat-bar-container--compact .stat-bar-track.vx-nbar { height: 15px; border-width: 2px; }
+.stat-bar-container--compact .vx-nbar__text { font-size: 11px; right: 4px; }
 
-.stat-bar-container--compact .stat-bar-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.stat-bar-container--compact .stat-bar-icon svg {
-  width: 11px;
-  height: 11px;
-}
-
-.stat-bar-container--compact .stat-bar-track.vx-bar {
-  height: 14px;
-}
-
-.stat-bar-container--compact .stat-bar-value {
-  font-size: 10px;
-  right: 4px;
+@media (prefers-reduced-motion: reduce) {
+  .stat-bar-track.is-low { animation: none; background: #5a1414; }
+  .stat-bar-track > i { transition: none; }
 }

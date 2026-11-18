@@ -439,6 +439,12 @@
     "file": "misc/rift.svg"
   },
   {
+    "group": "misc",
+    "id": "coin",
+    "label": "Gold",
+    "file": "misc/coin.svg"
+  },
+  {
     "group": "ui",
     "id": "bag",
     "label": "Bag",
@@ -702,6 +708,13 @@
     "id": "moon",
     "label": "Night",
     "file": "ui/moon.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "home",
+    "label": "Shelter",
+    "file": "ui/home.svg",
     "uiGroup": "General"
   },
   {

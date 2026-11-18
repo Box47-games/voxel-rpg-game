@@ -65,8 +65,9 @@ npm run art:portraits   # player + settler portraits from the real models (needs
 - [ ] Build catalog, Plan bar + overview
 - [ ] Spell wheel, touch tool wheel, Dialogue
 - [ ] Pause, Start, Death, Help/controls, phone tutorial, error screen
-- [ ] HUD: stat bars (HUD icons), level badge, clock (sun/moon), hotbar (block icons),
-      mode buttons, crosshair, tool durability
+- [x] HUD: stat bars (HUD icons), level badge, clock (sun/moon), hotbar (block icons),
+      mode buttons, crosshair, tool durability; toasts placed for upright and sideways phones
+      (touch buttons — jump, E, sprint, spell, Attack — still old; with the wheels/Dialogue pass)
 - [ ] Replace emoji/lucide icons everywhere with the manifest icons
 
 ### To do: 3D

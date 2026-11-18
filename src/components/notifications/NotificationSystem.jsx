@@ -24,9 +24,9 @@ import './NotificationSystem.css';
 
 let notificationId = 0;
 
-const SHORT_SCREEN = '(max-height: 500px)';
+const SHORT_SCREEN = '(max-height: 500px), (max-width: 768px)';
 
-/** Short screens (phones held sideways) show one toast at a time; the rest wait. */
+/** Phones (short or narrow screens) show one toast at a time; the rest wait. */
 function useMaxVisible() {
   const query = () => typeof window !== 'undefined' && window.matchMedia?.(SHORT_SCREEN).matches;
   const [short, setShort] = useState(query);

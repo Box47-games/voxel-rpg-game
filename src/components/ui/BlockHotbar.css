@@ -1,0 +1,62 @@
+/* BlockHotbar.css — the desktop block bar: block icons in stone slots
+   inside a thin wood frame. Placement (left) lives in GameUI.css. */
+
+.vx-block-hotbar {
+  position: fixed;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.hotbar { display: flex; gap: 4px; padding: 4px; }
+
+.hotbar__slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  background: #1d1f26;
+  border: 3px solid #07080b;
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.5), inset -2px -2px 0 rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: transform 80ms steps(2);
+}
+.hotbar__slot img { width: 36px; height: 36px; image-rendering: pixelated; pointer-events: none; }
+.hotbar__slot--hand img { width: 24px; height: 24px; }
+.hotbar__swatch { width: 30px; height: 30px; border: 2px solid #07080b; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.3); }
+.hotbar__slot:hover { background: #2a2c33; }
+.hotbar__slot.is-selected { transform: translateY(-4px); border-color: #ffe08a; background: #3a2e14; box-shadow: inset 0 0 0 2px #07080b, 0 4px 0 #b07e26; }
+.hotbar__slot.is-empty img, .hotbar__slot.is-empty .hotbar__swatch { opacity: 0.35; filter: grayscale(0.8); }
+.hotbar__slot:focus-visible { outline: 2px solid #ffe08a; outline-offset: 2px; }
+
+.hotbar__count,
+.hotbar__key {
+  position: absolute;
+  font-family: var(--vx-font-pixel);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 1px 0 0 #07080b, -1px 0 0 #07080b, 0 1px 0 #07080b, 0 -1px 0 #07080b;
+  pointer-events: none;
+}
+.hotbar__count { right: 3px; bottom: 2px; }
+.hotbar__key { left: 3px; top: 2px; color: #ffe08a; }
+
+.hotbar__hint {
+  display: flex;
+  gap: 8px;
+  font-family: var(--vx-font-pixel);
+  font-size: 14px;
+  color: var(--vx-cream);
+  text-shadow: 1px 1px 0 #07080b, 0 0 4px #07080b;
+}
+.hotbar__sep { color: #bfb293; }
