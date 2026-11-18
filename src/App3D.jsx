@@ -15,6 +15,7 @@ import PickupTextOverlay from './components/ui/PickupTextOverlay';
 import PauseMenu from './components/PauseMenu';
 import MobileActionButtons from './components/ui/MobileActionButtons';
 import ContextButton from './components/ui/ContextButton';
+import InteractPrompt from './components/ui/InteractPrompt';
 import ToolWheel from './components/ui/ToolWheel';
 import MobileTouchTutorial from './components/ui/MobileTouchTutorial';
 import VirtualJoystick from './components/ui/VirtualJoystick';
@@ -113,6 +114,7 @@ function App3D() {
       <VirtualJoystick />
       <MobileActionButtons />
       <ContextButton />
+      <InteractPrompt />
       <ToolWheel />
 
       {/* Mobile touch tutorial (shows once on first mobile play) */}

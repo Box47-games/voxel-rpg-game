@@ -14,9 +14,8 @@ import useGameStore from '../../stores/useGameStore';
 import { calculateDrops, getPlacementCost, canAffordPlacement } from '../../data/blockDrops';
 import { BLOCK_USE_ACTIONS } from '../../data/blockUseActions';
 import { usableTool } from '../../systems/tools/toolDurability';
-import { TOUCH_MINE_HOLD_MS, TOUCH_BLOCK_REACH, TAP_MAX_DISTANCE_PX, HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN, STOCKPILE_INTERACT_RANGE, CONSTRUCTION_INTERACT_RANGE, BUILDING_INTERACT_RANGE, NPC_INTERACT_RANGE } from '../../data/tuning';
-import { findNearestNPC } from '../../utils/npcQueries';
-import { getBuildingById } from '../../data/buildings';
+import { TOUCH_MINE_HOLD_MS, TOUCH_BLOCK_REACH, TAP_MAX_DISTANCE_PX, HARVEST_SPEED_BARE_HANDS, USE_KEY_RANGE, USE_KEY_COOLDOWN } from '../../data/tuning';
+import { findInteractTarget } from '../../systems/interaction/interactTarget';
 import { notePlayerAction } from '../../systems/playerActions';
 import { getSpellById, executeSpell } from '../../data/spells';
 import { performMeleeAttack, MELEE_COOLDOWN } from '../../data/meleeAttack';
@@ -804,49 +803,12 @@ export function BlockInteraction({ chunkManager }) {
       }
     }
 
-    // A settler next to the player opens their detail panel, unless a construction
-    // site or stockpile is closer (so NPCs working there don't block E).
-    const px = playerPos[0], pz = playerPos[2];
-    const nearbyNPC = findNearestNPC(store.settlement?.npcs || [], playerPos, NPC_INTERACT_RANGE);
-    const npcDist = nearbyNPC
-      ? Math.hypot(nearbyNPC.position[0] - px, nearbyNPC.position[2] - pz)
-      : Infinity;
-
-    // Near a construction site (delivery panel) or a completed building (info
-    // panel; shorter range so buildings don't swallow every E press)
-    for (const site of store.constructionSites) {
-      const range = site.status === 'COMPLETE' ? BUILDING_INTERACT_RANGE : CONSTRUCTION_INTERACT_RANGE;
-      const building = getBuildingById(site.buildingId);
-      if (!building) continue;
-      const centerX = site.position[0] + (building.size.width * VOXEL_SIZE) / 2;
-      const centerZ = site.position[2] + (building.size.depth * VOXEL_SIZE) / 2;
-      const dx = px - centerX, dz = pz - centerZ;
-      const siteDist = Math.sqrt(dx * dx + dz * dz);
-      if (siteDist <= range && siteDist <= npcDist) {
-        store.setActiveConstructionSite(site.id);
-        useBlockCooldown.current = now;
-        return true;
-      }
-    }
-
-    // Check if player is near a stockpile zone — open panel instead of block interact
-    const zones = store.zones;
-    for (const zone of zones) {
-      if (zone.type !== 'STOCKPILE' || !zone.storage) continue;
-      const { minX, minZ, maxX, maxZ } = zone.bounds;
-      const centerX = (minX + maxX) / 2;
-      const centerZ = (minZ + maxZ) / 2;
-      const dx = px - centerX, dz = pz - centerZ;
-      const zoneDist = Math.sqrt(dx * dx + dz * dz);
-      if (zoneDist <= STOCKPILE_INTERACT_RANGE && zoneDist <= npcDist) {
-        store.setActiveStockpileZone(zone.id);
-        useBlockCooldown.current = now;
-        return true;
-      }
-    }
-
-    if (nearbyNPC) {
-      store.setActiveNPC(nearbyNPC.id);
+    // A construction site or building, a stockpile, or a settler (see interactTarget.js)
+    const target = findInteractTarget(store, playerPos);
+    if (target) {
+      if (target.kind === 'site' || target.kind === 'building') store.setActiveConstructionSite(target.id);
+      else if (target.kind === 'stockpile') store.setActiveStockpileZone(target.id);
+      else store.setActiveNPC(target.id);
       useBlockCooldown.current = now;
       return true;
     }
