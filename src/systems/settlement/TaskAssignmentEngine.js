@@ -145,6 +145,8 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
         position: [cx, site.position[1], cz],
         blockType: null,
         material: haulKey,
+        // The site's material ('stone' for 'stone_slab'): the task's identity across rescans
+        baseMaterial: mat,
         amount,
         claimedBy: existing ? existing.claimedBy : null,
         priority: 2,
@@ -240,7 +242,8 @@ export function scanForTasks(zones, constructionSites, chunkManager, worldTimeEl
 /** Generate a dedup key for preserving claims across scans */
 function taskKey(task) {
   if (task.type === 'MINE') return `MINE:${task.position[0]},${task.position[1]},${task.position[2]}`;
-  if (task.type === 'HAUL') return `HAUL:${task.siteId}:${task.material}`;
+  // By the site's material, as the scan keys it: hauling slabs for stone is the same task
+  if (task.type === 'HAUL') return `HAUL:${task.siteId}:${task.baseMaterial || task.material}`;
   if (task.type === 'BUILD') return `BUILD:${task.siteId}`;
   if (task.type === 'FARM') return `FARM:${task.zoneId}:${task._tileIndex}:${task.farmAction}`;
   if (task.type === 'CHOP' || task.type === 'FORAGE') return `${task.type}:${task.position[0]},${task.position[1]},${task.position[2]}`;

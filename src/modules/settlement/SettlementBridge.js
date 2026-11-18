@@ -23,8 +23,9 @@ function createStoreHost() {
     updateZone: (zoneId, updates) => store().updateZone(zoneId, updates),
     addMaterial: (material, amount) => store().addMaterial(material, amount),
     removeMaterial: (material, amount) => store().removeMaterial(material, amount),
-    npcDeliverToConstruction: (siteId, material, amount) =>
-      store().npcDeliverToConstruction(siteId, material, amount),
+    // returnZoneId: where change from a broken block goes back to
+    npcDeliverToConstruction: (siteId, material, amount, returnZoneId) =>
+      store().npcDeliverToConstruction(siteId, material, amount, returnZoneId),
     advanceConstruction: (siteId) => store().advanceConstruction(siteId),
     addPickupText: (text, color) => store().addPickupText(text, color),
   };
@@ -48,6 +49,9 @@ class SettlementBridge {
       iterateChunks: () => chunkManager.chunks.values(),
       getBlock: (wx, wy, wz) => chunkManager.getBlock(wx, wy, wz),
       setBlock: (wx, wy, wz, blockType) => chunkManager.setBlock(wx, wy, wz, blockType),
+      // Shaped cells (pieces: slabs, plank floors) for construction
+      getShape: (wx, wy, wz) => chunkManager.getShape(wx, wy, wz),
+      setCell: (wx, wy, wz, blockType, shape) => chunkManager.setCell(wx, wy, wz, blockType, shape),
       getRawChunkManager: () => chunkManager,
     };
     this._module.setChunkAdapter(this._chunkAdapter);

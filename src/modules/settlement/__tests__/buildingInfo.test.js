@@ -31,6 +31,7 @@ describe('placed blocks', () => {
       y: 4 + first.y * VOXEL_SIZE + VOXEL_SIZE / 2,
       z: 20 + first.z * VOXEL_SIZE + VOXEL_SIZE / 2,
       blockType: first.blockType,
+      shape: 0,
     });
   });
 
@@ -46,7 +47,7 @@ describe('placed blocks', () => {
 
 describe('demolish refund', () => {
   test(`returns ${BUILDING_DEMOLISH_REFUND * 100}% of the cost, rounded down`, () => {
-    expect(getDemolishRefund(getBuildingById('stone_house'))).toEqual({ stone: 20, wood: 5 });
+    expect(getDemolishRefund(getBuildingById('stone_house'))).toEqual({ stone: 15, wood: 5 });
     expect(getDemolishRefund({ cost: { iron: 1 } })).toEqual({});
   });
 });

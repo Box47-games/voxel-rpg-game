@@ -116,7 +116,7 @@ WorkerPool (`src/systems/workers/WorkerPool.js`) caps at `Math.min(navigator.har
 - **`src/data/blockDrops.js`** — Block → loot tables, calculated via `calculateDrops(blockType, toolTier, pieceTiers)`.
 - **`src/data/pieces.js`** — Blocks break into pieces (`wood_plank`, `stone_slab`, `dirt_cube`, ...; a block is 8 units). Placing a block takes a real block; costs in blocks (recipes, blueprints, repairs, hauling) are paid by volume with `spendByVolume` / `payVolume`. Plan: `.claude/plans/block-pieces.md`. Also defines `BLOCK_PLACEMENT_COSTS`.
 - **`src/data/spells.js`** — Spell definitions with cooldowns and mana costs.
-- **`src/data/buildings.js`** — Building blueprints for the construction system.
+- **`src/data/buildings.js`** — Building blueprints for the construction system. Layer chars: `W` wood, `S` stone, `I` iron ore, `.` air, plus pieces filling a cell's lower half: `s` stone slab, `=` / `:` wood planks along X / Z (pairing up into 4-long planks). `parseLayers` gives `{x, y, z, blockType, shape, box}`; construction places shaped cells via `setCell`.
 - **`src/data/craftingRecipes.js`** — Crafting recipe definitions.
 - **`src/data/wildlifeTypes.js`** — Wildlife animal type definitions.
 - **`src/config/loot/*.json`** — Item templates, properties, rarity config, monster loot tables (JSON data, not code).

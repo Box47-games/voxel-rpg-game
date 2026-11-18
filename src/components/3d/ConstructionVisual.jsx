@@ -9,7 +9,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import useGameStore from '../../stores/useGameStore';
-import { getBuildingById, parseLayers } from '../../data/buildings';
+import { getBuildingById, parseLayers, cellBox } from '../../data/buildings';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { getBlockColor } from '../../systems/chunks/blockTypes';
 import { getScaffoldRoute, segmentBox } from '../../systems/construction/scaffoldRoute';
@@ -23,6 +23,7 @@ const scaffoldMat = new THREE.MeshLambertMaterial({ color: '#9a6a3c' });
 const plankMat = new THREE.MeshLambertMaterial({ color: '#b98551' });
 const BLUEPRINT = new THREE.Color('#7cc4ff');
 const tmpM = new THREE.Matrix4();
+const ONE = [1, 1, 1];
 const tmpC = new THREE.Color();
 
 /** Posts at the ramp's outer corners, up to the site's height. */
@@ -41,7 +42,8 @@ function GhostBlocks({ blocks }) {
   const ref = (mesh) => {
     if (!mesh) return;
     blocks.forEach((b, i) => {
-      mesh.setMatrixAt(i, tmpM.makeTranslation(b.position[0], b.position[1], b.position[2]));
+      const sc = b.scale || ONE;
+      mesh.setMatrixAt(i, tmpM.makeScale(sc[0], sc[1], sc[2]).setPosition(b.position[0], b.position[1], b.position[2]));
       mesh.setColorAt(i, tmpC.setRGB(...b.color).lerp(BLUEPRINT, 0.45));
     });
     mesh.instanceMatrix.needsUpdate = true;
@@ -86,6 +88,7 @@ const barBorderGeo = new THREE.PlaneGeometry(4.1, 0.5);
 function ConstructionSiteVisual({ site }) {
   const barGroupRef = useRef();
   const nextRef = useRef();
+  const nextScaleRef = useRef(ONE);
   const { camera } = useThree();
 
   const building = useMemo(() => getBuildingById(site.buildingId), [site.buildingId]);
@@ -94,15 +97,17 @@ function ConstructionSiteVisual({ site }) {
   // Ghost blocks = blocks not yet placed (index >= blocksPlaced)
   const ghostBlocks = useMemo(() => {
     if (!building || site.status === 'COMPLETE') return [];
-    return blocks.slice(site.blocksPlaced).map(b => ({
-      position: [
-        site.position[0] + b.x * VOXEL_SIZE + VOXEL_SIZE / 2,
-        site.position[1] + b.y * VOXEL_SIZE + VOXEL_SIZE / 2,
-        site.position[2] + b.z * VOXEL_SIZE + VOXEL_SIZE / 2,
-      ],
-      color: getBlockColor(b.blockType),
-    }));
+    return blocks.slice(site.blocksPlaced).map((b) => {
+      // A piece (slab, plank floor) shows as the part of the cell it fills
+      const { center, size } = cellBox(b, VOXEL_SIZE);
+      return {
+        position: [site.position[0] + center[0], site.position[1] + center[1], site.position[2] + center[2]],
+        scale: size.map((v) => v / VOXEL_SIZE),
+        color: getBlockColor(b.blockType),
+      };
+    });
   }, [building, blocks, site.position, site.blocksPlaced, site.status]);
+  nextScaleRef.current = ghostBlocks[0]?.scale || ONE;
 
   // Progress calculation
   const progress = useMemo(() => {
@@ -132,7 +137,9 @@ function ConstructionSiteVisual({ site }) {
       barGroupRef.current.lookAt(camera.position);
     }
     if (nextRef.current) {
-      nextRef.current.scale.setScalar(1.02 + Math.sin(clock.elapsedTime * 4) * 0.04);
+      const pulse = 1.02 + Math.sin(clock.elapsedTime * 4) * 0.04;
+      const sc = nextScaleRef.current || ONE;
+      nextRef.current.scale.set(sc[0] * pulse, sc[1] * pulse, sc[2] * pulse);
     }
   });
 

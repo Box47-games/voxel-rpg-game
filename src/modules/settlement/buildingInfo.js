@@ -37,6 +37,7 @@ export function getPlacedBlocks(site, building = getBuildingById(site.buildingId
     y: site.position[1] + b.y * VOXEL_SIZE + VOXEL_SIZE / 2,
     z: site.position[2] + b.z * VOXEL_SIZE + VOXEL_SIZE / 2,
     blockType: b.blockType,
+    shape: b.shape || 0,
   }));
 }
 
@@ -74,7 +75,7 @@ export function getResidents(site, npcs) {
   return (npcs || []).filter((n) => n.homeId === site.id);
 }
 
-/** World position and type of the next block construction should place, or null. */
+/** World position, type and shape (0 = full block) of the next cell construction should place, or null. */
 export function getNextBlock(site, building = getBuildingById(site.buildingId)) {
   if (!building) return null;
   const b = parseLayers(building)[site.blocksPlaced || 0];
@@ -84,14 +85,16 @@ export function getNextBlock(site, building = getBuildingById(site.buildingId)) 
     y: site.position[1] + b.y * VOXEL_SIZE + VOXEL_SIZE / 2,
     z: site.position[2] + b.z * VOXEL_SIZE + VOXEL_SIZE / 2,
     blockType: b.blockType,
+    shape: b.shape || 0,
+    box: b.box,
   };
 }
 
 /**
- * Place the next block of a BUILDING site in the world. For an upgrade, the
- * old building's blocks the new blueprint doesn't use are cleared first.
- * The caller then advances the site's block count.
- * @param {{ getBlock, setBlock }} world
+ * Place the next block (or piece: a slab, plank floor) of a BUILDING site in
+ * the world. For an upgrade, the old building's blocks the new blueprint
+ * doesn't use are cleared first. The caller then advances the site's count.
+ * @param {{ getBlock, setBlock, setCell? }} world
  */
 export function placeNextBlock(site, world) {
   if (site.upgradeFrom && (site.blocksPlaced || 0) === 0) {
@@ -100,7 +103,9 @@ export function placeNextBlock(site, world) {
     }
   }
   const next = getNextBlock(site);
-  if (next) world.setBlock(next.x, next.y, next.z, next.blockType);
+  if (!next) return;
+  if (next.shape && world.setCell) world.setCell(next.x, next.y, next.z, next.blockType, next.shape);
+  else world.setBlock(next.x, next.y, next.z, next.blockType);
 }
 
 /** Blueprint cell key, relative to the site corner. */

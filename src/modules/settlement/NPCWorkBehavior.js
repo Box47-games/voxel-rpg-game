@@ -362,6 +362,8 @@ function tickMine(npc, tickDelta, updates, ctx) {
 function tickHaul(npc, tickDelta, updates, ctx) {
   const task = getTask(npc.currentTaskId);
   if (!task) {
+    // The task is gone (site finished or removed): put the load back, never lose it
+    if (npc.carryingItem?.amount > 0) depositDrops([npc.carryingItem], ctx);
     goIdleFromHaul(updates);
     return false;
   }

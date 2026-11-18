@@ -196,22 +196,29 @@ function renderBuilding(blocks, colorOf, seed) {
   const a = Math.cos(Math.PI / 6) * s;
   const b = 0.5 * s;
   const key = (x, y, z) => `${x},${y},${z}`;
-  const filled = new Set(blocks.map(({ x, y, z }) => key(x, y, z)));
+  // Height of each cell as a fraction of a block (pieces: slabs and plank floors fill the lower half)
+  const heightOf = (bl) => (bl.box ? (bl.box[4] - bl.box[1]) / 2 : 1);
+  const filled = new Map(blocks.map((bl) => [key(bl.x, bl.y, bl.z), heightOf(bl)]));
   const order = [...blocks].sort((p, q) => p.x + p.z - (q.x + q.z) || p.y - q.y);
   const sil = [];
   const body = [];
   let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
-  for (const { x, y, z, blockType } of order) {
+  for (const bl of order) {
+    const { x, y, z, blockType } = bl;
+    const hf = heightOf(bl);
     const base = shade(colorOf(blockType), 1 + (rand() - 0.5) * 0.12);
     const ox = (x - z) * a;
-    const oy = (x + z) * b - y * s;
+    const oy = (x + z) * b - y * s + (1 - hf) * s; // a half-height piece's top sits lower
+    const hs = hf * s;
     const top = [[ox, oy], [ox + a, oy + b], [ox, oy + 2 * b], [ox - a, oy + b]];
-    const lf = [[ox - a, oy + b], [ox, oy + 2 * b], [ox, oy + 2 * b + s], [ox - a, oy + b + s]];
-    const rt = [[ox, oy + 2 * b], [ox + a, oy + b], [ox + a, oy + b + s], [ox, oy + 2 * b + s]];
+    const lf = [[ox - a, oy + b], [ox, oy + 2 * b], [ox, oy + 2 * b + hs], [ox - a, oy + b + hs]];
+    const rt = [[ox, oy + 2 * b], [ox + a, oy + b], [ox + a, oy + b + hs], [ox, oy + 2 * b + hs]];
     const faces = [];
-    if (!filled.has(key(x, y + 1, z))) faces.push([top, shade(base, 1.18)]);
-    if (!filled.has(key(x, y, z + 1))) faces.push([lf, shade(base, 0.86)]);
-    if (!filled.has(key(x + 1, y, z))) faces.push([rt, shade(base, 0.64)]);
+    // A side hides behind a neighbour at least as tall; a seam line marks each piece
+    const covers = (k) => (filled.get(k) ?? 0) >= hf;
+    if (!(hf === 1 && filled.has(key(x, y + 1, z)))) faces.push([top, shade(base, 1.18)]);
+    if (!covers(key(x, y, z + 1))) faces.push([lf, shade(base, 0.86)]);
+    if (!covers(key(x + 1, y, z))) faces.push([rt, shade(base, 0.64)]);
     for (const [p, col] of faces) {
       body.push(`<polygon points="${pts(p)}" fill="${col}" stroke="${shade(col, 0.82)}" stroke-width="0.12"/>`);
       sil.push(`<polygon points="${pts(p)}"/>`);

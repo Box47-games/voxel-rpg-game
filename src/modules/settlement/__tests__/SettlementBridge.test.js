@@ -95,7 +95,7 @@ describe('SettlementBridge', () => {
       host.updateZone('z', { a: 1 });
       host.addMaterial('stone', 2);
       host.removeMaterial('meat', 1);
-      host.npcDeliverToConstruction('s', 'wood', 4);
+      host.npcDeliverToConstruction('s', 'wood', 4, 'z1');
       host.advanceConstruction('s');
       host.addPickupText('Building complete!', '#44ff44');
 
@@ -103,7 +103,7 @@ describe('SettlementBridge', () => {
       expect(mockStoreState.updateZone).toHaveBeenCalledWith('z', { a: 1 });
       expect(mockStoreState.addMaterial).toHaveBeenCalledWith('stone', 2);
       expect(mockStoreState.removeMaterial).toHaveBeenCalledWith('meat', 1);
-      expect(mockStoreState.npcDeliverToConstruction).toHaveBeenCalledWith('s', 'wood', 4);
+      expect(mockStoreState.npcDeliverToConstruction).toHaveBeenCalledWith('s', 'wood', 4, 'z1');
       expect(mockStoreState.advanceConstruction).toHaveBeenCalledWith('s');
       expect(mockStoreState.addPickupText).toHaveBeenCalledWith('Building complete!', '#44ff44');
     });

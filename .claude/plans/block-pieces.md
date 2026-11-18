@@ -1,6 +1,6 @@
 # Block pieces: blocks break into placeable pieces
 
-Status: phases 1 and 2 merged; phase 3 (placing pieces) built on branch `block-pieces-3`. Decisions from the user on 2026-11-18 are marked **[decided]**;
+Status: phases 1–3 merged; phase 4 (settlers and blueprints) built on branch `block-pieces-4`. Decisions from the user on 2026-11-18 are marked **[decided]**;
 my proposals still to confirm are marked **[proposed]**.
 
 ## The idea
@@ -141,6 +141,21 @@ one plank; 8 = two). The rest is lost as rubble or splinters.
    - Changes: construction places and pays per piece; blueprint glyphs for slabs and planks;
      refresh a few buildings to use them; regenerate building art.
    - Check: a settlement builds a slab-roof house end to end.
+   - Built: blueprint chars `s` (stone slab), `=` and `:` (wood planks along X / Z), each the
+     lower half of a cell; planks pair along their axis. Construction places them as shaped
+     cells; ghosts, the placement preview and the building art show their real size. The
+     Stone House has a plank floor and a slab roof, the Storage Shed a plank roof, the
+     Watchtower a slab roof; their costs dropped with the volume saved (house stone 40→31,
+     wood 10→11; shed wood 15→11; tower stone 25→22).
+   - Not done: paying per piece while building. Sites still collect all their materials
+     before building starts; mixing hauling and building is a bigger settler-AI change.
+   - Fixed: hauling pieces lost the load (phase 1 bug). A haul task was keyed by the piece
+     ('stone_slab') when claims were kept but by the material ('stone') when scanned, so every
+     rescan dropped the settler's task and the carried load with it. Now keyed by material, and
+     a settler whose haul task disappears puts the load back in a stockpile. The bridge also
+     passes the stockpile for change from a broken block.
+   - Checked: one settler hauled 62 slabs and 2 planks from a pieces-only stockpile and built
+     a Stone House; all 56 cells (16 slabs, 4 plank cells) match the blueprint in the world.
 5. **Polish.**
    - Changes: 3D loot pieces, piece icons, sub-cube ambient occlusion, tuning pass.
 

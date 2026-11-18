@@ -12,7 +12,7 @@ import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
-import { getBuildingById, parseLayers } from '../../data/buildings';
+import { getBuildingById, parseLayers, cellBox } from '../../data/buildings';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { isSolid } from '../../systems/chunks/blockTypes';
 import { getBlockColor } from '../../systems/chunks/blockTypes';
@@ -43,10 +43,11 @@ export default function BuildingPlacement({ chunkManager }) {
   // Create instanced mesh data for the ghost blocks
   const blockData = useMemo(() => {
     if (!building || blocks.length === 0) return null;
-    return blocks.map(b => ({
-      offset: [b.x * VOXEL_SIZE, b.y * VOXEL_SIZE, b.z * VOXEL_SIZE],
-      color: getBlockColor(b.blockType),
-    }));
+    return blocks.map((b) => {
+      // A piece (slab, plank floor) shows as the part of the cell it fills
+      const { center, size } = cellBox(b, VOXEL_SIZE);
+      return { center, scale: size.map((v) => v / VOXEL_SIZE), color: getBlockColor(b.blockType) };
+    });
   }, [building, blocks]);
 
   // Raycast from camera center to find terrain placement position
@@ -227,11 +228,8 @@ export default function BuildingPlacement({ chunkManager }) {
         <mesh
           key={i}
           geometry={boxGeo}
-          position={[
-            b.offset[0] + VOXEL_SIZE / 2,
-            b.offset[1] + VOXEL_SIZE / 2,
-            b.offset[2] + VOXEL_SIZE / 2,
-          ]}
+          position={b.center}
+          scale={b.scale}
         >
           <meshBasicMaterial
             color="#00ff00"

@@ -417,14 +417,29 @@ describe('WORKING_HAUL', () => {
     expect(updates.skills.gathering).toBeCloseTo(0.5 + NPC_SKILL_GROWTH, 10);
   });
 
-  test('returns to IDLE empty-handed if the task no longer exists', () => {
-    const ctx = haulWorld();
+  test('returns to IDLE if the task no longer exists, putting the load back in a stockpile', () => {
+    const ctx = haulWorld(10);
     const npc = { ...startWork(makeNPC(), ctx), haulPhase: 'deliver', carryingItem: { material: 'wood', amount: 4 } };
     clearTasks();
 
     const { updates } = tickNPC(npc, 2, ctx);
 
     expect(updates).toMatchObject({ state: 'IDLE', currentTaskId: null, carryingItem: null, haulPhase: null, targetPosition: null });
+    expect(ctx.host.getZones()[0].storage.items.wood).toBe(14); // not lost
+  });
+
+  test('hauling pieces: the task keeps its id across rescans (the load is never dropped)', () => {
+    const stockpile = makeStockpile({ storage: { items: { wood_plank: 10 }, capacity: 100, usedCapacity: 5 } });
+    const zones = [stockpile];
+    const sites = [makeSite()];
+    const ctx = setup({ zones, constructionSites: sites });
+    const npc = startWork(makeNPC(), ctx);
+    const task = getTask(npc.currentTaskId);
+    expect(task.material).toBe('wood_plank');
+    // The settlement rescans for tasks every few seconds
+    scanForTasks(zones, sites, ctx.chunkAdapter);
+    expect(getTask(npc.currentTaskId)).not.toBeNull();
+    expect(getTask(npc.currentTaskId).claimedBy).toBe(npc.id);
   });
 });
 
