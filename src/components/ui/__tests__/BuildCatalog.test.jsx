@@ -46,7 +46,14 @@ describe('BuildCatalog (B)', () => {
     render(<BlockHotbar />);
     expect(screen.queryByTitle(/^Clay/)).toBeNull();
     act(() => s().pickBlock(BlockTypes.CLAY));
-    expect(screen.getByTitle(/^Clay \(B\)/)).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTitle(/^Clay \(from Build\)/)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('picking a block that a slot already holds holds that slot', () => {
+    useGameStore.setState({ gameState: 'playing' });
+    act(() => s().pickBlock(BlockTypes.STONE));
+    expect(s().heldSlot).toBe(1);
+    expect(s().selectedBlockType).toBe(BlockTypes.STONE);
   });
 
   test('number keys switch tabs while open without changing the held block', () => {

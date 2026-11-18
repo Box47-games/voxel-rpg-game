@@ -1,132 +1,143 @@
 /**
- * BlockHotbar - the block hotbar. On desktop it is always shown in Play:
- * slot 0 is the empty hand (mine and fight; right-click places nothing),
- * 1-9/0 pick a block. Pressing the selected block's key again returns to the hand.
- * Touch has no hotbar: blocks are picked from the tool wheel and placed with
- * a tap on the world.
+ * BlockHotbar — the desktop hotbar in Play: the empty hand, then the 4 slots
+ * the player fills from the Bag (drag blocks and pieces there; keys 1-4,
+ * the same key again = back to the hand). A block picked from the Build
+ * catalog (B) that isn't in a slot shows as an extra slot.
+ * Touch has no hotbar: the tool wheel shows the same slots.
  */
 
-import React, { useEffect, useRef } from 'react';
-import useGameStore from '../../stores/useGameStore';
+import React, { useEffect } from 'react';
+import useGameStore, { selectHotbar } from '../../stores/useGameStore';
 import { BlockProperties, BlockTypes } from '../../systems/chunks/blockTypes';
-import { artUrl } from './art';
-import './BlockHotbar.css';
 import { isTouchDevice } from '../../utils/deviceDetection';
-import { getPlacementCost, countPlaceable, HOTBAR_BLOCKS } from '../../data/blockDrops';
-
-
-/**
- * Convert RGB array [0-1] to CSS color
- */
-function rgbToCSS(rgb) {
-  const r = Math.round(rgb[0] * 255);
-  const g = Math.round(rgb[1] * 255);
-  const b = Math.round(rgb[2] * 255);
-  return `rgb(${r}, ${g}, ${b})`;
-}
+import { getPlacementCost, countPlaceable, blockForMaterial } from '../../data/blockDrops';
+import { materialName, isPieceKey } from '../../data/pieces';
+import { artUrl, materialArt } from './art';
+import './BlockHotbar.css';
 
 const BLOCK_NAME = Object.fromEntries(Object.entries(BlockTypes).map(([name, id]) => [id, name]));
 
 /** Isometric block icon (or the campfire) for a block type, else null. */
-function blockArt(blockType) {
+export function blockArt(blockType) {
   const name = BLOCK_NAME[blockType];
   return artUrl('blocks', name) || artUrl('misc', name?.toLowerCase());
 }
 
-export function BlockHotbar() {
-  const selectedBlockType = useGameStore((state) => state.selectedBlockType);
-  const zoneMode = useGameStore((state) => state.zoneMode || state.planMode); // planning: no mining or placing
-  const placingBuildingId = useGameStore((state) => state.placingBuildingId);
-  const playing = useGameStore((state) => state.gameState === 'playing');
-  const materials = useGameStore((state) => state.inventory.materials);
-  const setSelectedBlockType = useGameStore(
-    (state) => state.setSelectedBlockType
-  );
-  const isMobile = useRef(isTouchDevice());
+/** Cost text for a block: "2 wood". */
+const costText = (blockType) =>
+  Object.entries(getPlacementCost(blockType) || {}).map(([m, q]) => `${q} ${m}`).join(', ') || 'n/a';
 
-  // Keyboard shortcuts (number keys for block selection only)
+/** Keys 1-4 hold a hotbar slot (desktop and touch keyboards). */
+export function useHotbarKeys() {
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Number keys to select blocks (when not focused on input)
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')
-        return;
-
+    const onKey = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const st = useGameStore.getState();
       if (st.zoneMode || st.planMode || st.placingBuildingId) return; // number keys mean something else there
-      if (e.key === '`' || e.key === '~') return;
-      const keyIndex = parseInt(e.key, 10);
-      if (Number.isNaN(keyIndex)) return;
-      // 1-9 then 0 for the tenth slot
-      const slot = keyIndex === 0 ? HOTBAR_BLOCKS.length : keyIndex;
-      if (slot < 1 || slot > HOTBAR_BLOCKS.length) return;
-      const block = HOTBAR_BLOCKS[slot - 1];
-      setSelectedBlockType(st.selectedBlockType === block ? null : block);
+      const n = parseInt(e.key, 10);
+      const slots = selectHotbar(st).length;
+      if (Number.isNaN(n) || n < 1 || n > slots) return;
+      st.holdSlot(n - 1);
     };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+}
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setSelectedBlockType]);
+export function BlockHotbar() {
+  const hotbar = useGameStore(selectHotbar);
+  const heldSlot = useGameStore((s) => s.heldSlot);
+  const selectedBlockType = useGameStore((s) => s.selectedBlockType);
+  const zoneMode = useGameStore((s) => s.zoneMode || s.planMode); // planning: no mining or placing
+  const placingBuildingId = useGameStore((s) => s.placingBuildingId);
+  const playing = useGameStore((s) => s.gameState === 'playing');
+  const materials = useGameStore((s) => s.inventory.materials);
+  useHotbarKeys();
 
   // Desktop only, in Play. Hidden while planning or placing a building.
-  if (isMobile.current || !playing) return null; // not on the title, death or pause screens
+  if (isTouchDevice() || !playing) return null;
   if (zoneMode || placingBuildingId) return null;
 
-  const blocks =
-    HOTBAR_BLOCKS.includes(selectedBlockType) || selectedBlockType == null
-      ? HOTBAR_BLOCKS
-      : [...HOTBAR_BLOCKS, selectedBlockType]; // picked from the catalog (B)
+  const handHeld = heldSlot == null && selectedBlockType == null;
+  // A catalog block (campfire, gravel, ...) in hand that no slot holds
+  const catalogBlock = heldSlot == null && selectedBlockType != null ? selectedBlockType : null;
+  const heldKey = heldSlot != null ? hotbar[heldSlot] : null;
+  const hint =
+    heldKey && isPieceKey(heldKey)
+      ? `${materialName(heldKey, 2)} can't be placed yet: combine them in Craft`
+      : handHeld
+        ? hotbar.some(Boolean) ? `Pick a slot (1-${hotbar.length}) to place` : 'Drag blocks into the hotbar in your Bag (I)'
+        : 'Right-click to place';
 
   return (
     <div className="vx-block-hotbar vx-block-hotbar--desktop">
       <div className="hotbar vx-hudpanel">
         <button
           type="button"
-          className={`hotbar__slot hotbar__slot--hand${selectedBlockType == null ? ' is-selected' : ''}`}
-          aria-pressed={selectedBlockType == null}
+          className={`hotbar__slot hotbar__slot--hand${handHeld ? ' is-selected' : ''}`}
+          aria-pressed={handHeld}
           aria-label="Empty hand"
-          onClick={() => setSelectedBlockType(null)}
-          title="Empty hand: mine and fight; right-click places nothing (press the selected block's key again)"
+          onClick={() => useGameStore.getState().holdSlot(null)}
+          title="Empty hand: mine and fight (press the held slot's key again)"
         >
           <img src={artUrl('ui', 'hand')} alt="" />
         </button>
-        {blocks.map((blockType, index) => {
-          const keyLabel = index < HOTBAR_BLOCKS.length ? String((index + 1) % 10) : 'B';
-          const props = BlockProperties[blockType];
-          const isSelected = selectedBlockType === blockType;
-          const placeable = countPlaceable(blockType, materials);
-          const cost = getPlacementCost(blockType) || {};
-          const costText = Object.entries(cost)
-            .map(([m, q]) => `${q} ${m}`)
-            .join(', ');
-          const url = blockArt(blockType);
-
+        {hotbar.map((key, i) => {
+          const held = heldSlot === i;
+          if (!key) {
+            return (
+              <button
+                key={i}
+                type="button"
+                className={`hotbar__slot is-unset${held ? ' is-selected' : ''}`}
+                aria-label={`Slot ${i + 1}: empty`}
+                title="Empty: drag a block here in your Bag (I)"
+                onClick={() => useGameStore.getState().holdSlot(i)}
+              >
+                <span className="hotbar__key">{i + 1}</span>
+              </button>
+            );
+          }
+          const block = blockForMaterial(key);
+          const count = block != null ? countPlaceable(block, materials) : materials?.[key] || 0;
           return (
             <button
-              key={blockType}
+              key={i}
               type="button"
-              className={`hotbar__slot${isSelected ? ' is-selected' : ''}${placeable > 0 ? '' : ' is-empty'}`}
-              aria-pressed={isSelected}
-              aria-label={`${props.name}, ${placeable}`}
-              onClick={() => setSelectedBlockType(isSelected ? null : blockType)}
-              title={`${props.name} (${keyLabel}): costs ${costText || 'n/a'}`}
+              className={`hotbar__slot${held ? ' is-selected' : ''}${count > 0 ? '' : ' is-empty'}${block == null ? ' is-piece' : ''}`}
+              aria-pressed={held}
+              aria-label={`Slot ${i + 1}: ${materialName(key)}, ${count}`}
+              title={block != null ? `${materialName(key)} (${i + 1}): costs ${costText(block)}` : `${materialName(key)} (${i + 1}): can't be placed yet`}
+              onClick={() => useGameStore.getState().holdSlot(i)}
             >
-              {url ? (
-                <img src={url} alt="" />
-              ) : (
-                <span className="hotbar__swatch" style={{ background: rgbToCSS(props.color) }} />
-              )}
-              <span className="hotbar__count">{placeable}</span>
-              <span className="hotbar__key">{keyLabel}</span>
+              <img src={materialArt(key)} alt="" />
+              <span className="hotbar__count">{count}</span>
+              <span className="hotbar__key">{i + 1}</span>
             </button>
           );
         })}
+        {catalogBlock != null && (
+          <button
+            type="button"
+            className={`hotbar__slot is-selected${countPlaceable(catalogBlock, materials) > 0 ? '' : ' is-empty'}`}
+            aria-pressed="true"
+            aria-label={`${BlockProperties[catalogBlock]?.name}, ${countPlaceable(catalogBlock, materials)}`}
+            title={`${BlockProperties[catalogBlock]?.name} (from Build): costs ${costText(catalogBlock)}`}
+            onClick={() => useGameStore.getState().holdSlot(null)}
+          >
+            <img src={blockArt(catalogBlock)} alt="" />
+            <span className="hotbar__count">{countPlaceable(catalogBlock, materials)}</span>
+            <span className="hotbar__key">B</span>
+          </button>
+        )}
       </div>
 
       <div className="hotbar__hint">
         <span>Hold left-click to mine</span>
         <span className="hotbar__sep" aria-hidden="true">·</span>
-        <span>{selectedBlockType == null ? 'Pick a block (1-0) to place' : 'Right-click to place'}</span>
+        <span>{hint}</span>
       </div>
     </div>
   );

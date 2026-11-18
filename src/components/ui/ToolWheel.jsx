@@ -1,16 +1,20 @@
 /**
  * ToolWheel — the touch menu behind the HUD's Tools button (panel 'tools').
  * A ring of the big screens (Bag, Craft, Build catalog, Plan, Settlement)
- * around a close button, and a strip of blocks underneath: tap one to hold it
- * (then tap the world to place it), or the hand to empty your hands.
+ * around a close button, and the hotbar underneath (the same 4 slots the
+ * player fills in the Bag): tap one to hold it (then tap the world to place
+ * it), or the hand to empty your hands.
  * Spells keep their own wand button.
  */
 
 import React from 'react';
 import { Package, Hammer, Pickaxe, MapPin, Users, X } from 'lucide-react';
-import useGameStore from '../../stores/useGameStore';
+import useGameStore, { selectHotbar } from '../../stores/useGameStore';
 import { BlockProperties } from '../../systems/chunks/blockTypes';
-import { HOTBAR_BLOCKS, countPlaceable } from '../../data/blockDrops';
+import { countPlaceable, blockForMaterial } from '../../data/blockDrops';
+import { materialName } from '../../data/pieces';
+import { materialArt } from './art';
+import { blockArt } from './BlockHotbar';
 import './ToolWheel.css';
 
 const RING = [
@@ -21,21 +25,25 @@ const RING = [
   { id: 'settlement', label: 'Settlement', Icon: Users, color: '#5cc36b', run: (st) => st.togglePanel('settlement') },
 ];
 
-const rgb = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
-
 export default function ToolWheel() {
   const open = useGameStore((s) => s.openPanel === 'tools');
   const held = useGameStore((s) => s.selectedBlockType);
+  const heldSlot = useGameStore((s) => s.heldSlot);
+  const hotbar = useGameStore(selectHotbar);
   const materials = useGameStore((s) => s.inventory?.materials);
   if (!open) return null;
 
   const st = useGameStore.getState;
   const close = () => st().closePanels();
-  const pick = (blockType) => {
-    st().setSelectedBlockType(blockType);
+  const holdSlot = (i) => {
+    if (st().heldSlot !== i) st().holdSlot(i);
     close();
   };
-  const strip = held != null && !HOTBAR_BLOCKS.includes(held) ? [...HOTBAR_BLOCKS, held] : HOTBAR_BLOCKS;
+  const emptyHand = () => {
+    st().holdSlot(null);
+    close();
+  };
+  const catalogBlock = heldSlot == null && held != null ? held : null; // picked from Build
 
   return (
     <div className="tw-backdrop" onClick={close}>
@@ -69,32 +77,51 @@ export default function ToolWheel() {
         <div className="tw-blocks vx-panel" role="group" aria-label="Hold a block">
           <button
             type="button"
-            className={`tw-block tw-block--hand${held == null ? ' tw-block--held' : ''}`}
-            aria-pressed={held == null}
+            className={`tw-block tw-block--hand${held == null && heldSlot == null ? ' tw-block--held' : ''}`}
+            aria-pressed={held == null && heldSlot == null}
             aria-label="Empty hand"
-            onClick={() => pick(null)}
+            onClick={emptyHand}
           >
             ✋
           </button>
-          {strip.map((type) => {
-            const props = BlockProperties[type];
-            const count = countPlaceable(type, materials);
+          {hotbar.map((key, i) => {
+            if (!key) {
+              return (
+                <button key={i} type="button" className="tw-block tw-block--unset" aria-label={`Slot ${i + 1}: empty`} onClick={() => { close(); st().togglePanel('inventory'); }}>
+                  <span className="tw-block__count">{i + 1}</span>
+                </button>
+              );
+            }
+            const block = blockForMaterial(key);
+            const count = block != null ? countPlaceable(block, materials) : materials?.[key] || 0;
             return (
               <button
-                key={type}
+                key={i}
                 type="button"
-                className={`tw-block${held === type ? ' tw-block--held' : ''}${count > 0 ? '' : ' tw-block--empty'}`}
-                style={{ background: rgb(props.color) }}
-                aria-pressed={held === type}
-                aria-label={`${props.name} (${count})`}
-                onClick={() => pick(type)}
+                className={`tw-block${heldSlot === i ? ' tw-block--held' : ''}${count > 0 ? '' : ' tw-block--empty'}`}
+                aria-pressed={heldSlot === i}
+                aria-label={`${materialName(key)} (${count})`}
+                onClick={() => holdSlot(i)}
               >
+                <img src={materialArt(key)} alt="" />
                 <span className="tw-block__count">{count}</span>
               </button>
             );
           })}
+          {catalogBlock != null && (
+            <button
+              type="button"
+              className="tw-block tw-block--held"
+              aria-pressed="true"
+              aria-label={`${BlockProperties[catalogBlock]?.name} (${countPlaceable(catalogBlock, materials)})`}
+              onClick={close}
+            >
+              <img src={blockArt(catalogBlock)} alt="" />
+              <span className="tw-block__count">{countPlaceable(catalogBlock, materials)}</span>
+            </button>
+          )}
         </div>
-        <p className="tw-hint">Pick a block, then tap where it goes. Hold a block on screen to mine it.</p>
+        <p className="tw-hint">Pick a slot, then tap where it goes. Fill the slots in your Bag. Hold a block on screen to mine it.</p>
       </div>
     </div>
   );

@@ -133,3 +133,61 @@
   .recipe .vx-slot { --size: 44px; }
   .detail { padding: 12px; gap: 8px; }
 }
+
+/* ── Hotbar row in the Bag ── */
+.bag-hotbar { margin-top: 8px; }
+.bag-hotbar__slots { display: flex; gap: 8px; }
+.bag-hotbar__slot { --size: 64px; touch-action: manipulation; cursor: grab; user-select: none; -webkit-user-select: none; }
+.bag-hotbar__slot.is-ghost { cursor: default; }
+.bag-hotbar__slot.is-drop { border-color: #ffe08a; box-shadow: inset 0 0 0 2px #ffe08a; background: #3a2e14; }
+.bag-hotbar__key {
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  font-family: var(--vx-font-pixel);
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffe08a;
+  text-shadow: 1px 1px 0 #07080b;
+  pointer-events: none;
+}
+.bag-hotbar__clear {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: #5a1c1c;
+  border: 2px solid #07080b;
+  cursor: pointer;
+}
+.bag-hotbar__clear img { width: 12px; height: 12px; }
+.bag-hotbar__slot:hover .bag-hotbar__clear,
+.bag-hotbar__slot:focus-within .bag-hotbar__clear { display: flex; }
+@media (hover: none) { .bag-hotbar__clear { display: flex; } }
+
+/* Materials you can drag to the hotbar */
+.inv__grid .vx-slot.is-draggable { cursor: grab; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+
+/* The icon following the pointer while dragging */
+.hotbar-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 10000;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(29, 31, 38, 0.85);
+  border: 3px solid #ffe08a;
+  pointer-events: none;
+}
+.hotbar-ghost img { width: 38px; height: 38px; }
+.hotbar-assign { display: flex; gap: 6px; }
+.hotbar-assign .vx-pbtn { flex: 1; min-height: 36px; }

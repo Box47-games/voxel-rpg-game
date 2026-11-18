@@ -13,7 +13,7 @@
 
 import { BlockTypes } from '../systems/chunks/blockTypes';
 import { TOOL_TIER, APPLE_DROP_CHANCE } from './tuning';
-import { PIECES, piecesFromMining, blocksAvailable, spendByVolume } from './pieces';
+import { PIECES, piecesFromMining, blocksAvailable, spendByVolume, isPieceKey } from './pieces';
 
 export const BLOCK_DROPS = {
   [BlockTypes.STONE]: { material: 'stone', pieces: true },
@@ -117,8 +117,6 @@ export const BLOCK_PLACEMENT_COSTS = {
   [BlockTypes.SAND]: { sand: 1 },
   [BlockTypes.SNOW]: { snow: 1 },
   [BlockTypes.WOOD]: { wood: 1 },
-  // Leaves can drop berries when mined, so they cost wood to avoid a free-food loop
-  [BlockTypes.LEAVES]: { wood: 1 },
   [BlockTypes.GRAVEL]: { stone: 1 },
   [BlockTypes.COAL_ORE]: { coal: 1 },
   [BlockTypes.CLAY]: { clay: 1 },
@@ -131,7 +129,7 @@ export const BLOCK_PLACEMENT_COSTS = {
  * takes a real block of its material: pieces combine into blocks only by
  * crafting (data/pieces.js).
  */
-const PLACE_BY_VOLUME = new Set([BlockTypes.LEAVES, BlockTypes.CAMPFIRE]);
+const PLACE_BY_VOLUME = new Set([BlockTypes.CAMPFIRE]);
 
 /** Does placing this block accept pieces (by volume)? */
 export const placementByVolume = (blockType) => PLACE_BY_VOLUME.has(blockType);
@@ -149,19 +147,26 @@ export function getPlacementCost(blockType) {
   return BLOCK_PLACEMENT_COSTS[blockType] || null;
 }
 
-/** The desktop hotbar's blocks (keys 1-9, 0) and the touch tool wheel's block strip. */
-export const HOTBAR_BLOCKS = [
-  BlockTypes.DIRT,
-  BlockTypes.GRASS,
-  BlockTypes.STONE,
-  BlockTypes.SAND,
-  BlockTypes.SNOW,
-  BlockTypes.WOOD,
-  BlockTypes.LEAVES,
-  BlockTypes.GRAVEL,
-  BlockTypes.COAL_ORE,
-  BlockTypes.CAMPFIRE,
-];
+/**
+ * Materials that are a placeable block of their own: what a hotbar slot
+ * holding that material places. (Grass, gravel, coal ore and the campfire
+ * are picked from the Build catalog.)
+ */
+export const MATERIAL_BLOCK = {
+  wood: BlockTypes.WOOD,
+  stone: BlockTypes.STONE,
+  dirt: BlockTypes.DIRT,
+  sand: BlockTypes.SAND,
+  snow: BlockTypes.SNOW,
+  clay: BlockTypes.CLAY,
+  ice: BlockTypes.ICE,
+};
+
+/** Block a hotbar slot holding `key` places, or null (pieces: not placeable yet). */
+export const blockForMaterial = (key) => MATERIAL_BLOCK[key] ?? null;
+
+/** Can this material go in a hotbar slot? Blocks and pieces. */
+export const hotbarAllows = (key) => key in MATERIAL_BLOCK || isPieceKey(key);
 
 /** Every block type the player can place, in catalog order. */
 export const PLACEABLE_BLOCKS = Object.keys(BLOCK_PLACEMENT_COSTS).map(Number);

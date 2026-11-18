@@ -6,12 +6,15 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import useGameStore, { selectPlayerStats } from '../stores/useGameStore';
+import useGameStore, { selectPlayerStats, selectHotbar } from '../stores/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import ToolDurability from './ui/ToolDurability';
 import BagFrame from './ui/BagFrame';
 import { artUrl, itemArt, materialArt, rarityClass, RARITY_INK } from './ui/art';
 import { materialName, pieceInfo, isBuildingMaterial, PIECES } from '../data/pieces';
+import { hotbarAllows } from '../data/blockDrops';
+import BagHotbar from './ui/BagHotbar';
+import { beginHotbarDrag, justDragged } from './ui/hotbarDrag';
 import { ITEM_TYPES } from '../data/craftingRecipes';
 import { compareStatsWithItem, formatStatDifference } from '../utils/EquipmentStatsIntegration';
 import { FOOD_BERRY_RESTORE, FOOD_RAW_MEAT_RESTORE, FOOD_BERRY_HEAL, FOOD_RAW_MEAT_HEAL, FOOD_VEGETABLE_RESTORE, FOOD_VEGETABLE_HEAL } from '../data/tuning';
@@ -48,7 +51,7 @@ const RIGHT_SLOTS = [
   { slot: 'ring1', name: 'Ring', ghost: ['items', 'ironRing'] },
   { slot: 'ring2', name: 'Ring', ghost: ['items', 'ironRing'] },
 ];
-const MIN_ITEM_SLOTS = 24;
+const MIN_ITEM_SLOTS = 12; // two rows; the hotbar and materials sit below
 
 // Blocks first, each followed by its pieces (wood, planks, stone, slabs, ...), then the rest
 const BUILDING_ORDER = Object.keys(PIECES).flatMap((base) => [base, PIECES[base].key]);
@@ -242,6 +245,8 @@ const InventoryUI = () => {
             <p className="bag__empty">No items yet. Craft some in the Craft tab.</p>
           )}
 
+          <BagHotbar />
+
           <h3 className="vx-h" style={{ marginTop: 8 }}>Materials</h3>
           {ownedMaterials.length === 0 ? (
             <p className="bag__empty">No materials yet. Mine blocks and fell trees to gather them.</p>
@@ -251,10 +256,11 @@ const InventoryUI = () => {
                 <button
                   key={key}
                   type="button"
-                  className={`vx-slot${selection?.kind === 'material' && selection.key === key ? ' is-selected' : ''}`}
+                  className={`vx-slot${selection?.kind === 'material' && selection.key === key ? ' is-selected' : ''}${hotbarAllows(key) ? ' is-draggable' : ''}`}
                   aria-label={`${materialName(key, amount)}, ${amount}`}
-                  title={materialName(key)}
-                  onClick={() => setSelection({ kind: 'material', key })}
+                  title={hotbarAllows(key) ? `${materialName(key)}: drag to the hotbar` : materialName(key)}
+                  onPointerDown={hotbarAllows(key) ? (e) => beginHotbarDrag(e, { key, icon: materialArt(key) }) : undefined}
+                  onClick={() => { if (!justDragged()) setSelection({ kind: 'material', key }); }}
                 >
                   {materialArt(key) ? <img src={materialArt(key)} alt="" /> : <span className="vx-slot__emoji">?</span>}
                   <span className="vx-slot__qty">{amount}</span>
@@ -347,6 +353,30 @@ function ItemDetail({ item, equippedSlot, index, statComparison, onEquip, onUneq
   );
 }
 
+/** Put the selected material in a hotbar slot without dragging (tap 1-4). */
+function HotbarAssign({ materialKey }) {
+  const hotbar = useGameStore(selectHotbar);
+  return (
+    <div className="detail__rows">
+      <h4 className="vx-h">Put in hotbar</h4>
+      <div className="hotbar-assign">
+        {hotbar.map((key, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`vx-pbtn vx-pbtn--sm${key === materialKey ? '' : ' vx-pbtn--stone'}`}
+            aria-pressed={key === materialKey}
+            aria-label={`Put ${materialName(materialKey).toLowerCase()} in hotbar slot ${i + 1}`}
+            onClick={() => useGameStore.getState().setHotbarSlot(i, key === materialKey ? null : materialKey)}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** "2 stone slabs" / "8 dirt cubes": how many of a piece make a block. */
 const BLOCK_PER = (piece) => `${8 / piece.units} ${piece.name.toLowerCase()}s`;
 
@@ -378,6 +408,7 @@ function MaterialDetail({ materialKey, amount, hungerFull, onEat }) {
       {edible && (
         <div className="vx-stat"><span>Eating restores</span><span className="vx-stat__dots" /><strong className="good">+{edible.restore} food, +{edible.heal} HP</strong></div>
       )}
+      {hotbarAllows(materialKey) && <HotbarAssign materialKey={materialKey} />}
       <div className="detail__fill" />
       {edible && (
         <button

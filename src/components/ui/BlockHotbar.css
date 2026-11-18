@@ -60,3 +60,6 @@
   text-shadow: 1px 1px 0 #07080b, 0 0 4px #07080b;
 }
 .hotbar__sep { color: #bfb293; }
+.hotbar__slot.is-unset { background: rgba(29, 31, 38, 0.6); }
+.hotbar__slot.is-piece img { width: 30px; height: 30px; }
+.hotbar__hint { white-space: nowrap; }

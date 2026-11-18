@@ -511,3 +511,7 @@ export const PIECE_YIELD_STONE_TOOL = 6;  // Stone-tier pickaxe or axe
 export const PIECE_YIELD_IRON_TOOL = 8;   // Iron or better: the whole block
 export const PIECE_YIELD_LOOSE = 8;       // Dirt, sand, snow and clay always give the whole block
 export const NPC_PIECE_YIELD_TIER = 2;    // Settlers mine and chop as if with stone tools (TOOL_TIER.STONE)
+
+// ── Hotbar ──
+export const HOTBAR_SLOTS = 4;            // Slots the player fills from the Bag (keys 1-4)
+export const HOTBAR_DEFAULT = ['wood', 'stone', 'dirt', null]; // A new game's slots (material keys)

@@ -26,16 +26,27 @@ describe('BlockHotbar (modeless, desktop)', () => {
     expect(screen.getByRole('button', { name: 'Empty hand' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('number keys pick a block; the same key again returns to the hand', () => {
+  test('keys 1-4 hold a slot; the same key again returns to the hand', () => {
     render(<BlockHotbar />);
     press('1');
-    expect(useGameStore.getState().selectedBlockType).toBe(BlockTypes.DIRT);
-    press('3');
+    expect(useGameStore.getState().selectedBlockType).toBe(BlockTypes.WOOD);
+    press('2');
     expect(useGameStore.getState().selectedBlockType).toBe(BlockTypes.STONE);
-    press('3');
+    expect(useGameStore.getState().heldSlot).toBe(1);
+    press('2');
     expect(useGameStore.getState().selectedBlockType).toBeNull();
-    press('0');
-    expect(useGameStore.getState().selectedBlockType).toBe(BlockTypes.CAMPFIRE);
+    expect(useGameStore.getState().heldSlot).toBeNull();
+    press('5'); // only 4 slots
+    expect(useGameStore.getState().heldSlot).toBeNull();
+  });
+
+  test('a slot holding pieces is held but places nothing yet', () => {
+    act(() => useGameStore.getState().setHotbarSlot(3, 'stone_slab'));
+    render(<BlockHotbar />);
+    press('4');
+    expect(useGameStore.getState().heldSlot).toBe(3);
+    expect(useGameStore.getState().selectedBlockType).toBeNull();
+    expect(screen.getByText(/can't be placed yet/)).toBeInTheDocument();
   });
 
   test('clicking the hand slot clears the block', () => {
@@ -43,6 +54,12 @@ describe('BlockHotbar (modeless, desktop)', () => {
     press('2');
     fireEvent.click(screen.getByRole('button', { name: 'Empty hand' }));
     expect(useGameStore.getState().selectedBlockType).toBeNull();
+  });
+
+  test('a block picked from the Build catalog shows as an extra slot', () => {
+    render(<BlockHotbar />);
+    act(() => useGameStore.getState().pickBlock(BlockTypes.CAMPFIRE));
+    expect(screen.getByRole('button', { name: /^Campfire/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('hidden, and number keys ignored, while zoning or placing a building', () => {

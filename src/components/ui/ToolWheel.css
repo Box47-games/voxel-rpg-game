@@ -150,3 +150,8 @@
     display: none;
   }
 }
+
+/* Hotbar slots: block and piece icons on stone */
+.tw-block { width: 52px; height: 52px; padding: 0; display: flex; align-items: center; justify-content: center; background: #1d1f26; }
+.tw-block img { width: 36px; height: 36px; pointer-events: none; }
+.tw-block--unset { background: rgba(29, 31, 38, 0.55); border-style: dashed; }
