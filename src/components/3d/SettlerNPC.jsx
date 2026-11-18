@@ -12,6 +12,7 @@ import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { getActiveScaffoldRoutes, scaffoldHeightAt } from '../../systems/construction/scaffoldRoute';
+import { PathFollower } from '../../systems/navigation/gridPath';
 
 const BUILDER_ARRIVE_DISTANCE = 0.25;
 import * as THREE from 'three';
@@ -28,6 +29,7 @@ import { createHumanoidAnimState, stepHumanoidAnimation } from './characters/hum
 const _targetVec = new THREE.Vector3();
 const _currentVec = new THREE.Vector3();
 const _dirVec = new THREE.Vector3();
+const _steerVec = new THREE.Vector3();
 
 // Status gem floating above the settler's head
 const statusGeo = new THREE.OctahedronGeometry(0.16, 0);
@@ -92,6 +94,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
   const lastTerrainCheck = useRef(0);
   const terrainY = useRef(npcData.position[1]);
   const onScaffold = useRef(false);
+  const followerRef = useRef(null); // path to targetPosition
   const evalRotation = useRef(0);
   const npcIndexRef = useRef(0);
 
@@ -110,7 +113,7 @@ const SettlerNPC = React.memo(({ npcData }) => {
     statusMaterial.dispose();
   }, [rig, statusMaterial]);
 
-  useFrame((_, delta) => {
+  useFrame((frameState, delta) => {
     if (!bodyRef.current) return;
 
     const store = useGameStore.getState();
@@ -190,8 +193,23 @@ const SettlerNPC = React.memo(({ npcData }) => {
           speed = NPC_HAUL_SPEED;
         }
 
+        // Steer along a path round walls and trees (straight when the way is
+        // clear). On a scaffold ramp the route is already the ramp's.
+        let steerDist = dist;
+        const cmNav = store._chunkManager;
+        if (cmNav && !onScaffold.current) {
+          if (!followerRef.current) followerRef.current = new PathFollower({ arrive: 0.6 });
+          followerRef.current.setGoal(npc.targetPosition);
+          const p = followerRef.current.next(cmNav, [pos.x, terrainY.current, pos.z], frameState.clock.elapsedTime);
+          if (p) {
+            _steerVec.set(p[0], 0, p[2]);
+            steerDist = _currentVec.distanceTo(_steerVec);
+            if (steerDist > 0.01) _targetVec.copy(_steerVec);
+            else steerDist = dist;
+          }
+        }
         _dirVec.subVectors(_targetVec, _currentVec).normalize();
-        const step = Math.min(speed * delta, dist); // never overshoot the target
+        const step = Math.min(speed * delta, steerDist); // never overshoot the target
 
         const newX = pos.x + _dirVec.x * step;
         const newZ = pos.z + _dirVec.z * step;

@@ -493,3 +493,11 @@ export const NPC_WANDER_TIMEOUT = 15;          // Seconds before a wandering NPC
 export const NPC_LEAVE_EXTRA_DISTANCE = 20;    // World units past the spawn ring a departing NPC walks to
 export const NPC_WORK_SKILL_FALLBACK = 0.5;    // Skill used for work speed when an NPC has none recorded
 export const NPC_SKILL_GROWTH_BASE = 0.3;      // Skill a first completed task grows from when none recorded
+
+// ─── Navigation (monsters, animals, settlers) ───────────────
+// (Step up/down, headroom and the search cap: NAV_MAX_STEP_UP, NAV_MAX_STEP_DOWN,
+// NAV_PLAYER_HEIGHT_VOXELS and NAV_MAX_ITERATIONS above.)
+export const NAV_MAX_RANGE = 40;          // Columns from the start a search may go
+export const NAV_SEARCHES_PER_WINDOW = 4; // Path searches allowed across all agents...
+export const NAV_SEARCH_WINDOW_MS = 50;   // ...per this many ms
+export const NAV_HOP_VELOCITY = 10.5;     // Upward speed for a monster/animal hopping a 1-block step (gravity 20: clears ~2.7 units)
