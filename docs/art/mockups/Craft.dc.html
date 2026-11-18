@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bag: Craft</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Pixelify+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ui{font-family:'Pixelify Sans',monospace;color:#f1e6cc}
+.px{font-family:'Silkscreen',monospace;letter-spacing:.04em}
+.frame{position:relative;box-sizing:border-box;border:24px solid transparent;border-image:url(/_blob/04f03979970324fc7f87b0468a663b1b) 8 / 24px round;background:url(/_blob/597f08af170ec61daad3635603c56c4a) 0 0/64px 64px;background-clip:padding-box;image-rendering:pixelated;filter:drop-shadow(0 10px 0 rgba(0,0,0,.55))}
+.frame.stone{border-image-source:url(/_blob/5a77bcad49ef8a9085fd38a3986eaa2b)}
+.banner{position:absolute;left:50%;top:-52px;transform:translateX(-50%);margin:0;background:url(/_blob/d75f694f953561db6fa20ae0a251ef4a) 0 0/64px 32px;image-rendering:pixelated;border:3px solid #07080b;box-shadow:inset 0 3px 0 rgba(255,255,255,.18),inset 0 -4px 0 rgba(0,0,0,.45),0 5px 0 #07080b;padding:8px 30px 10px;font-family:'Silkscreen',monospace;font-size:28px;font-weight:700;color:#ffe08a;text-shadow:3px 3px 0 #07080b;white-space:nowrap}
+.sign{font-family:'Silkscreen',monospace;font-size:14px;background:url(/_blob/d75f694f953561db6fa20ae0a251ef4a) 0 0/64px 32px;image-rendering:pixelated;border:3px solid #07080b;box-shadow:inset 0 3px 0 rgba(255,255,255,.15),inset 0 -4px 0 rgba(0,0,0,.45);color:#f6e7c8;text-shadow:2px 2px 0 #07080b;padding:8px 14px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left}
+.sign.on{background:url(/_blob/276836b063b7b48e65665b29b5b94268) 0 0/96px 96px;color:#3a2410;text-shadow:1px 1px 0 #f3e6c6;box-shadow:inset 0 3px 0 #f3e6c6,inset 0 -4px 0 #a88a58}
+.key{font-family:'Silkscreen',monospace;font-size:11px;background:#e9e0c8;color:#1a140c;border:2px solid #07080b;box-shadow:inset -2px -3px 0 #a79f88;padding:1px 5px 3px;text-shadow:none}
+.slot{width:56px;height:56px;flex:none;box-sizing:border-box;background:#121419;border:3px solid var(--r,#07080b);box-shadow:0 0 0 2px #07080b,inset 4px 4px 0 rgba(0,0,0,.6),inset -3px -3px 0 rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;position:relative}
+.slot img{width:44px;height:44px}
+.locked .slot img{filter:grayscale(.9) brightness(.6)}
+.h{font-family:'Silkscreen',monospace;font-size:15px;font-weight:400;color:#ffd977;text-shadow:2px 2px 0 #07080b;margin:0}
+.recipe{display:flex;align-items:center;gap:14px;width:100%;padding:6px 12px 6px 6px;background:rgba(7,8,11,.55);border:3px solid #07080b;box-shadow:inset 0 3px 0 rgba(255,255,255,.05);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.recipe.sel{border-color:#ffe08a}
+.name{display:block;font-size:19px;font-weight:600}
+.sub{font-size:15px;color:#bfb293}
+.tag{font-family:'Silkscreen',monospace;font-size:12px;padding:4px 8px 6px;border:3px solid #07080b;display:inline-flex;gap:6px;align-items:center;white-space:nowrap;text-shadow:2px 2px 0 #07080b}
+.tag.lock{background:#5a4314;color:#ffe08a;box-shadow:inset 0 3px 0 #8a6a24}
+.tag.need{background:#5a1c1c;color:#ffb3a8;box-shadow:inset 0 3px 0 #873030}
+.tag.ready{background:#24501a;color:#c4f2a6;box-shadow:inset 0 3px 0 #3d7a2c}
+.parch{background:url(/_blob/276836b063b7b48e65665b29b5b94268) 0 0/128px 128px;image-rendering:pixelated;color:#3a2410;border:3px solid #07080b;box-shadow:inset 4px 4px 0 #f1e2bf,inset -4px -4px 0 #a88a58,0 6px 0 rgba(0,0,0,.5)}
+.stat{display:flex;align-items:center;font-size:18px;line-height:1.25;gap:10px}
+.dots{flex:1;border-bottom:3px dotted currentColor;opacity:.35}
+.btn{font-family:'Silkscreen',monospace;font-size:15px;border:3px solid #07080b;padding:10px 0 13px;width:100%;display:flex;gap:10px;justify-content:center;align-items:center}
+.btn.locked{background:#4b4f57;color:#e9dfc6;text-shadow:2px 2px 0 #07080b;box-shadow:inset 4px 4px 0 #6d717a,inset -4px -5px 0 #33363c,0 4px 0 #07080b;cursor:not-allowed}
+.bar{height:16px;box-sizing:border-box;border:3px solid #07080b;background:#2b1d10}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--c) 0 10px,rgba(0,0,0,.35) 10px 12px);box-shadow:inset 0 3px 0 rgba(255,255,255,.3)}
+</style>
+</helmet>
+<div class="ui" style="width:1280px;height:800px;position:relative;overflow:hidden;background:#0d1016">
+<img src="/_blob/797eb01f6738a606ad5e3c6b1867fc45" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.4)">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="lock"><path d="M3 5V3h1V2h4v1h1v2h1v6H2V5h1zm1 0h4V3H4v2zm1 2v2h2V7H5z" fill-rule="evenodd"/></g></defs></svg>
+
+<section class="frame {{frameCls}}" aria-label="Bag" style="position:absolute;left:70px;top:100px;width:1140px;height:660px;padding:14px 20px 14px;display:flex;flex-direction:column;gap:14px">
+<h1 class="banner">Bag</h1>
+<header style="display:flex;align-items:center;gap:10px">
+<nav aria-label="Bag tabs" style="display:flex;gap:10px">
+<button class="sign" type="button">Inventory <span class="key">I</span></button>
+<button class="sign on" type="button">Craft <span class="key">C</span></button>
+<button class="sign" type="button">Repair</button>
+</nav>
+<div style="flex:1"></div>
+<div style="display:flex;align-items:center;gap:10px;font-size:16px"><span class="px" style="color:#ffd977;font-size:15px;text-shadow:2px 2px 0 #07080b">Lv 2</span><div class="bar" style="width:140px"><i style="--c:#e8b443;width:60%"></i></div><span style="color:#d8ccb0">60 / 100 XP</span></div>
+<button class="sign" type="button" aria-label="Close" style="padding:8px 10px 10px"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 2h3v2h2v2h2V4h2V2h3v3h-2v2h-2v2h2v2h2v3h-3v-2H9v-2H7v2H5v2H2v-3h2V9h2V7H4V5H2z" fill="currentColor"/></svg></button>
+</header>
+
+<div style="flex:1;display:grid;grid-template-columns:150px 420px 1fr;gap:24px;min-height:0">
+<nav aria-label="Categories" style="display:flex;flex-direction:column;gap:10px">
+<button class="sign on" type="button">All</button>
+<button class="sign" type="button">Tools</button>
+<button class="sign" type="button">Weapons</button>
+<button class="sign" type="button">Armor</button>
+<button class="sign" type="button">Potions</button>
+</nav>
+
+<div style="display:flex;flex-direction:column;gap:8px;overflow:hidden">
+<button class="recipe" type="button"><span class="slot"><img src="/_blob/e36ea94a35cc8d24a9bb9af334bccaa9" alt=""></span><span style="flex:1"><span class="name">Stone Axe</span><span class="sub">Common tool</span></span><span class="tag ready">Ready</span></button>
+<button class="recipe" type="button"><span class="slot"><img src="/_blob/2334eb6013143471002c218c3da82710" alt=""></span><span style="flex:1"><span class="name">Stone Sword</span><span class="sub">Common weapon</span></span><span class="tag ready">Ready</span></button>
+<button class="recipe" type="button"><span class="slot"><img src="/_blob/e01d63cd4bdc3c99d6df2e6cc16ea19c" alt=""></span><span style="flex:1"><span class="name">Health Potion</span><span class="sub">Common potion</span></span><span class="tag need">Need materials</span></button>
+<button class="recipe sel locked" type="button" aria-label="Iron Pickaxe, locked until level 3"><span class="slot" style="--r:#4f9a3a"><img src="/_blob/f5e671b907d29787a9ecc6a3c34a7243" alt=""></span><span style="flex:1"><span class="name">Iron Pickaxe</span><span class="sub">Uncommon tool</span></span><span class="tag lock"><svg viewBox="0 0 12 12" width="12" height="12" fill="currentColor" aria-hidden="true"><use href="#lock"/></svg>Lv 3</span></button>
+<button class="recipe locked" type="button" aria-label="Iron Helmet, locked until level 3"><span class="slot"><img src="/_blob/ceeeb4261744b8fe438504215259c38e" alt=""></span><span style="flex:1"><span class="name">Iron Helmet</span><span class="sub">Common armor</span></span><span class="tag lock"><svg viewBox="0 0 12 12" width="12" height="12" fill="currentColor" aria-hidden="true"><use href="#lock"/></svg>Lv 3</span></button>
+<button class="recipe locked" type="button" aria-label="Iron Armor, locked until level 5"><span class="slot" style="--r:#4f9a3a"><img src="/_blob/46a8cf9dd1e2908ce7c0f74713c03501" alt=""></span><span style="flex:1"><span class="name">Iron Armor</span><span class="sub">Uncommon armor</span></span><span class="tag lock"><svg viewBox="0 0 12 12" width="12" height="12" fill="currentColor" aria-hidden="true"><use href="#lock"/></svg>Lv 5</span></button>
+<button class="recipe locked" type="button" aria-label="Crystal Ring, locked until level 10"><span class="slot" style="--r:#8a55d8"><img src="/_blob/82514a7129e3c954ed0270d44810a3a2" alt=""></span><span style="flex:1"><span class="name">Crystal Ring</span><span class="sub">Epic ring</span></span><span class="tag lock"><svg viewBox="0 0 12 12" width="12" height="12" fill="currentColor" aria-hidden="true"><use href="#lock"/></svg>Lv 10</span></button>
+</div>
+
+<aside class="parch" aria-label="Iron Pickaxe recipe" style="display:flex;flex-direction:column;gap:12px;padding:16px 16px 18px">
+<div class="locked" style="display:flex;gap:14px;align-items:center">
+<div class="slot" style="--r:#4f9a3a;width:88px;height:88px"><img src="/_blob/f5e671b907d29787a9ecc6a3c34a7243" alt="" style="width:72px;height:72px"></div>
+<div>
+<h3 class="px" style="margin:0;font-size:18px;color:#2d6a1c">Iron Pickaxe</h3>
+<div style="font-size:16px;color:#6b5236;margin-top:2px">Uncommon tool · Tier 3</div>
+</div>
+</div>
+<p style="margin:0;font-size:17px;line-height:1.3">Bites through stone and ore. Mines iron veins that stone picks can't.</p>
+<h4 class="px" style="margin:2px 0 0;font-size:14px;color:#6b4a1c">Materials</h4>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div class="stat"><span class="slot" style="width:40px;height:40px"><img src="/_blob/dbaf6abd8dc63ee1b88257565be9ed64" alt="" style="width:30px;height:30px"></span><span>Iron</span><span class="dots"></span><strong style="color:#2d6a1c">5 / 4</strong></div>
+<div class="stat"><span class="slot" style="width:40px;height:40px"><img src="/_blob/0931aef99a1c483b870bb41202ffb14e" alt="" style="width:30px;height:30px"></span><span>Wood</span><span class="dots"></span><strong style="color:#2d6a1c">24 / 2</strong></div>
+<div class="stat"><span class="slot" style="width:40px;height:40px"><img src="/_blob/60baa79d8038f167b26e22d64011a16b" alt="" style="width:30px;height:30px"></span><span>Stone</span><span class="dots"></span><strong style="color:#2d6a1c">41 / 1</strong></div>
+</div>
+<div style="flex:1"></div>
+<button class="btn locked" type="button" disabled><svg viewBox="0 0 12 12" width="14" height="14" fill="currentColor" aria-hidden="true"><use href="#lock"/></svg>Reach level 3</button>
+<div style="font-size:16px;color:#6b5236;text-align:center">40 XP to go. Mine, fight and close rifts.</div>
+</aside>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["wood","stone"],"default":"wood","section":"Panel"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { frameCls: (this.props.frame ?? 'wood') === 'stone' ? 'stone' : '' };
+  }
+}
+</script>
+</body>
+</html>

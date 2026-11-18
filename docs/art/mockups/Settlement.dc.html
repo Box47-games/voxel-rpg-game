@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settlement dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Pixelify+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ui{font-family:'Pixelify Sans',monospace;color:#f1e6cc}
+.px{font-family:'Silkscreen',monospace;letter-spacing:.04em}
+.frame{position:relative;box-sizing:border-box;border:24px solid transparent;border-image:url(/_blob/04f03979970324fc7f87b0468a663b1b) 8 / 24px round;background:url(/_blob/597f08af170ec61daad3635603c56c4a) 0 0/64px 64px;background-clip:padding-box;image-rendering:pixelated;filter:drop-shadow(0 10px 0 rgba(0,0,0,.55))}
+.frame.stone{border-image-source:url(/_blob/5a77bcad49ef8a9085fd38a3986eaa2b)}
+.frame.thin{border-width:15px;border-image-width:15px}
+.banner{position:absolute;left:50%;top:-52px;transform:translateX(-50%);margin:0;background:url(/_blob/d75f694f953561db6fa20ae0a251ef4a) 0 0/64px 32px;image-rendering:pixelated;border:3px solid #07080b;box-shadow:inset 0 3px 0 rgba(255,255,255,.18),inset 0 -4px 0 rgba(0,0,0,.45),0 5px 0 #07080b;padding:8px 30px 10px;font-family:'Silkscreen',monospace;font-size:26px;font-weight:700;color:#ffe08a;text-shadow:3px 3px 0 #07080b;white-space:nowrap}
+.sign{font-family:'Silkscreen',monospace;font-size:14px;background:url(/_blob/d75f694f953561db6fa20ae0a251ef4a) 0 0/64px 32px;image-rendering:pixelated;border:3px solid #07080b;box-shadow:inset 0 3px 0 rgba(255,255,255,.15),inset 0 -4px 0 rgba(0,0,0,.45);color:#f6e7c8;text-shadow:2px 2px 0 #07080b;padding:8px 14px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left}
+.sign.on{background:url(/_blob/276836b063b7b48e65665b29b5b94268) 0 0/96px 96px;color:#3a2410;text-shadow:1px 1px 0 #f3e6c6;box-shadow:inset 0 3px 0 #f3e6c6,inset 0 -4px 0 #a88a58}
+.key{font-family:'Silkscreen',monospace;font-size:11px;background:#e9e0c8;color:#1a140c;border:2px solid #07080b;box-shadow:inset -2px -3px 0 #a79f88;padding:1px 5px 3px;text-shadow:none}
+.badge{font-family:'Silkscreen',monospace;font-size:12px;background:#c0392f;color:#fff;border:2px solid #07080b;padding:0 5px 2px;margin-left:auto;text-shadow:1px 1px 0 #07080b}
+.parch{background:url(/_blob/276836b063b7b48e65665b29b5b94268) 0 0/128px 128px;image-rendering:pixelated;color:#3a2410;border:3px solid #07080b;box-shadow:inset 4px 4px 0 #f1e2bf,inset -4px -4px 0 #a88a58,0 5px 0 rgba(0,0,0,.5)}
+.tile{padding:8px 12px 10px;display:flex;flex-direction:column;gap:2px}
+.tile .lbl{font-family:'Silkscreen',monospace;font-size:11px;color:#6b4a1c}
+.tile b{font-family:'Silkscreen',monospace;font-size:24px;font-weight:400}
+.bar{height:16px;box-sizing:border-box;border:3px solid #07080b;background:#2b1d10}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--c) 0 10px,rgba(0,0,0,.35) 10px 12px);box-shadow:inset 0 3px 0 rgba(255,255,255,.3)}
+.settler{display:grid;grid-template-columns:44px 110px 1fr 110px 96px;gap:12px;align-items:center;padding:6px 10px 6px 6px;background:rgba(7,8,11,.55);border:3px solid #07080b;font-size:18px}
+.face{width:44px;height:44px;box-sizing:border-box;border:3px solid #07080b;background:#2a3a2a;overflow:hidden;display:flex;justify-content:center}
+.face img{width:38px;height:38px;flex:none;image-rendering:auto}
+.cols{display:grid;grid-template-columns:44px 110px 1fr 110px 96px;gap:12px;padding:0 13px 0 9px;font-family:'Silkscreen',monospace;font-size:11px;color:#d8ccb0;text-shadow:2px 2px 0 #07080b}
+.toast{position:absolute;right:24px;width:360px;box-sizing:border-box;display:flex;gap:12px;align-items:center;padding:6px 8px 6px 6px}
+.toast .ico{width:56px;height:56px;flex:none;box-sizing:border-box;border:3px solid #07080b;display:flex;align-items:center;justify-content:center;box-shadow:inset 4px 4px 0 rgba(0,0,0,.5)}
+.toast .ico img{width:46px;height:46px}
+.toast h4{margin:0 0 2px;font-family:'Silkscreen',monospace;font-size:14px;font-weight:400;text-shadow:2px 2px 0 #07080b}
+.toast p{margin:0;font-size:16px;line-height:1.25;color:#efe3c6}
+</style>
+</helmet>
+<div class="ui" style="width:1280px;height:800px;position:relative;overflow:hidden;background:#0d1016">
+<img src="/_blob/797eb01f6738a606ad5e3c6b1867fc45" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.6)">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="lock"><path d="M3 5V3h1V2h4v1h1v2h1v6H2V5h1zm1 0h4V3H4v2zm1 2v2h2V7H5z" fill-rule="evenodd"/></g></defs></svg>
+
+<section class="frame {{frameCls}}" aria-label="Settlement" style="position:absolute;left:60px;top:110px;width:820px;height:620px;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+<h1 class="banner">Settlement</h1>
+<header style="display:flex;align-items:center;gap:12px">
+<span style="font-size:18px;color:#d8ccb0">Day 6 · founded on day 2</span>
+<div style="flex:1"></div>
+<span style="font-size:16px;color:#d8ccb0"><span class="key">N</span> close</span>
+<button class="sign" type="button" aria-label="Close" style="padding:8px 10px 10px"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 2h3v2h2v2h2V4h2V2h3v3h-2v2h-2v2h2v2h2v3h-3v-2H9v-2H7v2H5v2H2v-3h2V9h2V7H4V5H2z" fill="currentColor"/></svg></button>
+</header>
+<div style="flex:1;display:grid;grid-template-columns:160px 1fr;gap:22px;min-height:0">
+<nav aria-label="Settlement sections" style="display:flex;flex-direction:column;gap:10px">
+<button class="sign on" type="button">People</button>
+<button class="sign" type="button">Stores</button>
+<button class="sign" type="button">Buildings</button>
+<button class="sign" type="button">Alerts <span class="badge">2</span></button>
+</nav>
+<div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+<div class="parch tile"><span class="lbl">Settlers</span><b>3 / 4</b></div>
+<div class="parch tile"><span class="lbl">Beds</span><b>4</b></div>
+<div class="parch tile"><span class="lbl">Happiness</span><b style="color:#2d6a1c">72</b></div>
+</div>
+<div class="cols"><span></span><span>Name</span><span>Doing</span><span>Mood</span><span>Home</span></div>
+<div class="settler"><span class="face"><img src="/_blob/efd779d34a2d13d36a4fbf29da09ee4a" alt=""></span><strong>Yara</strong><span>Mining stone</span><div class="bar"><i style="--c:#6cbf4a;width:80%"></i></div><span>Shelter</span></div>
+<div class="settler"><span class="face" style="background:#3a2e22"><img src="/_blob/d78f9808b224c6fe72974f14b66f1da0" alt=""></span><strong>Willa</strong><span>Hauling wood</span><div class="bar"><i style="--c:#6cbf4a;width:66%"></i></div><span>Shelter</span></div>
+<div class="settler"><span class="face" style="background:#22303a"><img src="/_blob/9cafcc8324e68fd8aab530fa31a35c2c" alt=""></span><strong>Wynne</strong><span>Planting seeds</span><div class="bar"><i style="--c:#e0913a;width:44%"></i></div><span style="color:#ffb46a">No bed</span></div>
+<div class="parch" style="padding:10px 14px;font-size:17px;display:flex;gap:12px;align-items:center"><img src="/_blob/669b2fdcc0d032c8265e44c25a4c5379" alt="" style="width:40px;height:40px"><span>Wynne has no bed. Build a Shelter so a 4th settler can move in.</span></div>
+</div>
+</div>
+</section>
+
+<div class="toast frame thin" role="status" style="top:28px;filter:drop-shadow(0 6px 0 rgba(0,0,0,.5))">
+<div class="ico" style="background:#5a4314"><img src="/_blob/669b2fdcc0d032c8265e44c25a4c5379" alt=""></div>
+<div><h4 style="color:#ffe08a">New building!</h4><p>Stone House unlocked: you have 3 settlers.</p></div>
+</div>
+<div class="toast frame thin stone" role="status" style="top:132px;filter:drop-shadow(0 6px 0 rgba(0,0,0,.5))">
+<div class="ico" style="background:#262b33;color:#ffe08a"><svg viewBox="0 0 12 12" width="30" height="30" fill="currentColor" aria-hidden="true"><use href="#lock"/></svg></div>
+<div><h4 style="color:#f1e6cc">Watchtower locked</h4><p>To unlock it, close a rift.</p></div>
+</div>
+<div class="toast frame thin" role="alert" style="top:236px;filter:drop-shadow(0 6px 0 rgba(0,0,0,.5))">
+<div class="ico" style="background:#2a1747"><img src="/_blob/b49c606a7267ab4b5934f6353df35177" alt=""></div>
+<div><h4 style="color:#d7b8ff">Reinforcements!</h4><p>Monsters pour from the rift. Hold the anchor.</p></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["wood","stone"],"default":"wood","section":"Panel"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { frameCls: (this.props.frame ?? 'wood') === 'stone' ? 'stone' : '' };
+  }
+}
+</script>
+</body>
+</html>

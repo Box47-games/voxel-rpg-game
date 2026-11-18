@@ -61,6 +61,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "node scripts/smoke-test.mjs",
+    "art": "node scripts/art/build.mjs",
+    "art:portraits": "node scripts/art/portraits.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "lint": "eslint src/ --max-warnings 34",

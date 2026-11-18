@@ -1,0 +1,821 @@
+[
+  {
+    "group": "items",
+    "id": "woodenClub",
+    "label": "Wooden Club",
+    "file": "items/woodenClub.svg"
+  },
+  {
+    "group": "items",
+    "id": "stoneSword",
+    "label": "Stone Sword",
+    "file": "items/stoneSword.svg"
+  },
+  {
+    "group": "items",
+    "id": "ironSword",
+    "label": "Iron Sword",
+    "file": "items/ironSword.svg"
+  },
+  {
+    "group": "items",
+    "id": "steelSword",
+    "label": "Steel Sword",
+    "file": "items/steelSword.svg"
+  },
+  {
+    "group": "items",
+    "id": "crystalSword",
+    "label": "Crystal Sword",
+    "file": "items/crystalSword.svg"
+  },
+  {
+    "group": "items",
+    "id": "stoneAxe",
+    "label": "Stone Axe",
+    "file": "items/stoneAxe.svg"
+  },
+  {
+    "group": "items",
+    "id": "ironAxe",
+    "label": "Iron Axe",
+    "file": "items/ironAxe.svg"
+  },
+  {
+    "group": "items",
+    "id": "steelAxe",
+    "label": "Steel Axe",
+    "file": "items/steelAxe.svg"
+  },
+  {
+    "group": "items",
+    "id": "stonePickaxe",
+    "label": "Stone Pickaxe",
+    "file": "items/stonePickaxe.svg"
+  },
+  {
+    "group": "items",
+    "id": "ironPickaxe",
+    "label": "Iron Pickaxe",
+    "file": "items/ironPickaxe.svg"
+  },
+  {
+    "group": "items",
+    "id": "steelPickaxe",
+    "label": "Steel Pickaxe",
+    "file": "items/steelPickaxe.svg"
+  },
+  {
+    "group": "items",
+    "id": "leatherArmor",
+    "label": "Leather Armor",
+    "file": "items/leatherArmor.svg"
+  },
+  {
+    "group": "items",
+    "id": "ironArmor",
+    "label": "Iron Armor",
+    "file": "items/ironArmor.svg"
+  },
+  {
+    "group": "items",
+    "id": "crystalArmor",
+    "label": "Crystal Armor",
+    "file": "items/crystalArmor.svg"
+  },
+  {
+    "group": "items",
+    "id": "ironHelmet",
+    "label": "Iron Helmet",
+    "file": "items/ironHelmet.svg"
+  },
+  {
+    "group": "items",
+    "id": "ironRing",
+    "label": "Iron Ring",
+    "file": "items/ironRing.svg"
+  },
+  {
+    "group": "items",
+    "id": "crystalRing",
+    "label": "Crystal Ring",
+    "file": "items/crystalRing.svg"
+  },
+  {
+    "group": "items",
+    "id": "woodenShield",
+    "label": "Wooden Shield",
+    "file": "items/woodenShield.svg",
+    "note": "off-hand (not craftable yet)"
+  },
+  {
+    "group": "items",
+    "id": "healthPotion",
+    "label": "Health Potion",
+    "file": "items/healthPotion.svg"
+  },
+  {
+    "group": "items",
+    "id": "manaPotion",
+    "label": "Mana Potion",
+    "file": "items/manaPotion.svg"
+  },
+  {
+    "group": "items",
+    "id": "ragePotion",
+    "label": "Rage Potion",
+    "file": "items/ragePotion.svg"
+  },
+  {
+    "group": "items",
+    "id": "crystalElixir",
+    "label": "Crystal Elixir",
+    "file": "items/crystalElixir.svg"
+  },
+  {
+    "group": "items",
+    "id": "herbalSalve",
+    "label": "Herbal Salve",
+    "file": "items/herbalSalve.svg"
+  },
+  {
+    "group": "items",
+    "id": "berryJam",
+    "label": "Berry Jam",
+    "file": "items/berryJam.svg"
+  },
+  {
+    "group": "items",
+    "id": "cookedMeat",
+    "label": "Cooked Meat",
+    "file": "items/cookedMeat.svg"
+  },
+  {
+    "group": "items",
+    "id": "mushroomStew",
+    "label": "Mushroom Stew",
+    "file": "items/mushroomStew.svg"
+  },
+  {
+    "group": "materials",
+    "id": "wood",
+    "label": "Wood",
+    "file": "materials/wood.svg"
+  },
+  {
+    "group": "materials",
+    "id": "stone",
+    "label": "Stone",
+    "file": "materials/stone.svg"
+  },
+  {
+    "group": "materials",
+    "id": "iron",
+    "label": "Iron",
+    "file": "materials/iron.svg"
+  },
+  {
+    "group": "materials",
+    "id": "coal",
+    "label": "Coal",
+    "file": "materials/coal.svg"
+  },
+  {
+    "group": "materials",
+    "id": "gold_ore",
+    "label": "Gold Ore",
+    "file": "materials/gold_ore.svg"
+  },
+  {
+    "group": "materials",
+    "id": "crystal",
+    "label": "Crystal",
+    "file": "materials/crystal.svg"
+  },
+  {
+    "group": "materials",
+    "id": "clay",
+    "label": "Clay",
+    "file": "materials/clay.svg"
+  },
+  {
+    "group": "materials",
+    "id": "sand",
+    "label": "Sand",
+    "file": "materials/sand.svg"
+  },
+  {
+    "group": "materials",
+    "id": "dirt",
+    "label": "Dirt",
+    "file": "materials/dirt.svg"
+  },
+  {
+    "group": "materials",
+    "id": "snow",
+    "label": "Snow",
+    "file": "materials/snow.svg"
+  },
+  {
+    "group": "materials",
+    "id": "ice",
+    "label": "Ice",
+    "file": "materials/ice.svg"
+  },
+  {
+    "group": "materials",
+    "id": "leather",
+    "label": "Leather",
+    "file": "materials/leather.svg"
+  },
+  {
+    "group": "materials",
+    "id": "bone",
+    "label": "Bone",
+    "file": "materials/bone.svg"
+  },
+  {
+    "group": "materials",
+    "id": "fiber",
+    "label": "Fiber",
+    "file": "materials/fiber.svg"
+  },
+  {
+    "group": "materials",
+    "id": "meat",
+    "label": "Meat",
+    "file": "materials/meat.svg"
+  },
+  {
+    "group": "materials",
+    "id": "berry",
+    "label": "Berries",
+    "file": "materials/berry.svg"
+  },
+  {
+    "group": "materials",
+    "id": "seed",
+    "label": "Seeds",
+    "file": "materials/seed.svg"
+  },
+  {
+    "group": "spells",
+    "id": "fireball",
+    "label": "Fireball",
+    "file": "spells/fireball.svg"
+  },
+  {
+    "group": "spells",
+    "id": "lightning",
+    "label": "Lightning",
+    "file": "spells/lightning.svg"
+  },
+  {
+    "group": "spells",
+    "id": "iceShard",
+    "label": "Ice Shard",
+    "file": "spells/iceShard.svg"
+  },
+  {
+    "group": "spells",
+    "id": "windBlast",
+    "label": "Wind Blast",
+    "file": "spells/windBlast.svg"
+  },
+  {
+    "group": "spells",
+    "id": "meteor",
+    "label": "Meteor",
+    "file": "spells/meteor.svg"
+  },
+  {
+    "group": "spells",
+    "id": "chainLightning",
+    "label": "Chain Lightning",
+    "file": "spells/chainLightning.svg"
+  },
+  {
+    "group": "spells",
+    "id": "poisonCloud",
+    "label": "Poison Cloud",
+    "file": "spells/poisonCloud.svg"
+  },
+  {
+    "group": "spells",
+    "id": "frostNova",
+    "label": "Frost Nova",
+    "file": "spells/frostNova.svg"
+  },
+  {
+    "group": "spells",
+    "id": "heal",
+    "label": "Heal",
+    "file": "spells/heal.svg"
+  },
+  {
+    "group": "spells",
+    "id": "shield",
+    "label": "Shield",
+    "file": "spells/shield.svg"
+  },
+  {
+    "group": "spells",
+    "id": "haste",
+    "label": "Haste",
+    "file": "spells/haste.svg"
+  },
+  {
+    "group": "spells",
+    "id": "inferno",
+    "label": "Inferno",
+    "file": "spells/inferno.svg"
+  },
+  {
+    "group": "spells",
+    "id": "arcaneBarrage",
+    "label": "Arcane Barrage",
+    "file": "spells/arcaneBarrage.svg"
+  },
+  {
+    "group": "spells",
+    "id": "waterjet",
+    "label": "Water Jet",
+    "file": "spells/waterjet.svg"
+  },
+  {
+    "group": "spells",
+    "id": "deathRay",
+    "label": "Death Ray",
+    "file": "spells/deathRay.svg"
+  },
+  {
+    "group": "status",
+    "id": "STUN",
+    "label": "Stun",
+    "file": "status/STUN.svg"
+  },
+  {
+    "group": "status",
+    "id": "FREEZE",
+    "label": "Freeze",
+    "file": "status/FREEZE.svg"
+  },
+  {
+    "group": "status",
+    "id": "POISON",
+    "label": "Poison",
+    "file": "status/POISON.svg"
+  },
+  {
+    "group": "status",
+    "id": "BURN",
+    "label": "Burn",
+    "file": "status/BURN.svg"
+  },
+  {
+    "group": "status",
+    "id": "SLOW",
+    "label": "Slow",
+    "file": "status/SLOW.svg"
+  },
+  {
+    "group": "status",
+    "id": "SHIELD",
+    "label": "Shield",
+    "file": "status/SHIELD.svg"
+  },
+  {
+    "group": "status",
+    "id": "HASTE",
+    "label": "Haste",
+    "file": "status/HASTE.svg"
+  },
+  {
+    "group": "hud",
+    "id": "health",
+    "label": "Health",
+    "file": "hud/health.svg"
+  },
+  {
+    "group": "hud",
+    "id": "mana",
+    "label": "Mana",
+    "file": "hud/mana.svg"
+  },
+  {
+    "group": "hud",
+    "id": "stamina",
+    "label": "Stamina",
+    "file": "hud/stamina.svg"
+  },
+  {
+    "group": "hud",
+    "id": "hunger",
+    "label": "Hunger",
+    "file": "hud/hunger.svg"
+  },
+  {
+    "group": "hud",
+    "id": "rage",
+    "label": "Rage",
+    "file": "hud/rage.svg"
+  },
+  {
+    "group": "hud",
+    "id": "xp",
+    "label": "XP",
+    "file": "hud/xp.svg"
+  },
+  {
+    "group": "misc",
+    "id": "campfire",
+    "label": "Campfire",
+    "file": "misc/campfire.svg"
+  },
+  {
+    "group": "misc",
+    "id": "rift",
+    "label": "Rift",
+    "file": "misc/rift.svg"
+  },
+  {
+    "group": "ui",
+    "id": "bag",
+    "label": "Bag",
+    "file": "ui/bag.svg",
+    "uiGroup": "Mode buttons"
+  },
+  {
+    "group": "ui",
+    "id": "hammer",
+    "label": "Build",
+    "file": "ui/hammer.svg",
+    "uiGroup": "Mode buttons"
+  },
+  {
+    "group": "ui",
+    "id": "mapPin",
+    "label": "Plan",
+    "file": "ui/mapPin.svg",
+    "uiGroup": "Mode buttons"
+  },
+  {
+    "group": "ui",
+    "id": "people",
+    "label": "Settlement",
+    "file": "ui/people.svg",
+    "uiGroup": "Mode buttons"
+  },
+  {
+    "group": "ui",
+    "id": "box",
+    "label": "Inventory",
+    "file": "ui/box.svg",
+    "uiGroup": "Bag tabs & categories"
+  },
+  {
+    "group": "ui",
+    "id": "wrench",
+    "label": "Repair",
+    "file": "ui/wrench.svg",
+    "uiGroup": "Bag tabs & categories"
+  },
+  {
+    "group": "ui",
+    "id": "grid",
+    "label": "All",
+    "file": "ui/grid.svg",
+    "uiGroup": "Bag tabs & categories"
+  },
+  {
+    "group": "ui",
+    "id": "pickaxe",
+    "label": "Tools",
+    "file": "ui/pickaxe.svg",
+    "uiGroup": "Bag tabs & categories"
+  },
+  {
+    "group": "ui",
+    "id": "sword",
+    "label": "Weapons",
+    "file": "ui/sword.svg",
+    "uiGroup": "Bag tabs & categories"
+  },
+  {
+    "group": "ui",
+    "id": "armor",
+    "label": "Armor",
+    "file": "ui/armor.svg",
+    "uiGroup": "Bag tabs & categories"
+  },
+  {
+    "group": "ui",
+    "id": "flask",
+    "label": "Potions",
+    "file": "ui/flask.svg",
+    "uiGroup": "Bag tabs & categories"
+  },
+  {
+    "group": "ui",
+    "id": "crate",
+    "label": "Stockpile",
+    "file": "ui/crate.svg",
+    "uiGroup": "Plan tools"
+  },
+  {
+    "group": "ui",
+    "id": "sprout",
+    "label": "Farm",
+    "file": "ui/sprout.svg",
+    "uiGroup": "Plan tools"
+  },
+  {
+    "group": "ui",
+    "id": "trash",
+    "label": "Remove",
+    "file": "ui/trash.svg",
+    "uiGroup": "Plan tools"
+  },
+  {
+    "group": "ui",
+    "id": "shield",
+    "label": "Off-hand",
+    "file": "ui/shield.svg",
+    "uiGroup": "Equipment slots"
+  },
+  {
+    "group": "ui",
+    "id": "helmet",
+    "label": "Helmet",
+    "file": "ui/helmet.svg",
+    "uiGroup": "Equipment slots"
+  },
+  {
+    "group": "ui",
+    "id": "gloves",
+    "label": "Gloves",
+    "file": "ui/gloves.svg",
+    "uiGroup": "Equipment slots"
+  },
+  {
+    "group": "ui",
+    "id": "boots",
+    "label": "Boots",
+    "file": "ui/boots.svg",
+    "uiGroup": "Equipment slots"
+  },
+  {
+    "group": "ui",
+    "id": "ring",
+    "label": "Ring",
+    "file": "ui/ring.svg",
+    "uiGroup": "Equipment slots"
+  },
+  {
+    "group": "ui",
+    "id": "trophy",
+    "label": "Achievement",
+    "file": "ui/trophy.svg",
+    "uiGroup": "Notifications"
+  },
+  {
+    "group": "ui",
+    "id": "swords",
+    "label": "Raid",
+    "file": "ui/swords.svg",
+    "uiGroup": "Notifications"
+  },
+  {
+    "group": "ui",
+    "id": "levelUp",
+    "label": "Level up",
+    "file": "ui/levelUp.svg",
+    "uiGroup": "Notifications"
+  },
+  {
+    "group": "ui",
+    "id": "check",
+    "label": "Success",
+    "file": "ui/check.svg",
+    "uiGroup": "Notifications"
+  },
+  {
+    "group": "ui",
+    "id": "warning",
+    "label": "Warning",
+    "file": "ui/warning.svg",
+    "uiGroup": "Notifications"
+  },
+  {
+    "group": "ui",
+    "id": "info",
+    "label": "Info",
+    "file": "ui/info.svg",
+    "uiGroup": "Notifications"
+  },
+  {
+    "group": "ui",
+    "id": "sleep",
+    "label": "Sleeping",
+    "file": "ui/sleep.svg",
+    "uiGroup": "Settler activities"
+  },
+  {
+    "group": "ui",
+    "id": "food",
+    "label": "Hungry",
+    "file": "ui/food.svg",
+    "uiGroup": "Settler activities"
+  },
+  {
+    "group": "ui",
+    "id": "talk",
+    "label": "Socialising",
+    "file": "ui/talk.svg",
+    "uiGroup": "Settler activities"
+  },
+  {
+    "group": "ui",
+    "id": "jump",
+    "label": "Jump",
+    "file": "ui/jump.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
+    "id": "dash",
+    "label": "Sprint",
+    "file": "ui/dash.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
+    "id": "wand",
+    "label": "Spell",
+    "file": "ui/wand.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
+    "id": "wheel",
+    "label": "Tool wheel",
+    "file": "ui/wheel.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
+    "id": "hand",
+    "label": "Hand",
+    "file": "ui/hand.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
+    "id": "lock",
+    "label": "Locked",
+    "file": "ui/lock.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "close",
+    "label": "Close",
+    "file": "ui/close.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "alert",
+    "label": "Alert",
+    "file": "ui/alert.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "sun",
+    "label": "Day",
+    "file": "ui/sun.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "moon",
+    "label": "Night",
+    "file": "ui/moon.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "blocks",
+    "id": "STONE",
+    "label": "Stone",
+    "file": "blocks/STONE.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "DIRT",
+    "label": "Dirt",
+    "file": "blocks/DIRT.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "GRASS",
+    "label": "Grass",
+    "file": "blocks/GRASS.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "SAND",
+    "label": "Sand",
+    "file": "blocks/SAND.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "WOOD",
+    "label": "Wood",
+    "file": "blocks/WOOD.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "LEAVES",
+    "label": "Leaves",
+    "file": "blocks/LEAVES.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "GRAVEL",
+    "label": "Gravel",
+    "file": "blocks/GRAVEL.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "COAL_ORE",
+    "label": "Coal Ore",
+    "file": "blocks/COAL_ORE.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "IRON_ORE",
+    "label": "Iron Ore",
+    "file": "blocks/IRON_ORE.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "GOLD_ORE",
+    "label": "Gold Ore",
+    "file": "blocks/GOLD_ORE.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "CLAY",
+    "label": "Clay",
+    "file": "blocks/CLAY.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "SNOW",
+    "label": "Snow",
+    "file": "blocks/SNOW.svg"
+  },
+  {
+    "group": "blocks",
+    "id": "ICE",
+    "label": "Ice",
+    "file": "blocks/ICE.svg"
+  },
+  {
+    "group": "buildings",
+    "id": "wooden_shelter",
+    "label": "Wooden Shelter",
+    "file": "buildings/wooden_shelter.svg"
+  },
+  {
+    "group": "buildings",
+    "id": "stone_house",
+    "label": "Stone House",
+    "file": "buildings/stone_house.svg"
+  },
+  {
+    "group": "buildings",
+    "id": "manor",
+    "label": "Manor",
+    "file": "buildings/manor.svg"
+  },
+  {
+    "group": "buildings",
+    "id": "farm_plot",
+    "label": "Farm Plot",
+    "file": "buildings/farm_plot.svg"
+  },
+  {
+    "group": "buildings",
+    "id": "watchtower",
+    "label": "Watchtower",
+    "file": "buildings/watchtower.svg"
+  },
+  {
+    "group": "buildings",
+    "id": "storage_shed",
+    "label": "Storage Shed",
+    "file": "buildings/storage_shed.svg"
+  }
+]

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bag on a phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&amp;family=Pixelify+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.ui{font-family:'Pixelify Sans',monospace;color:#f1e6cc}
+.px{font-family:'Silkscreen',monospace;letter-spacing:.04em}
+.frame{position:relative;box-sizing:border-box;border:15px solid transparent;border-image:url(/_blob/04f03979970324fc7f87b0468a663b1b) 8 / 15px round;background:url(/_blob/597f08af170ec61daad3635603c56c4a) 0 0/48px 48px;background-clip:padding-box;image-rendering:pixelated}
+.frame.stone{border-image-source:url(/_blob/5a77bcad49ef8a9085fd38a3986eaa2b)}
+.sign{font-family:'Silkscreen',monospace;font-size:13px;background:url(/_blob/d75f694f953561db6fa20ae0a251ef4a) 0 0/64px 32px;image-rendering:pixelated;border:3px solid #07080b;box-shadow:inset 0 3px 0 rgba(255,255,255,.15),inset 0 -4px 0 rgba(0,0,0,.45);color:#f6e7c8;text-shadow:2px 2px 0 #07080b;min-height:44px;padding:0 14px;display:flex;align-items:center;gap:8px}
+.sign.on{background:url(/_blob/276836b063b7b48e65665b29b5b94268) 0 0/96px 96px;color:#3a2410;text-shadow:1px 1px 0 #f3e6c6;box-shadow:inset 0 3px 0 #f3e6c6,inset 0 -4px 0 #a88a58}
+.title{font-family:'Silkscreen',monospace;font-size:20px;font-weight:700;color:#ffe08a;text-shadow:3px 3px 0 #07080b;margin:0 6px 0 2px}
+.slot{width:50px;height:50px;box-sizing:border-box;background:#121419;border:3px solid var(--r,#07080b);box-shadow:0 0 0 2px #07080b,inset 4px 4px 0 rgba(0,0,0,.6),inset -3px -3px 0 rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;padding:0;position:relative}
+.slot img{width:40px;height:40px}
+.slot.sel{outline:3px solid #ffe08a;outline-offset:3px}
+.qty{position:absolute;right:2px;bottom:-1px;font-family:'Silkscreen',monospace;font-size:12px;color:#fff;text-shadow:2px 2px 0 #07080b}
+.parch{background:url(/_blob/276836b063b7b48e65665b29b5b94268) 0 0/128px 128px;image-rendering:pixelated;color:#3a2410;border:3px solid #07080b;box-shadow:inset 4px 4px 0 #f1e2bf,inset -4px -4px 0 #a88a58}
+.btn{font-family:'Silkscreen',monospace;font-size:14px;border:3px solid #07080b;min-height:46px;flex:1}
+.btn.gold{background:#e8b443;color:#2a1806;box-shadow:inset 4px 4px 0 #ffe08a,inset -4px -5px 0 #a8711f}
+.btn.stone{background:#6f747d;color:#fff;text-shadow:2px 2px 0 #07080b;box-shadow:inset 4px 4px 0 #9ca1a9,inset -4px -5px 0 #44484f}
+.stat{display:flex;align-items:baseline;font-size:16px}
+.dots{flex:1;margin:0 6px;border-bottom:3px dotted currentColor;opacity:.35}
+.bar{height:14px;box-sizing:border-box;border:3px solid #07080b;background:#2b1d10}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--c) 0 8px,rgba(0,0,0,.35) 8px 10px)}
+</style>
+</helmet>
+<div class="ui frame {{frameCls}}" style="width:844px;height:390px;padding:8px 12px;display:flex;flex-direction:column;gap:10px">
+<header style="display:flex;align-items:center;gap:8px">
+<h1 class="title">Bag</h1>
+<button class="sign on" type="button">Items</button>
+<button class="sign" type="button">Craft</button>
+<button class="sign" type="button">Repair</button>
+<div style="flex:1"></div>
+<button class="sign" type="button" aria-label="Close" style="width:44px;justify-content:center;padding:0"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 2h3v2h2v2h2V4h2V2h3v3h-2v2h-2v2h2v2h2v3h-3v-2H9v-2H7v2H5v2H2v-3h2V9h2V7H4V5H2z" fill="currentColor"/></svg></button>
+</header>
+<div style="flex:1;display:flex;gap:16px;min-height:0">
+<div style="display:grid;grid-template-columns:repeat(6,50px);grid-auto-rows:50px;gap:8px;align-content:start;padding:3px">
+<button class="slot sel" type="button" aria-label="Iron Pickaxe, selected" style="--r:#4f9a3a"><img src="/_blob/f5e671b907d29787a9ecc6a3c34a7243" alt=""></button>
+<button class="slot" type="button" aria-label="Iron Axe" style="--r:#4f9a3a"><img src="/_blob/e36ea94a35cc8d24a9bb9af334bccaa9" alt=""></button>
+<button class="slot" type="button" aria-label="Steel Sword" style="--r:#3d6fd0"><img src="/_blob/2334eb6013143471002c218c3da82710" alt=""></button>
+<button class="slot" type="button" aria-label="Health Potion, 3"><img src="/_blob/e01d63cd4bdc3c99d6df2e6cc16ea19c" alt=""><span class="qty">3</span></button>
+<button class="slot" type="button" aria-label="Berries, 12"><img src="/_blob/cde83e40d876fd8e8038fab3dadbb86f" alt=""><span class="qty">12</span></button>
+<button class="slot" type="button" aria-label="Iron Helmet" style="--r:#4f9a3a"><img src="/_blob/ceeeb4261744b8fe438504215259c38e" alt=""></button>
+<button class="slot" type="button" aria-label="Wood, 24"><img src="/_blob/0931aef99a1c483b870bb41202ffb14e" alt=""><span class="qty">24</span></button>
+<button class="slot" type="button" aria-label="Stone, 41"><img src="/_blob/60baa79d8038f167b26e22d64011a16b" alt=""><span class="qty">41</span></button>
+<button class="slot" type="button" aria-label="Iron, 5"><img src="/_blob/dbaf6abd8dc63ee1b88257565be9ed64" alt=""><span class="qty">5</span></button>
+<button class="slot" type="button" aria-label="Crystal, 2"><img src="/_blob/38770dcc33beda68c63d5d360ab11b54" alt=""><span class="qty">2</span></button>
+<button class="slot" type="button" aria-label="Seeds, 3"><img src="/_blob/fab7a5951fc7a0a166090bb2067bae27" alt=""><span class="qty">3</span></button>
+<button class="slot" type="button" aria-label="Empty slot"></button>
+<button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button>
+<button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button><button class="slot" type="button" aria-label="Empty slot"></button>
+</div>
+<aside class="parch" aria-label="Selected item" style="flex:1;display:flex;flex-direction:column;gap:8px;padding:10px 12px 12px;min-width:0">
+<div style="display:flex;gap:12px;align-items:center">
+<div class="slot" style="--r:#4f9a3a;width:64px;height:64px"><img src="/_blob/f5e671b907d29787a9ecc6a3c34a7243" alt="" style="width:54px;height:54px"></div>
+<div><h3 class="px" style="margin:0;font-size:15px;color:#2d6a1c">Iron Pickaxe</h3><div style="font-size:15px;color:#6b5236">Uncommon tool · Tier 3</div></div>
+</div>
+<div class="stat"><span>Harvest speed</span><span class="dots"></span><strong style="color:#2d6a1c">+1.5</strong></div>
+<div class="stat"><span>Ore yield</span><span class="dots"></span><strong style="color:#2d6a1c">+1.3</strong></div>
+<div><div style="display:flex;justify-content:space-between;font-size:15px;margin-bottom:3px"><span>Durability</span><span>84 / 120</span></div><div class="bar"><i style="--c:#e8b443;width:70%"></i></div></div>
+<div style="flex:1"></div>
+<div style="display:flex;gap:10px"><button class="btn gold" type="button">Equip</button><button class="btn stone" type="button">Drop</button></div>
+</aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["wood","stone"],"default":"wood","section":"Panel"},"$preview":{"width":844,"height":390}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { frameCls: (this.props.frame ?? 'wood') === 'stone' ? 'stone' : '' };
+  }
+}
+</script>
+</body>
+</html>
