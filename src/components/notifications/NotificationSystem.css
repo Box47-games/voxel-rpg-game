@@ -19,3 +19,12 @@
     padding: 10px;
   }
 }
+
+/* Phones held sideways: span the screen so a toast can sit in the centre */
+@media (max-height: 500px) {
+  .notification-system {
+    left: 0;
+    max-width: none;
+    padding: 0;
+  }
+}

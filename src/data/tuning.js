@@ -497,3 +497,8 @@ export const NPC_WANDER_TIMEOUT = 15;          // Seconds before a wandering NPC
 export const NPC_LEAVE_EXTRA_DISTANCE = 20;    // World units past the spawn ring a departing NPC walks to
 export const NPC_WORK_SKILL_FALLBACK = 0.5;    // Skill used for work speed when an NPC has none recorded
 export const NPC_SKILL_GROWTH_BASE = 0.3;      // Skill a first completed task grows from when none recorded
+
+// ── Toasts ──
+export const TOAST_DURATION_MS = 5000;     // Default time a toast stays up, counted from when it is shown
+export const TOAST_MAX_VISIBLE = 3;        // Toasts stacked at once; more wait their turn
+export const TOAST_MAX_VISIBLE_SHORT = 1;  // Same on short screens (phones held sideways)

@@ -119,12 +119,17 @@ const GameUI = () => {
   const toolsOpen = useGameStore((state) => state.openPanel === 'tools');
   const bagOpen = useGameStore((state) => ['inventory', 'crafting', 'repair'].includes(state.openPanel));
   const catalogOpen = useGameStore((state) => state.activeBuildingCatalog);
+  // Start screen: narrow screens only. HUD: also phones held sideways (short).
   const [isMobile, setIsMobile] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
   const [isTouch] = useState(isTouchDevice);
   const statBreakdowns = useStatBreakdown();
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+      setIsCompact(window.innerWidth <= 768 || window.innerHeight <= 500);
+    };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -144,7 +149,7 @@ const GameUI = () => {
 
   const hudClass = [
     'hud',
-    isMobile && 'hud--compact',
+    isCompact && 'hud--compact',
     isTouch && 'hud--touch',
     inMode && 'hud--mode',
     !isTouch && !inMode && 'hud--hotbar', // desktop block hotbar is always up in Play
@@ -172,7 +177,7 @@ const GameUI = () => {
           <div className="hud-level__body">
             <div className="hud-level__label">
               <span>Level {player.level}</span>
-              {!isMobile && (
+              {!isCompact && (
                 <span className="hud-level__xp">
                   {player.xp} / {player.xpToNext} XP
                 </span>
@@ -195,7 +200,7 @@ const GameUI = () => {
           max={player.maxHealth}
           statName="health"
           breakdown={statBreakdowns.health}
-          isMobile={isMobile}
+          isMobile={isCompact}
           low={player.health / player.maxHealth < 0.25}
         />
         <StatBarWithTooltip
@@ -206,9 +211,9 @@ const GameUI = () => {
           max={player.maxMana}
           statName="mana"
           breakdown={statBreakdowns.mana}
-          isMobile={isMobile}
+          isMobile={isCompact}
         />
-        {!isMobile && (
+        {!isCompact && (
           <StatBarWithTooltip
             icon={<Activity />}
             iconColor="#5cc36b"
@@ -225,10 +230,10 @@ const GameUI = () => {
           label="Hunger"
           current={hunger.current}
           max={hunger.max}
-          isMobile={isMobile}
+          isMobile={isCompact}
           low={hunger.current < 20}
         />
-        {!isMobile && (
+        {!isCompact && (
           <StatBarWithTooltip
             icon={<Flame />}
             iconColor="#ff6a2b"
@@ -264,7 +269,7 @@ const GameUI = () => {
 
       {/* Top right: clock and purse */}
       <section className="hud-info vx-panel" aria-label="Time and supplies">
-        <Clock worldTime={worldTime} compact={isMobile} />
+        <Clock worldTime={worldTime} compact={isCompact} />
         <div className="hud-info__row">
           <span className="hud-info__stat hud-info__stat--gold" title="Gold">
             <Coins aria-hidden="true" />
@@ -275,7 +280,7 @@ const GameUI = () => {
             {potions}
           </span>
         </div>
-        {!isMobile && (
+        {!isCompact && (
           <div className="hud-info__row hud-info__row--combat">
             <span className="hud-info__stat" title="Total damage">
               <Sword aria-hidden="true" />
@@ -297,7 +302,7 @@ const GameUI = () => {
             label="Tools"
             color="#f2c14e"
             active={toolsOpen}
-            compact={isMobile}
+            compact={isCompact}
             onClick={() => useGameStore.getState().togglePanel('tools')}
           />
         ) : (
@@ -309,7 +314,7 @@ const GameUI = () => {
               hotkey="I"
               color="#4f8cf7"
               active={bagOpen}
-              compact={isMobile}
+              compact={isCompact}
               onClick={() => pressKey('i')}
             />
             {/* Desktop mines and places in Play, so Build opens the catalog (blocks + buildings) */}
@@ -319,16 +324,16 @@ const GameUI = () => {
               hotkey="B"
               color="#ffb02e"
               active={catalogOpen}
-              compact={isMobile}
+              compact={isCompact}
               onClick={() => useGameStore.getState().togglePanel('buildings')}
             />
-            <ActionSlot icon={MapPin} label="Plan" hotkey="P" color="#ff8c1a" active={planMode} compact={isMobile} onClick={togglePlanMode} />
+            <ActionSlot icon={MapPin} label="Plan" hotkey="P" color="#ff8c1a" active={planMode} compact={isCompact} onClick={togglePlanMode} />
             <ActionSlot
               icon={Users}
               label="Settlement"
               hotkey="N"
               color="#5cc36b"
-              compact={isMobile}
+              compact={isCompact}
               onClick={() => useGameStore.getState().toggleSettlementDashboard()}
             />
           </>

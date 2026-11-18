@@ -18,13 +18,29 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { TOAST_MAX_VISIBLE, TOAST_MAX_VISIBLE_SHORT } from '../../data/tuning';
 import Notification from './Notification';
 import './NotificationSystem.css';
 
 let notificationId = 0;
 
+const SHORT_SCREEN = '(max-height: 500px)';
+
+/** Short screens (phones held sideways) show one toast at a time; the rest wait. */
+function useMaxVisible() {
+  const query = () => typeof window !== 'undefined' && window.matchMedia?.(SHORT_SCREEN).matches;
+  const [short, setShort] = useState(query);
+  useEffect(() => {
+    const check = () => setShort(query());
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return short ? TOAST_MAX_VISIBLE_SHORT : TOAST_MAX_VISIBLE;
+}
+
 function NotificationSystem() {
   const [notifications, setNotifications] = useState([]);
+  const maxVisible = useMaxVisible();
 
   // Expose global function to add notifications
   useEffect(() => {
@@ -36,15 +52,8 @@ function NotificationSystem() {
         timestamp: Date.now()
       };
 
+      // Queued: each toast's timer starts when it is shown (Notification.jsx)
       setNotifications(prev => [...prev, newNotification]);
-
-      // Auto-dismiss after duration (default 5 seconds)
-      const duration = notification.duration || 5000;
-      if (duration > 0) {
-        setTimeout(() => {
-          dismissNotification(id);
-        }, duration);
-      }
     };
 
     return () => {
@@ -58,7 +67,7 @@ function NotificationSystem() {
 
   return (
     <div className="notification-system">
-      {notifications.map((notification, index) => (
+      {notifications.slice(0, maxVisible).map((notification, index) => (
         <Notification
           key={notification.id}
           notification={notification}

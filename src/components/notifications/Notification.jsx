@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { artUrl } from '../ui/art';
+import { TOAST_DURATION_MS } from '../../data/tuning';
 import './Notification.css';
 
 /** Icon art and tile colour per toast type */
@@ -29,20 +30,27 @@ function Notification({ notification, index, onDismiss }) {
   const look = TYPE_ART[type] || TYPE_ART.info;
   const iconUrl = (art && artUrl(art.group, art.id)) || artUrl(...look.art);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 50);
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleDismiss = () => {
     setIsExiting(true);
     setTimeout(onDismiss, 250);
   };
 
+  // Slide in, then auto-dismiss `duration` ms after it was shown
+  useEffect(() => {
+    const show = setTimeout(() => setIsVisible(true), 50);
+    const duration = notification.duration || TOAST_DURATION_MS;
+    const hide = duration > 0 ? setTimeout(handleDismiss, duration) : null;
+    return () => {
+      clearTimeout(show);
+      if (hide) clearTimeout(hide);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div
       className={`notification notification-${type}${isVisible ? ' visible' : ''}${isExiting ? ' exiting' : ''}`}
-      style={{ top: `${index * 96 + 12}px` }}
+      style={{ '--i': index }}
       role="status"
       onClick={handleDismiss}
     >
