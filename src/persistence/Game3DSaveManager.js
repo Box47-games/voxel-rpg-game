@@ -16,8 +16,9 @@ import { Chunk } from '../systems/chunks/Chunk';
 import useQuestStore from '../stores/useQuestStore';
 import { getStockpileCapacity } from '../data/zoneTypes';
 import { clearTasks } from '../systems/settlement/TaskAssignmentEngine';
+import { getBuildingById, parseLayers } from '../data/buildings';
 
-const SAVE_VERSION = 7;
+const SAVE_VERSION = 8;
 const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
 
 // Player fields that describe a moment in time, not progress. Not saved.
@@ -77,6 +78,23 @@ export function validateSaveData(saveData) {
   return errors;
 }
 
+/**
+ * A saved construction site against the current blueprint: finished buildings
+ * keep standing (counted as complete); unfinished ones start over on the new
+ * blueprint with what was delivered still credited. Unknown buildings drop.
+ */
+export function refitSite(site) {
+  const building = getBuildingById(site?.buildingId);
+  if (!building) return null;
+  const total = parseLayers(building).length;
+  if (site.status === 'COMPLETE') {
+    return { ...site, blocksPlaced: total, totalBlocks: total, materialsRequired: { ...building.cost }, materialsDelivered: { ...building.cost } };
+  }
+  const from = site.upgradeFrom && getBuildingById(site.upgradeFrom);
+  const required = from?.upgrade ? from.upgrade.cost : building.cost;
+  return { ...site, status: 'PLACED', blocksPlaced: 0, totalBlocks: total, materialsRequired: { ...required } };
+}
+
 /** Bring older saves up to the current version. Mutates and returns saveData. */
 function migrateSave(saveData) {
   // V1 → V2: hunger + worldTime
@@ -108,6 +126,11 @@ function migrateSave(saveData) {
   if (saveData.version < 7) {
     saveData.rifts = null;
     saveData.version = 7;
+  }
+  // V7 → V8: buildings redesigned; fit saved sites to the new blueprints
+  if (saveData.version < 8) {
+    saveData.constructionSites = (saveData.constructionSites || []).map(refitSite).filter(Boolean);
+    saveData.version = 8;
   }
   return saveData;
 }

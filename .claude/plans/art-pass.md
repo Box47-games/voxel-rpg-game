@@ -47,7 +47,7 @@ npm run art:portraits   # player + settler portraits from the real models (needs
 - [x] Item icons (26): weapons 5, tools 6, armour 4, rings 2, wooden shield, potions/food 8
 - [x] Material icons (17)
 - [x] Block icons (13): the 12 placeable blocks + iron/gold ore
-- [x] Building pictures (6): from the real blueprints
+- [x] Building pictures (7): from the real blueprints, seen from the front-right
 - [x] Spell icons (15), status effect icons (7), HUD stat icons (6)
 - [x] UI symbols (40): mode buttons, tabs/categories, plan tools, equipment slots,
       notifications, settler activities, touch controls, general

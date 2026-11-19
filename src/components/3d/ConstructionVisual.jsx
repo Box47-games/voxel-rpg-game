@@ -1,6 +1,7 @@
 /**
  * ConstructionVisual — Renders construction sites: a blueprint of the blocks
- * still to place (one instanced mesh; the next block pulses), wooden
+ * still to place (BlueprintGhost: blue outlined cells, a gridded footprint,
+ * the next cell lit up — gold while it waits for materials), wooden
  * scaffolding around the footprint, and a progress bar above it.
  */
 
@@ -15,19 +16,14 @@ import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { getBlockColor } from '../../systems/chunks/blockTypes';
 import { getScaffoldRoute, segmentBox } from '../../systems/construction/scaffoldRoute';
 import { SCAFFOLD_OFFSET, SCAFFOLD_WIDTH } from '../../data/tuning';
+import BlueprintGhost, { BLUEPRINT_NEXT, BLUEPRINT_WAITING } from './BlueprintGhost';
 
-const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
-const ghostMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.28, depthWrite: false });
-const nextMat = new THREE.MeshBasicMaterial({ color: '#9fd3ff', transparent: true, opacity: 0.5, depthWrite: false });
 const scaffoldMat = new THREE.MeshLambertMaterial({ color: '#9a6a3c' });
 const braceMat = new THREE.MeshLambertMaterial({ color: '#7a5230' });
 const padMat = new THREE.MeshLambertMaterial({ color: '#8f949c' });
 const plankMat = new THREE.MeshLambertMaterial({ color: '#b98551' });
-const BLUEPRINT = new THREE.Color('#7cc4ff');
 const tmpM = new THREE.Matrix4();
-const ONE = [1, 1, 1];
-const tmpC = new THREE.Color();
 const tmpQ = new THREE.Quaternion();
 const tmpE = new THREE.Euler();
 const tmpP = new THREE.Vector3();
@@ -103,22 +99,6 @@ function fillInstances(mesh, items) {
   mesh.instanceMatrix.needsUpdate = true;
 }
 
-/** All the blueprint blocks as one instanced mesh (block colour, tinted blue). */
-function GhostBlocks({ blocks }) {
-  const ref = (mesh) => {
-    if (!mesh) return;
-    blocks.forEach((b, i) => {
-      const sc = b.scale || ONE;
-      mesh.setMatrixAt(i, tmpM.makeScale(sc[0], sc[1], sc[2]).setPosition(b.position[0], b.position[1], b.position[2]));
-      mesh.setColorAt(i, tmpC.setRGB(...b.color).lerp(BLUEPRINT, 0.45));
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  };
-  if (blocks.length === 0) return null;
-  return <instancedMesh key={blocks.length} ref={ref} args={[boxGeo, ghostMat, blocks.length]} frustumCulled={false} />;
-}
-
 function Scaffold({ posts, frame, route }) {
   const wood = [...posts, ...frame.rails];
   return (
@@ -155,27 +135,18 @@ const BAR_SEG_W = (4 - BAR_PAD * 2 - BAR_GAP * (BAR_SEGMENTS - 1)) / BAR_SEGMENT
 
 function ConstructionSiteVisual({ site }) {
   const barGroupRef = useRef();
-  const nextRef = useRef();
-  const nextScaleRef = useRef(ONE);
   const { camera } = useThree();
 
   const building = useMemo(() => getBuildingById(site.buildingId), [site.buildingId]);
   const blocks = useMemo(() => building ? parseLayers(building) : [], [building]);
 
-  // Ghost blocks = blocks not yet placed (index >= blocksPlaced)
+  // Blueprint = cells not yet placed (index >= blocksPlaced), relative to the corner
   const ghostBlocks = useMemo(() => {
     if (!building || site.status === 'COMPLETE') return [];
-    return blocks.slice(site.blocksPlaced).map((b) => {
-      // A piece (slab, plank floor) shows as the part of the cell it fills
-      const { center, size } = cellBox(b, VOXEL_SIZE);
-      return {
-        position: [site.position[0] + center[0], site.position[1] + center[1], site.position[2] + center[2]],
-        scale: size.map((v) => v / VOXEL_SIZE),
-        color: getBlockColor(b.blockType),
-      };
-    });
-  }, [building, blocks, site.position, site.blocksPlaced, site.status]);
-  nextScaleRef.current = ghostBlocks[0]?.scale || ONE;
+    // A piece (slab, plank floor) shows as the part of the cell it fills
+    return blocks.slice(site.blocksPlaced).map((b) => ({ ...cellBox(b, VOXEL_SIZE), color: getBlockColor(b.blockType) }));
+  }, [building, blocks, site.blocksPlaced, site.status]);
+  const restBlocks = useMemo(() => ghostBlocks.slice(1), [ghostBlocks]);
 
   // Progress: how much is built (it builds as materials arrive);
   // `paid`: the next block or piece has its materials, so it can go in now
@@ -192,16 +163,9 @@ function ConstructionSiteVisual({ site }) {
   );
   const route = useMemo(() => getScaffoldRoute(site), [site]);
 
-  // Billboard the progress bar; pulse the next block to place
-  useFrame(({ clock }) => {
-    if (barGroupRef.current) {
-      barGroupRef.current.lookAt(camera.position);
-    }
-    if (nextRef.current) {
-      const pulse = 1.02 + Math.sin(clock.elapsedTime * 4) * 0.04;
-      const sc = nextScaleRef.current || ONE;
-      nextRef.current.scale.set(sc[0] * pulse, sc[1] * pulse, sc[2] * pulse);
-    }
+  // Billboard the progress bar
+  useFrame(() => {
+    if (barGroupRef.current) barGroupRef.current.lookAt(camera.position);
   });
 
   if (!building || site.status === 'COMPLETE') return null;
@@ -215,12 +179,16 @@ function ConstructionSiteVisual({ site }) {
 
   return (
     <>
-      {/* Blueprint of the blocks still to place; the next one pulses */}
-      <GhostBlocks blocks={ghostBlocks.slice(1)} />
-      {ghostBlocks[0] && paid && (
-        <mesh ref={nextRef} geometry={boxGeo} material={nextMat} position={ghostBlocks[0].position} />
-      )}
-      {ghostBlocks[0] && !paid && <GhostBlocks blocks={ghostBlocks.slice(0, 1)} />}
+      {/* Blueprint of the cells still to place; the next one is lit up */}
+      <group position={site.position}>
+        <BlueprintGhost
+          boxes={restBlocks}
+          next={ghostBlocks[0] || null}
+          nextColor={paid ? BLUEPRINT_NEXT : BLUEPRINT_WAITING}
+          size={building.size}
+          voxelSize={VOXEL_SIZE}
+        />
+      </group>
 
       {/* Wooden scaffolding: corner posts and a ramp spiralling up to the top */}
       <Scaffold posts={posts} frame={frame} route={route} />

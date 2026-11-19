@@ -2,7 +2,7 @@
  * Blueprint piece glyphs (s slab, = and : planks) and construction placing
  * them as shaped cells.
  */
-import { parseLayers, getBuildingById, cellBox, cellUnits } from '../buildings';
+import { parseLayers, getBuildingById, cellBox, cellUnits, BUILDINGS } from '../buildings';
 import { BlockTypes } from '../../systems/chunks/blockTypes';
 import {
   shapes as SHAPE, AXIS, SHAPE_KIND, shapeKind, shapeAxis, shapeMask, cellPieces, plankPartnerOffset,
@@ -58,10 +58,46 @@ describe('blueprint piece glyphs', () => {
 
   test('the refreshed buildings use pieces', () => {
     const house = parseLayers(getBuildingById('stone_house'));
-    expect(house.filter((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.SLAB)).toHaveLength(16);
-    expect(house.filter((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.PLANK)).toHaveLength(4);
-    expect(parseLayers(getBuildingById('storage_shed')).filter((b) => b.shape)).toHaveLength(16);
-    expect(parseLayers(getBuildingById('watchtower')).filter((b) => b.shape)).toHaveLength(9);
+    // Slab eaves and ridge, plank floor
+    expect(house.filter((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.SLAB)).toHaveLength(24);
+    expect(house.filter((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.PLANK)).toHaveLength(20);
+    // Plank floor, eaves and ridge
+    expect(parseLayers(getBuildingById('storage_shed')).filter((b) => b.shape)).toHaveLength(40);
+    // Plinth, deck and cap
+    expect(parseLayers(getBuildingById('watchtower')).filter((b) => b.shape)).toHaveLength(45);
+  });
+
+  test('every blueprint matches its size and costs exactly its volume', () => {
+    const MAT = { [BlockTypes.WOOD]: 'wood', [BlockTypes.STONE]: 'stone', [BlockTypes.IRON_ORE]: 'iron', [BlockTypes.COAL_ORE]: 'coal' };
+    for (const b of BUILDINGS) {
+      expect(b.layers).toHaveLength(b.size.height);
+      for (const layer of b.layers) {
+        const rows = layer.split('|');
+        expect(rows).toHaveLength(b.size.depth);
+        for (const row of rows) expect(row).toHaveLength(b.size.width);
+      }
+      const volume = {};
+      for (const c of parseLayers(b)) volume[MAT[c.blockType]] = (volume[MAT[c.blockType]] || 0) + cellUnits(c) / 8;
+      expect(volume).toEqual(b.cost);
+    }
+  });
+
+  test('the Blacksmith is open on its front and right side, with a coal forge and an iron anvil', () => {
+    const smith = getBuildingById('blacksmith');
+    const cells = parseLayers(smith);
+    const at = (x, y, z) => cells.find((c) => c.x === x && c.y === y && c.z === z);
+    const { width, depth } = smith.size;
+    // Wall height (layers 1–2): no wall along the front row or the right column, bar the corner post
+    for (const y of [1, 2]) {
+      for (let x = 1; x < width - 1; x++) expect(at(x, y, 0)).toBeUndefined();
+      for (let z = 1; z < depth - 1; z++) expect(at(width - 1, y, z)).toBeUndefined();
+      for (let z = 0; z < depth; z++) expect(at(0, y, z)).toBeDefined(); // left wall
+      for (let x = 0; x < width; x++) expect(at(x, y, depth - 1)).toBeDefined(); // back wall
+    }
+    expect(cells.some((c) => c.blockType === BlockTypes.COAL_ORE)).toBe(true);
+    expect(cells.some((c) => c.blockType === BlockTypes.IRON_ORE)).toBe(true);
+    // The chimney rises above the roof
+    expect(at(1, smith.size.height - 1, depth - 1)?.blockType).toBe(BlockTypes.STONE);
   });
 });
 

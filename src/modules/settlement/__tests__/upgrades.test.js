@@ -24,7 +24,7 @@ import { makeFakeChunkManager } from './helpers/fakeWorld';
 const GROUND_Y = 4; // buildings stand on the top of the ground layer at y=4
 const shelterSite = (overrides = {}) => ({
   id: 'home', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [0, GROUND_Y, 0],
-  materialsRequired: { wood: 25 }, materialsDelivered: { wood: 25 }, blocksPlaced: 24, totalBlocks: 24,
+  materialsRequired: { wood: 63 }, materialsDelivered: { wood: 63 }, blocksPlaced: 74, totalBlocks: 74,
   ...overrides,
 });
 
@@ -67,16 +67,16 @@ describe('getUpgradeProblem', () => {
     const house = shelterSite({ buildingId: 'stone_house' });
     expect(getUpgradeProblem(house, env(cm, { settledCount: UPGRADE_HOUSE_TO_MANOR_SETTLERS - 1 }))).toMatch(new RegExp(`Needs ${UPGRADE_HOUSE_TO_MANOR_SETTLERS} settlers`));
 
-    const neighbour = { id: 'n', buildingId: 'farm_plot', status: 'COMPLETE', position: [3 * VOXEL_SIZE, GROUND_Y, 0] };
+    const neighbour = { id: 'n', buildingId: 'farm_plot', status: 'COMPLETE', position: [6 * VOXEL_SIZE, GROUND_Y, 0] };
     expect(getUpgradeProblem(shelterSite(), env(cm, { constructionSites: [shelterSite(), neighbour] })))
       .toBe('Too close to the Farm Plot');
 
     const blocked = world([shelterSite()]);
-    blocked.place(3 * VOXEL_SIZE + 1, GROUND_Y + 1, 1, BlockTypes.DIRT); // in the House's new column
+    blocked.place(5 * VOXEL_SIZE + 1, GROUND_Y + 1, 1, BlockTypes.DIRT); // in the House's new column
     expect(getUpgradeProblem(shelterSite(), env(blocked))).toMatch(/in the way/);
 
     const cliff = world([shelterSite()]);
-    cliff.place(3 * VOXEL_SIZE + 1, GROUND_Y - 1, 1, BlockTypes.AIR);
+    cliff.place(5 * VOXEL_SIZE + 1, GROUND_Y - 1, 1, BlockTypes.AIR);
     expect(getUpgradeProblem(shelterSite(), env(cliff))).toMatch(/not level/);
   });
 
@@ -167,15 +167,15 @@ describe('store: upgradeBuilding and cancelling', () => {
   test('cancelling before building restores the original and refunds deliveries', () => {
     const store = useGameStore.getState();
     store.upgradeBuilding('home');
-    useGameStore.getState().deliverToConstruction('home', 'wood', 10);
-    expect(useGameStore.getState().inventory.materials.wood).toBe(90);
+    useGameStore.getState().deliverToConstruction('home', 'stone', 10);
+    expect(useGameStore.getState().inventory.materials.stone).toBe(90);
 
     useGameStore.getState().removeConstructionSite('home');
 
     const [site] = useGameStore.getState().constructionSites;
     expect(site).toMatchObject({ id: 'home', buildingId: 'wooden_shelter', status: 'COMPLETE' });
     expect(site.upgradeFrom).toBeUndefined();
-    expect(useGameStore.getState().inventory.materials.wood).toBe(100);
+    expect(useGameStore.getState().inventory.materials.stone).toBe(100);
   });
 
   test('an upgrade already replacing blocks cannot be cancelled', () => {

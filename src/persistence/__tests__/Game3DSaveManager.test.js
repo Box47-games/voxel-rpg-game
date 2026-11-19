@@ -3,7 +3,7 @@
  * synchronous ChunkManager (fake-indexeddb).
  */
 import useGameStore from '../../stores/useGameStore';
-import Game3DSaveManager, { validateSaveData } from '../Game3DSaveManager';
+import Game3DSaveManager, { validateSaveData, refitSite } from '../Game3DSaveManager';
 import { ChunkManager } from '../../systems/chunks/ChunkManager';
 import { getStockpileCapacity } from '../../data/zoneTypes';
 import { scanForTasks, findBestTask, claimTask } from '../../systems/settlement/TaskAssignmentEngine';
@@ -211,5 +211,20 @@ describe('Game3DSaveManager', () => {
     expect(validateSaveData(null)).not.toHaveLength(0);
     expect(validateSaveData({ player: { position: [1, 2] }, inventory: {} })).toContain('Invalid player position');
     expect(validateSaveData({ player: { position: [1, 2, 3] }, inventory: { materials: {} } })).toEqual([]);
+  });
+});
+
+describe('v8: saved sites fit the redesigned blueprints', () => {
+  test('a finished building stays finished; an unfinished one starts over with its deliveries', () => {
+    const done = refitSite({ id: 'a', buildingId: 'wooden_shelter', status: 'COMPLETE', blocksPlaced: 24, totalBlocks: 24, materialsRequired: { wood: 25 }, materialsDelivered: { wood: 25 } });
+    expect(done).toMatchObject({ status: 'COMPLETE', blocksPlaced: 74, totalBlocks: 74, materialsRequired: { wood: 63 }, materialsDelivered: { wood: 63 } });
+
+    const half = refitSite({ id: 'b', buildingId: 'stone_house', status: 'BUILDING', blocksPlaced: 20, totalBlocks: 40, materialsRequired: { stone: 31, wood: 11 }, materialsDelivered: { stone: 20 } });
+    expect(half).toMatchObject({ status: 'PLACED', blocksPlaced: 0, totalBlocks: 158, materialsRequired: { stone: 96, wood: 40 }, materialsDelivered: { stone: 20 } });
+
+    const upgrade = refitSite({ id: 'c', buildingId: 'stone_house', upgradeFrom: 'wooden_shelter', status: 'PLACED', blocksPlaced: 0, materialsRequired: { wood: 40, stone: 30 }, materialsDelivered: {} });
+    expect(upgrade.materialsRequired).toEqual({ stone: 96 });
+
+    expect(refitSite({ id: 'd', buildingId: 'gone', status: 'COMPLETE' })).toBeNull();
   });
 });

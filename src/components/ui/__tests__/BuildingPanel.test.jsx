@@ -47,7 +47,7 @@ describe('BuildingPanel', () => {
   test('demolishing needs confirmation', () => {
     open([{ id: 'h1', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [0, 0, 0], ...DONE }]);
     fireEvent.click(screen.getByRole('button', { name: 'Demolish' }));
-    expect(screen.getByText(/You get back 12 wood/)).toBeInTheDocument();
+    expect(screen.getByText(/You get back 31 wood/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
     expect(useGameStore.getState().constructionSites).toHaveLength(1);
 
@@ -72,7 +72,7 @@ describe('BuildingPanel', () => {
     open([{ id: 'h1', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [0, 0, 0], ...DONE }]);
     expect(screen.getByText('Upgrade to Stone House')).toBeInTheDocument();
     expect(screen.getByText(/Beds 1 → 2/)).toBeInTheDocument();
-    expect(screen.getByText(/Costs 40 wood, 30 stone; needs 3 settlers/)).toBeInTheDocument();
+    expect(screen.getByText(/Costs 96 stone; needs 3 settlers/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Upgrade' })).toBeDisabled();
     expect(screen.getByText(/Needs 3 settlers/)).toBeInTheDocument();
 
@@ -91,10 +91,10 @@ describe('BuildingPanel', () => {
   });
 
   test('part built and short: shows what is up, what the next piece needs, and still takes deliveries', () => {
-    const site = { id: 'c1', buildingId: 'wooden_shelter', status: 'BUILDING', position: [0, 0, 0], blocksPlaced: 5, totalBlocks: 22, materialsRequired: { wood: 25 }, materialsDelivered: { wood: 5 } };
+    const site = { id: 'c1', buildingId: 'wooden_shelter', status: 'BUILDING', position: [0, 0, 0], blocksPlaced: 5, totalBlocks: 74, materialsRequired: { wood: 63 }, materialsDelivered: { wood: 5 } };
     open([site]);
     expect(screen.getByText('WAITING')).toBeInTheDocument();
-    expect(screen.getByText('Built: 5/22')).toBeInTheDocument();
+    expect(screen.getByText('Built: 5/74')).toBeInTheDocument();
     expect(screen.getByText(/Paused: the next piece needs .* wood more/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Deliver All' })).toBeInTheDocument();
   });

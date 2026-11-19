@@ -7,6 +7,7 @@ import { scaffoldFrame } from '../ConstructionVisual';
 import { THOUGHT_ART, thoughtTexture } from '../NPCThoughtBubble';
 import { createCompanionRig, COMPANION_LOOKS, COMPANION_ANIMALS } from '../Companion';
 import { artUrl } from '../../ui/art';
+import { boxEdgePositions, footprintGridPositions } from '../BlueprintGhost';
 
 describe('stockpile crates', () => {
   it('gives every material a crate and fills the last one partly', () => {
@@ -77,5 +78,28 @@ describe('companion rigs', () => {
       rig.dispose();
     }
     expect(createCompanionRig(null).animal).toBeNull(); // unknown: the mage
+  });
+});
+
+describe('blueprint ghost', () => {
+  it('outlines each cell with its 12 edges, just inside the cell', () => {
+    const pos = boxEdgePositions([{ center: [1, 1, 1], size: [2, 2, 2] }, { center: [3, 0.5, 1], size: [2, 1, 2] }], 0.05);
+    expect(pos).toHaveLength(2 * 12 * 2 * 3);
+    const first = Array.from(pos.slice(0, 72));
+    expect(Math.min(...first)).toBeCloseTo(0.05);
+    expect(Math.max(...first)).toBeCloseTo(1.95);
+    // The half-height piece stays in the lower half of its cell
+    const ys = Array.from(pos.slice(72)).filter((_, i) => i % 3 === 1);
+    expect(Math.max(...ys)).toBeCloseTo(0.95);
+  });
+
+  it('grids the footprint: one line per cell boundary each way, on the ground', () => {
+    const pos = footprintGridPositions(5, 4, 2);
+    expect(pos.length / 6).toBe((5 + 1) + (4 + 1));
+    const xs = Array.from(pos).filter((_, i) => i % 3 === 0);
+    const zs = Array.from(pos).filter((_, i) => i % 3 === 2);
+    expect(Math.max(...xs)).toBe(10);
+    expect(Math.max(...zs)).toBe(8);
+    for (let i = 1; i < pos.length; i += 3) expect(pos[i]).toBeGreaterThan(0);
   });
 });

@@ -915,5 +915,11 @@
     "id": "storage_shed",
     "label": "Storage Shed",
     "file": "buildings/storage_shed.svg"
+  },
+  {
+    "group": "buildings",
+    "id": "blacksmith",
+    "label": "Blacksmith",
+    "file": "buildings/blacksmith.svg"
   }
 ]

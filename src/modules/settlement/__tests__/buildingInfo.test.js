@@ -56,7 +56,7 @@ describe('placed blocks', () => {
 
 describe('demolish refund', () => {
   test(`returns ${BUILDING_DEMOLISH_REFUND * 100}% of the cost, rounded down`, () => {
-    expect(getDemolishRefund(getBuildingById('stone_house'))).toEqual({ stone: 15, wood: 5 });
+    expect(getDemolishRefund(getBuildingById('stone_house'))).toEqual({ stone: 48, wood: 20 });
     expect(getDemolishRefund({ cost: { iron: 1 } })).toEqual({});
   });
 });
@@ -64,7 +64,7 @@ describe('demolish refund', () => {
 describe('construction ETA', () => {
   test('self-building pace without a builder, settler pace with one', () => {
     const paid = { materialsRequired: { ...shelter.cost }, materialsDelivered: { ...shelter.cost } };
-    const building = site({ status: 'BUILDING', blocksPlaced: 10, totalBlocks: 14, ...paid });
+    const building = site({ status: 'BUILDING', blocksPlaced: 20, totalBlocks: 24, ...paid }); // four wall logs left
     expect(getConstructionEta(building)).toBe(4 * CONSTRUCTION_BLOCK_INTERVAL);
     expect(getConstructionEta(building, 0.5)).toBe(4 * NPC_BUILD_DURATION / 0.5);
     // Still waiting for materials: no ETA

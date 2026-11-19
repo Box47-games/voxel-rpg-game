@@ -353,7 +353,9 @@ async function main() {
     return `#${c.map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('')}`;
   };
   for (const bld of buildings.BUILDINGS) {
-    write('buildings', bld.id, bld.name, renderBuilding(buildings.parseLayers(bld), colorOf, bld.id));
+    // Seen from the front-right: flip Z so the front (row 0, doors) faces the viewer
+    const cells = buildings.parseLayers(bld).map((c) => ({ ...c, z: bld.size.depth - 1 - c.z }));
+    write('buildings', bld.id, bld.name, renderBuilding(cells, colorOf, bld.id));
   }
 
   mkdirSync(join(OUT, 'textures'), { recursive: true });

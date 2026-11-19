@@ -4,7 +4,7 @@
  * Each building is defined by a layer-based voxel blueprint:
  *   - Layers are bottom-to-top (Y axis)
  *   - Each layer string: rows separated by '|', chars = columns (X axis)
- *   - Block char mapping: W=WOOD, S=STONE, I=IRON_ORE, .=AIR
+ *   - Block char mapping: W=WOOD, S=STONE, I=IRON_ORE, K=COAL_ORE, .=AIR
  *   - Piece chars (block pieces, see systems/chunks/cellShape.js), each filling
  *     the lower half of its cell:
  *       s = a stone slab (floor or flat roof)
@@ -27,6 +27,7 @@ const BLOCK_CHAR_MAP = {
   'W': BlockTypes.WOOD,
   'S': BlockTypes.STONE,
   'I': BlockTypes.IRON_ORE,
+  'K': BlockTypes.COAL_ORE,
   '.': BlockTypes.AIR,
 };
 
@@ -47,85 +48,115 @@ export const BUILDINGS = [
   {
     id: 'wooden_shelter',
     name: 'Wooden Shelter',
-    description: 'A simple wooden cabin. Provides 1 housing slot.',
-    size: { width: 3, height: 3, depth: 3 },
-    cost: { wood: 25 },
+    description: 'A log cabin with a plank floor and a pitched roof. Provides 1 housing slot.',
+    size: { width: 5, height: 5, depth: 4 },
+    cost: { wood: 63 },
     effects: { housing: 1, attractiveness: 5 },
     upgrade: { to: 'stone_house', cost: UPGRADE_SHELTER_TO_HOUSE_COST, settlers: UPGRADE_SHELTER_TO_HOUSE_SETTLERS },
     layers: [
-      'WWW|W.W|WWW',   // Layer 0 (floor)
-      'W.W|...|W.W',   // Layer 1 (walls with opening)
-      'WWW|WWW|WWW',   // Layer 2 (roof)
+      'WWWWW|W:::W|W:::W|WWWWW',   // Log sill, plank floor
+      'WW.WW|W...W|W...W|WWWWW',   // Walls, front door
+      'WWWWW|W...W|.....|WW.WW',   // Walls, side and back windows
+      ':WWW:|:W.W:|:W.W:|:WWW:',   // Eaves, roof, gable ends
+      '.:W:.|.:W:.|.:W:.|.:W:.',   // Roof and ridge
     ],
   },
   {
     id: 'stone_house',
     name: 'Stone House',
-    description: 'A sturdy stone dwelling with a plank floor and a slab roof. Provides 2 housing slots.',
-    size: { width: 4, height: 4, depth: 4 },
-    cost: { stone: 31, wood: 11 },
+    description: 'Stone walls on log corner posts, a plank floor and a stepped stone roof. Provides 2 housing slots.',
+    size: { width: 7, height: 6, depth: 6 },
+    cost: { stone: 96, wood: 40 },
     effects: { housing: 2, attractiveness: 15 },
     upgrade: { to: 'manor', cost: UPGRADE_HOUSE_TO_MANOR_COST, settlers: UPGRADE_HOUSE_TO_MANOR_SETTLERS },
     layers: [
-      'SSSS|S==S|S==S|SSSS',   // Layer 0 (foundation, plank floor inside)
-      'SWWS|W..W|W..W|SWWS',   // Layer 1 (walls)
-      'SWWS|W..W|W..W|SWWS',   // Layer 2 (walls)
-      'ssss|ssss|ssss|ssss',   // Layer 3 (slab roof)
+      'SSSSSSS|S:::::S|S:::::S|S:::::S|S:::::S|SSSSSSS',   // Foundation, plank floor
+      'WSS.SSW|S.....S|S.....S|S.....S|S.....S|WSSSSSW',   // Walls, front door
+      'W.SSS.W|S.....S|.......|S.....S|S.....S|WSS.SSW',   // Windows
+      'WWWWWWW|W.....W|W.....W|W.....W|W.....W|WWWWWWW',   // Log band
+      'sSSSSSs|sSS.SSs|sSS.SSs|sSS.SSs|sSS.SSs|sSSSSSs',   // Eaves, roof, gable ends
+      '..sSs..|..sSs..|..sSs..|..sSs..|..sSs..|..sSs..',   // Ridge
     ],
   },
   {
     id: 'manor',
     name: 'Manor',
-    description: 'A large stone hall with iron-framed windows. Provides 4 housing slots. Built by upgrading a Stone House.',
-    size: { width: 5, height: 4, depth: 5 },
-    cost: { stone: 120, wood: 20, iron: 20 },
+    description: 'A two-storey stone hall with iron-framed windows and a tall stepped roof. Provides 4 housing slots. Built by upgrading a Stone House.',
+    size: { width: 9, height: 8, depth: 8 },
+    cost: { stone: 177, wood: 51, iron: 12 },
     effects: { housing: 4, attractiveness: 30 },
     upgradeOnly: true,
     layers: [
-      'SSSSS|SSSSS|SSSSS|SSSSS|SSSSS',   // Layer 0 (floor)
-      'SW.WS|W...W|W...W|W...W|SWWWS',   // Layer 1 (walls, front doorway)
-      'SWIWS|I...I|W...W|I...I|SWIWS',   // Layer 2 (walls with iron windows)
-      'SSSSS|SSSSS|SSSSS|SSSSS|SSSSS',   // Layer 3 (roof)
+      'SSSSSSSSS|S:::::::S|S:::::::S|S:::::::S|S:::::::S|S:::::::S|S:::::::S|SSSSSSSSS',   // Foundation, plank floor
+      'SSSS.SSSS|S.......S|S.......S|S.......S|S.......S|S.......S|S.......S|SSSSSSSSS',   // Walls, front door
+      'SI.ISI.IS|S.......S|I.......I|S.......S|S.......S|I.......I|S.......S|SI.ISI.IS',   // Iron-framed windows
+      'WWWWWWWWW|W.......W|W.......W|W.......W|W.......W|W.......W|W.......W|WWWWWWWWW',   // Log band
+      'SS.SSS.SS|S.......S|S.......S|.........|.........|S.......S|S.......S|SS.SSS.SS',   // Upper windows
+      'sSSSSSSSs|sSS...SSs|sSS...SSs|sSS...SSs|sSS...SSs|sSS...SSs|sSS...SSs|sSSSSSSSs',   // Eaves, roof, gable ends
+      '..sSSSs..|..sSSSs..|..sSSSs..|..sSSSs..|..sSSSs..|..sSSSs..|..sSSSs..|..sSSSs..',   // Roof
+      '....s....|....s....|....s....|....s....|....s....|....s....|....s....|....s....',   // Ridge
     ],
   },
   {
     id: 'farm_plot',
     name: 'Farm Plot',
-    description: 'A wooden marker for a farm. Farming zones must be next to one.',
-    size: { width: 3, height: 1, depth: 3 },
-    cost: { wood: 10 },
+    description: 'A fenced plot of posts and rails. Farming zones must be next to one.',
+    size: { width: 5, height: 2, depth: 5 },
+    cost: { wood: 20 },
     effects: { housing: 0, attractiveness: 5, enablesFarming: true },
     layers: [
-      'WWW|W.W|WWW',   // Layer 0 (border)
+      'W=W=W|:...:|W...W|:...:|W=W=W',   // Posts and rails
+      'W.W.W|.....|W...W|.....|W.W.W',   // Post tops
     ],
   },
   {
     id: 'watchtower',
     name: 'Watchtower',
-    description: 'A tall stone lookout. Increases settlement visibility.',
-    size: { width: 3, height: 6, depth: 3 },
-    cost: { stone: 22, iron: 5 },
+    description: 'A stone tower with a lookout deck and a stone cap. Increases settlement visibility.',
+    size: { width: 5, height: 9, depth: 5 },
+    cost: { stone: 63, wood: 28.5, iron: 4 },
     effects: { housing: 0, attractiveness: 10 },
     layers: [
-      'SSS|SSS|SSS',   // Layer 0 (base)
-      'SSS|S.S|SSS',   // Layer 1
-      'S.S|...|S.S',   // Layer 2
-      'S.S|...|S.S',   // Layer 3
-      'SIS|I.I|SIS',   // Layer 4 (iron accents)
-      'sss|sss|sss',   // Layer 5 (slab roof)
+      '.sss.|sSSSs|sSSSs|sSSSs|.sss.',   // Plinth
+      '.....|.S.S.|.S.S.|.SSS.|.....',   // Tower, front door
+      '.....|.SIS.|.I.I.|.SIS.|.....',   // Iron bands
+      '.....|.S.S.|.S.S.|.SSS.|.....',   // Arrow slit
+      '.....|.SSS.|.S.S.|.SSS.|.....',   // Tower top
+      'WWWWW|W===W|W===W|W===W|WWWWW',   // Lookout deck
+      'W.W.W|.....|W...W|.....|W.W.W',   // Railing posts
+      'sssss|sSSSs|sSSSs|sSSSs|sssss',   // Cap
+      '.....|.sss.|.sSs.|.sss.|.....',   // Cap top
     ],
   },
   {
     id: 'storage_shed',
     name: 'Storage Shed',
-    description: 'A simple storage building with a plank roof. Keeps materials dry.',
-    size: { width: 4, height: 3, depth: 4 },
-    cost: { wood: 11, stone: 10 },
+    description: 'A stone-walled shed with a wide double door and a plank roof. Keeps materials dry.',
+    size: { width: 6, height: 5, depth: 6 },
+    cost: { stone: 34, wood: 60 },
     effects: { housing: 0, attractiveness: 5 },
     layers: [
-      'WWWW|W..W|W..W|WWWW',   // Layer 0 (floor)
-      'WSSW|S..S|S..S|WSSW',   // Layer 1 (walls)
-      '====|====|====|====',   // Layer 2 (plank roof)
+      'SSSSSS|S::::S|S::::S|S::::S|S::::S|SSSSSS',   // Foundation, plank floor
+      'WS..SW|S....S|S....S|S....S|S....S|WSSSSW',   // Walls, double door
+      'WWWWWW|W....W|W....W|W....W|W....W|WWWWWW',   // Log band
+      '======|WWWWWW|W....W|W....W|WWWWWW|======',   // Eaves, roof, gable ends
+      '......|......|::::::|::::::|......|......',   // Ridge
+    ],
+  },
+  {
+    id: 'blacksmith',
+    name: 'Blacksmith',
+    description: 'An open-sided smithy: a coal forge with a chimney, an iron anvil and a lean-to roof on a post.',
+    size: { width: 7, height: 6, depth: 6 },
+    cost: { stone: 57, wood: 43.5, iron: 1, coal: 1 },
+    effects: { housing: 0, attractiveness: 10 },
+    layers: [
+      'SsssssW|Sssssss|SssIsss|Sssssss|SSSssss|SSSSSSS',   // Stone floor, anvil, forge base, corner post
+      'S.....W|S......|S......|S......|SKS....|SSSSSSS',   // Walls, coal bed, post
+      'S.....W|S......|S......|S......|SSS....|SSSSSSS',   // Walls, forge hood, post
+      ':::::::|:::::::|WWWWWWW|WWWWWWW|WWWWWWW|WSWWWWW',   // Lean-to roof, chimney
+      '.......|.......|.......|.......|:::::::|:S:::::',   // Roof top, chimney
+      '.......|.......|.......|.......|.......|.S.....',   // Chimney top
     ],
   },
 ];
