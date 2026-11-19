@@ -47,7 +47,7 @@ describe('BuildingPanel', () => {
   test('demolishing needs confirmation', () => {
     open([{ id: 'h1', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [0, 0, 0], ...DONE }]);
     fireEvent.click(screen.getByRole('button', { name: 'Demolish' }));
-    expect(screen.getByText(/You get back 31 wood/)).toBeInTheDocument();
+    expect(screen.getByText(/You get back 26 wood/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));
     expect(useGameStore.getState().constructionSites).toHaveLength(1);
 
@@ -57,14 +57,14 @@ describe('BuildingPanel', () => {
   });
 
   test('a site under construction can be opened and shows its builder and ETA', () => {
-    const site = { id: 'c1', buildingId: 'wooden_shelter', status: 'BUILDING', position: [0, 0, 0], blocksPlaced: 20, totalBlocks: 24, materialsRequired: { wood: 25 }, materialsDelivered: { wood: 25 } };
+    const site = { id: 'c1', buildingId: 'wooden_shelter', status: 'BUILDING', position: [0, 0, 0], blocksPlaced: 16, totalBlocks: 20, materialsRequired: { wood: 25 }, materialsDelivered: { wood: 25 } };
     scanForTasks([], [site], null);
     const task = findBestTask(npc('x', 'X'));
     claimTask(task.id, 'b');
     const s = useGameStore.getState();
     open([site], { settlement: { ...s.settlement, npcs: [npc('b', 'Bria', { state: 'WORKING_BUILD', currentTaskId: task.id })] } });
     expect(screen.getByRole('dialog')).toBeInTheDocument(); // not auto-closed
-    expect(screen.getByText(/20\/24 placed\), ~24s left/)).toBeInTheDocument();
+    expect(screen.getByText(/16\/20 placed\), ~24s left/)).toBeInTheDocument();
     expect(screen.getByText('Builder: Bria')).toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe('BuildingPanel', () => {
     open([{ id: 'h1', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [0, 0, 0], ...DONE }]);
     expect(screen.getByText('Upgrade to Stone House')).toBeInTheDocument();
     expect(screen.getByText(/Beds 1 → 2/)).toBeInTheDocument();
-    expect(screen.getByText(/Costs 96 stone; needs 3 settlers/)).toBeInTheDocument();
+    expect(screen.getByText(/Costs 80 stone; needs 3 settlers/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Upgrade' })).toBeDisabled();
     expect(screen.getByText(/Needs 3 settlers/)).toBeInTheDocument();
 

@@ -58,13 +58,15 @@ describe('blueprint piece glyphs', () => {
 
   test('the refreshed buildings use pieces', () => {
     const house = parseLayers(getBuildingById('stone_house'));
-    // Slab eaves and ridge, plank floor
-    expect(house.filter((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.SLAB)).toHaveLength(24);
+    // Slab eaves and ridge, standing slab walls, plank floor
+    const slabs = house.filter((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.SLAB);
+    expect(slabs.filter((b) => shapeAxis(b.shape) === AXIS.Y)).toHaveLength(24);
+    expect(slabs.filter((b) => shapeAxis(b.shape) !== AXIS.Y).length).toBeGreaterThan(30);
     expect(house.filter((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.PLANK)).toHaveLength(20);
-    // Plank floor, eaves and ridge
-    expect(parseLayers(getBuildingById('storage_shed')).filter((b) => b.shape)).toHaveLength(40);
-    // Plinth, deck and cap
-    expect(parseLayers(getBuildingById('watchtower')).filter((b) => b.shape)).toHaveLength(45);
+    // No full stone blocks in the walls: only corner posts are full
+    expect(house.filter((b) => b.y === 1 && !b.shape).map((b) => b.blockType)).toEqual(Array(4).fill(BlockTypes.WOOD));
+    // The farm plot is all planks
+    expect(parseLayers(getBuildingById('farm_plot')).every((b) => b.shape && shapeKind(b.shape) === SHAPE_KIND.PLANK)).toBe(true);
   });
 
   test('every blueprint matches its size and costs exactly its volume', () => {
@@ -98,6 +100,51 @@ describe('blueprint piece glyphs', () => {
     expect(cells.some((c) => c.blockType === BlockTypes.IRON_ORE)).toBe(true);
     // The chimney rises above the roof
     expect(at(1, smith.size.height - 1, depth - 1)?.blockType).toBe(BlockTypes.STONE);
+  });
+});
+
+describe('wall pieces', () => {
+  const box = (layers) => ({ id: 'w', layers, size: { width: 3, height: layers.length, depth: 3 } });
+  const at = (cells, x, y, z) => cells.find((c) => c.x === x && c.y === y && c.z === z);
+
+  test('v is a standing stone slab on the outer half of the wall', () => {
+    const cells = parseLayers(box(['vvv|v.v|vvv']));
+    expect(at(cells, 1, 0, 0).box).toEqual([0, 0, 0, 2, 2, 1]); // front: low Z half
+    expect(at(cells, 1, 0, 2).box).toEqual([0, 0, 1, 2, 2, 2]); // back: high Z half
+    expect(at(cells, 0, 0, 1).box).toEqual([0, 0, 0, 1, 2, 2]); // left: low X half
+    expect(at(cells, 2, 0, 1).box).toEqual([1, 0, 0, 2, 2, 2]); // right: high X half
+    for (const c of cells) {
+      expect(shapeKind(c.shape)).toBe(SHAPE_KIND.SLAB);
+      expect(cellUnits(c)).toBe(4);
+    }
+  });
+
+  test('p is two upright boards on the outer half; stacked cells pair into whole planks', () => {
+    const cells = parseLayers(box(['.p.', '.p.', '.p.']));
+    expect(cells).toHaveLength(3);
+    for (const c of cells) {
+      expect(shapeAxis(c.shape)).toBe(AXIS.Y);
+      expect(cellPieces(c.shape)).toHaveLength(2);
+      expect(c.box).toEqual([0, 0, 0, 2, 2, 1]);
+    }
+    const dirs = cells.map((c) => plankPartnerOffset(c.shape, cellPieces(c.shape)[0].index)[1]);
+    expect(dirs).toEqual([1, -1, 1]); // the third is half a plank, pointing up at nothing
+  });
+
+  test('r is one rail bar along the wall, outer and upper half', () => {
+    const cells = parseLayers(box(['rrr|r.r|rrr']));
+    const front = at(cells, 1, 0, 0);
+    expect(shapeAxis(front.shape)).toBe(AXIS.X);
+    expect(front.box).toEqual([0, 1, 0, 2, 2, 1]);
+    const side = at(cells, 0, 0, 1);
+    expect(shapeAxis(side.shape)).toBe(AXIS.Z);
+    expect(side.box).toEqual([0, 1, 0, 1, 2, 2]);
+    expect(cellUnits(front)).toBe(2);
+  });
+
+  test('facing follows the layer\'s own extent (a tower on a wider plinth)', () => {
+    const cells = parseLayers({ id: 't', layers: ['sssss|sssss|sssss|sssss|sssss', '.....|.vvv.|.v.v.|.vvv.|.....'], size: { width: 5, height: 2, depth: 5 } });
+    expect(at(cells, 1, 1, 2).box).toEqual([0, 0, 0, 1, 2, 2]); // the tower's left wall
   });
 });
 

@@ -390,9 +390,9 @@ export const UNLOCK_STONE_HOUSE_SETTLERS = 3;      // Settlers before the Stone 
 export const UNLOCK_MANOR_SETTLERS = 6;             // Settlers before the Manor can be upgraded into
 
 // ─── Building Upgrades (in place: the bigger blueprint grows from the same corner) ───
-export const UPGRADE_SHELTER_TO_HOUSE_COST = { stone: 96 };  // The house's stone; its wood comes from the shelter
+export const UPGRADE_SHELTER_TO_HOUSE_COST = { stone: 80 };  // The house's stone; its wood comes from the shelter
 export const UPGRADE_SHELTER_TO_HOUSE_SETTLERS = UNLOCK_STONE_HOUSE_SETTLERS;  // Same milestone as building one outright
-export const UPGRADE_HOUSE_TO_MANOR_COST = { stone: 81, wood: 11, iron: 12 };  // What the manor needs beyond the house
+export const UPGRADE_HOUSE_TO_MANOR_COST = { stone: 67.5, wood: 11, iron: 12 };  // What the manor needs beyond the house
 export const UPGRADE_HOUSE_TO_MANOR_SETTLERS = UNLOCK_MANOR_SETTLERS;
 export const NPC_INTERACT_RANGE = 4;               // World units — E key range to inspect a settler (a closer stockpile/site wins)
 export const ATTRACT_BUILDING_SCORE = 5;            // Per completed building attractiveness
