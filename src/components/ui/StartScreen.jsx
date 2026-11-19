@@ -116,6 +116,7 @@ const StartScreen = ({ isMobile = false }) => {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Enter' || e.repeat) return;
+      if (useGameStore.getState().feedbackOpen) return; // typing feedback
       e.preventDefault();
       if (save) {
         if (canContinue) handleContinue();
@@ -165,6 +166,13 @@ const StartScreen = ({ isMobile = false }) => {
             disabled={loading}
           >
             {save ? 'New Game' : 'Start Game'}
+          </button>
+          <button
+            type="button"
+            className="vx-btn vx-btn--ghost vx-btn--block start-screen__feedback"
+            onClick={() => useGameStore.getState().setFeedbackOpen(true)}
+          >
+            Send Feedback
           </button>
           {error && (
             <p className="start-screen__error" role="alert">

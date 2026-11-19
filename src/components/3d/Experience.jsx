@@ -27,6 +27,7 @@ import WildlifeAnimal from './WildlifeAnimal';
 import PathVisualization from './PathVisualization';
 import ZoneOverlay from './ZoneOverlay';
 import PlanPlayerMarker from './PlanPlayerMarker';
+import ScreenshotProvider from './ScreenshotProvider';
 import ZoneInteraction from './ZoneInteraction';
 import Companion from './Companion';
 import CompanionController from './CompanionController';
@@ -344,6 +345,7 @@ const Experience = () => {
       {/* Zone designation overlays + interaction (Phase 2.2) */}
       <ZoneOverlay chunkManager={isReady ? chunkManager : null} />
       <PlanPlayerMarker />
+      <ScreenshotProvider />
       <MinedPops />
       <ZoneInteraction chunkManager={isReady ? chunkManager : null} />
 

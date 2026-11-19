@@ -91,6 +91,7 @@ const PauseMenu = () => {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (isOpen) {
+          if (useGameStore.getState().feedbackOpen) return;
           resume();
         } else {
           pause();
@@ -110,11 +111,12 @@ const PauseMenu = () => {
 
       if (!isOpen) return;
 
-      // Escape also closes
+      // Escape also closes (the feedback form first, if it's open)
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopImmediatePropagation();
-        resume();
+        if (useGameStore.getState().feedbackOpen) useGameStore.getState().setFeedbackOpen(false);
+        else resume();
         return;
       }
 
@@ -130,7 +132,7 @@ const PauseMenu = () => {
     if (!isOpen) return;
     const blockMouse = (e) => {
       // Only block events on the overlay itself, not the buttons
-      if (e.target.closest('[data-pause-button]')) return;
+      if (e.target.closest('[data-pause-button], [data-feedback-form]')) return;
       e.stopPropagation();
     };
     // Capture phase blocks mouse from reaching the canvas
@@ -162,6 +164,14 @@ const PauseMenu = () => {
           </button>
           <button type="button" data-pause-button className="vx-btn vx-btn--block" onClick={handleLoad}>
             Load Game
+          </button>
+          <button
+            type="button"
+            data-pause-button
+            className="vx-btn vx-btn--ghost vx-btn--block"
+            onClick={() => useGameStore.getState().setFeedbackOpen(true)}
+          >
+            Send Feedback
           </button>
         </div>
 

@@ -13,6 +13,7 @@ import NPCPanel from './components/ui/NPCPanel';
 import SettlementDashboard from './components/ui/SettlementDashboard';
 import PickupTextOverlay from './components/ui/PickupTextOverlay';
 import PauseMenu from './components/PauseMenu';
+import FeedbackForm from './components/ui/FeedbackForm';
 import MobileActionButtons from './components/ui/MobileActionButtons';
 import ContextButton, { RotatePieceButton } from './components/ui/ContextButton';
 import InteractPrompt from './components/ui/InteractPrompt';
@@ -125,6 +126,7 @@ function App3D() {
 
       {/* Pause menu (F10 to toggle) */}
       <PauseMenu />
+      <FeedbackForm />
 
       <Suspense fallback={null}>
         {/* Crafting UI */}

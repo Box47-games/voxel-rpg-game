@@ -122,6 +122,10 @@ WorkerPool (`src/systems/workers/WorkerPool.js`) caps at `Math.min(navigator.har
 - **`src/config/loot/*.json`** — Item templates, properties, rarity config, monster loot tables (JSON data, not code).
 - **`src/config/quests/*.json`** — Quest definitions (story, exploration, settlement) consumed by QuestManager.
 
+### Player feedback
+
+Pause menu / start screen → **Send Feedback** (`components/ui/FeedbackForm.jsx`, `store.feedbackOpen`, closed first by `backOut`). It posts rating, category, message, an optional screenshot (`store._captureScreenshot` from `ScreenshotProvider`) and `gameContext()` to the Cloudflare Worker in `workers/feedback/` (SQLite Durable Object, private `/admin` page; see its README).
+
 ### Persistence
 
 Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, schema v7, migrations inline in `migrateSave`). Main state + all modified chunks are written in one transaction. Rift state is saved via `RiftManager.serialize()`; a load before `RiftController` mounts waits in `store._pendingRiftState`. `TestNotesManager.js` stores QA tracker notes.

@@ -1,0 +1,15 @@
+# Riftholm feedback Worker (see README.md). Deployed with deploy.sh (Cloudflare
+# API) or `npx wrangler deploy`; the admin password is a secret:
+#   npx wrangler secret put ADMIN_TOKEN
+name = "riftholm-feedback"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "FEEDBACK"
+class_name = "FeedbackStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["FeedbackStore"]

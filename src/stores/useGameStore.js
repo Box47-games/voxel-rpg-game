@@ -330,6 +330,8 @@ const useGameStore = create((rawSet, get, api) => {
   settlementDashboardOpen: false, // Settlement dashboard (N key)
   helpOpen: false, // the key assignments screen (?)
   setHelpOpen: (open) => set({ helpOpen: !!open }),
+  feedbackOpen: false, // the Send feedback form (pause menu, start screen)
+  setFeedbackOpen: (open) => set({ feedbackOpen: !!open }),
   openPanel: null, // Store-owned screens: 'inventory' | 'crafting' | 'repair' (the Bag tabs) | 'tools' (touch wheel); at most one panel of any kind is open
 
   // Actions
@@ -1868,6 +1870,7 @@ const useGameStore = create((rawSet, get, api) => {
   backOut: () => {
     const s = get();
     if (s.placingBuildingId) { set({ placingBuildingId: null, ...backToPlanTool(s) }); return true; }
+    if (s.feedbackOpen) { set({ feedbackOpen: false }); return true; }
     if (s.helpOpen) { set({ helpOpen: false }); return true; }
     if (s.openPanel || s.settlementDashboardOpen || s.activeBuildingCatalog) { set(CLOSED_PANELS); return true; }
     if (s.activeNPCId || s.activeConstructionSiteId || s.activeStockpileZoneId) {
