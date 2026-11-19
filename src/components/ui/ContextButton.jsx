@@ -7,12 +7,12 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Sword, RotateCw } from 'lucide-react';
 import useGameStore from '../../stores/useGameStore';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import { meleeToward, findNearestEnemy } from '../../systems/combat/playerAttack';
 import { TOUCH_ATTACK_RANGE, TOUCH_ATTACK_REPEAT_MS } from '../../data/tuning';
 import { rotationCount } from '../../systems/chunks/piecePlacement';
+import { artUrl } from './art';
 import './ContextButton.css';
 
 /** One melee swing: at the nearest enemy in range, else the way the player faces. */
@@ -49,8 +49,8 @@ export default function ContextButton() {
   return (
     <button
       type="button"
-      className="ctx-btn"
-      style={{ '--ctx': '#e5484d' }}
+      className="vx-tbtn ctx-btn"
+      style={{ '--c': '#b8392f' }}
       aria-label="Attack"
       data-kind="attack"
       onPointerDown={onPointerDown}
@@ -58,8 +58,8 @@ export default function ContextButton() {
       onPointerCancel={release}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <Sword className="ctx-btn__icon" aria-hidden="true" />
-      <span className="ctx-btn__label">Attack</span>
+      <img src={artUrl('ui', 'sword')} alt="" />
+      <span className="vx-tbtn__label">Attack</span>
     </button>
   );
 }
@@ -79,8 +79,8 @@ export function RotatePieceButton() {
   return (
     <button
       type="button"
-      className="ctx-btn ctx-btn--small"
-      style={{ '--ctx': '#3b82c4' }}
+      className="vx-tbtn ctx-btn ctx-btn--small"
+      style={{ '--c': '#3b6fa8' }}
       aria-label={`Rotate piece (turn ${rotation + 1} of 3)`}
       data-kind="rotate"
       onPointerDown={(e) => {
@@ -89,8 +89,8 @@ export function RotatePieceButton() {
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <RotateCw className="ctx-btn__icon" aria-hidden="true" />
-      <span className="ctx-btn__label">Turn {rotation + 1}/3</span>
+      <img src={artUrl('ui', 'rotate')} alt="" />
+      <span className="vx-tbtn__label">Turn {rotation + 1}/3</span>
     </button>
   );
 }

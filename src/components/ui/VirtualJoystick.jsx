@@ -37,8 +37,9 @@ const baseStyle = {
   width: BASE_SIZE,
   height: BASE_SIZE,
   borderRadius: '50%',
-  background: 'rgba(20, 15, 30, 0.4)',
-  border: '2px solid rgba(255, 255, 255, 0.15)',
+  background: 'rgba(7, 8, 11, 0.32)',
+  border: '3px solid rgba(7, 8, 11, 0.75)',
+  boxShadow: 'inset 0 0 0 3px rgba(255, 255, 255, 0.08)',
 };
 
 const thumbBaseStyle = {
@@ -46,8 +47,10 @@ const thumbBaseStyle = {
   width: THUMB_SIZE,
   height: THUMB_SIZE,
   borderRadius: '50%',
-  background: 'rgba(100, 80, 160, 0.6)',
-  border: '2px solid rgba(200, 180, 255, 0.4)',
+  background: '#6f747d',
+  border: '3px solid #07080b',
+  boxShadow: 'inset 4px 4px 0 #9ca1a9, inset -4px -5px 0 #44484f',
+  opacity: 0.9,
   transform: 'translate(-50%, -50%)',
   transition: 'none',
 };

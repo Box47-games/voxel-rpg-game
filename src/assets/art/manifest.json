@@ -677,6 +677,27 @@
   },
   {
     "group": "ui",
+    "id": "rotate",
+    "label": "Turn piece",
+    "file": "ui/rotate.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
+    "id": "stick",
+    "label": "Joystick",
+    "file": "ui/stick.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
+    "id": "zoom",
+    "label": "Zoom",
+    "file": "ui/zoom.svg",
+    "uiGroup": "Touch controls"
+  },
+  {
+    "group": "ui",
     "id": "lock",
     "label": "Locked",
     "file": "ui/lock.svg",
@@ -715,6 +736,27 @@
     "id": "home",
     "label": "Shelter",
     "file": "ui/home.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "up",
+    "label": "Up",
+    "file": "ui/up.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "down",
+    "label": "Down",
+    "file": "ui/down.svg",
+    "uiGroup": "General"
+  },
+  {
+    "group": "ui",
+    "id": "skull",
+    "label": "Death",
+    "file": "ui/skull.svg",
     "uiGroup": "General"
   },
   {

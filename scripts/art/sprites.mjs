@@ -181,6 +181,12 @@ export const MONO = {
   moon: ['....####....', '..###.......', '.###........', '.##.........', '##..........', '##..........', '.##.........', '.###......#.', '..########..', '....####....'],
   home: ['.....##.....', '....####....', '...######...', '..########..', '.##########.', '############', '.#........#.', '.#..##....#.', '.#..##..###.', '.#..##..###.', '.##########.'],
   alert: ['.....##.....', '.....##.....', '.....##.....', '.....##.....', '.....##.....', '............', '.....##.....'],
+  rotate: ['...#####....', '..##...##.#.', '.##.....###.', '.#.....####.', '.#..........', '.#..........', '.##.....##..', '..##...##...', '...#####....'],
+  up: ['.....##.....', '....####....', '...######...', '..###..###..', '.###....###.', '###......###'],
+  down: ['###......###', '.###....###.', '..###..###..', '...######...', '....####....', '.....##.....'],
+  stick: ['....####....', '...######...', '...######...', '....####....', '.....##.....', '.....##.....', '.##########.', '############', '############'],
+  zoom: ['..#####.....', '.#.....#....', '#.......#...', '#..###..#...', '#.......#...', '.#.....#....', '..######....', '.......###..', '........###.', '.........##.'],
+  skull: ['..#######...', '.#########..', '###########.', '##..###..##.', '##..###..##.', '#####.#####.', '.####.####..', '..#.#.#.#...', '..#######...'],
 };
 
 // ── Icon list: what to draw, how, and what in the game it's for ──────────
@@ -263,8 +269,8 @@ export const ICONS = {
     'Equipment slots': { shield: 'Off-hand', helmet: 'Helmet', gloves: 'Gloves', boots: 'Boots', ring: 'Ring' },
     'Notifications': { trophy: 'Achievement', swords: 'Raid', levelUp: 'Level up', check: 'Success', warning: 'Warning', info: 'Info' },
     'Settler activities': { sleep: 'Sleeping', food: 'Hungry', talk: 'Socialising' },
-    'Touch controls': { jump: 'Jump', dash: 'Sprint', wand: 'Spell', wheel: 'Tool wheel', hand: 'Hand' },
-    'General': { lock: 'Locked', close: 'Close', alert: 'Alert', sun: 'Day', moon: 'Night', home: 'Shelter' },
+    'Touch controls': { jump: 'Jump', dash: 'Sprint', wand: 'Spell', wheel: 'Tool wheel', hand: 'Hand', rotate: 'Turn piece', stick: 'Joystick', zoom: 'Zoom' },
+    'General': { lock: 'Locked', close: 'Close', alert: 'Alert', sun: 'Day', moon: 'Night', home: 'Shelter', up: 'Up', down: 'Down', skull: 'Death' },
   }).flatMap(([group, entries]) => Object.entries(entries).map(([sprite, label]) => ({ id: sprite, label, kind: 'mono', sprite, group }))),
 };
 

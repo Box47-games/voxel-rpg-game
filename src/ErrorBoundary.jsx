@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import './ErrorBoundary.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -22,66 +23,21 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div
-          style={{
-            width: '100vw',
-            height: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#f5f5f5',
-            color: '#333',
-            fontFamily: 'monospace',
-            padding: '20px',
-            overflowY: 'auto'
-          }}
-        >
-          <h1 style={{ color: 'red', marginBottom: '20px' }}>⚠️ Game Error</h1>
-          <div
-            style={{
-              maxWidth: '600px',
-              background: 'white',
-              border: '2px solid red',
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '20px',
-              overflowX: 'auto'
-            }}
-          >
-            <h3>Error Message:</h3>
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {this.state.error?.message || 'Unknown error'}
-            </pre>
-            <h3>Stack Trace:</h3>
-            <pre
-              style={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                fontSize: '12px',
-                color: '#666'
-              }}
-            >
-              {this.state.error?.stack || 'No stack trace available'}
-            </pre>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              background: '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}
-          >
-            Reload Game
-          </button>
-          <p style={{ marginTop: '20px', fontSize: '12px', color: '#666' }}>
-            Check browser console (F12) for more details
-          </p>
+        <div className="vx-overlay err-screen" role="alert">
+          <section className="vx-frame err-screen__panel">
+            <h1 className="vx-sign-title">Something broke</h1>
+            <p className="err-screen__lead">
+              The game hit an error it couldn&apos;t recover from. Reloading usually fixes it; your last save is safe.
+            </p>
+            <pre className="err-screen__msg">{this.state.error?.message || 'Unknown error'}</pre>
+            <details className="err-screen__details">
+              <summary>Technical details</summary>
+              <pre>{this.state.error?.stack || 'No stack trace available'}</pre>
+            </details>
+            <button type="button" className="vx-pbtn vx-pbtn--block" onClick={() => window.location.reload()}>
+              Reload game
+            </button>
+          </section>
         </div>
       );
     }

@@ -1,0 +1,101 @@
+/* SpellWheel.css — the spell picker (hold Q, or the touch wand button) */
+
+.sw-fab {
+  --s: 60px;
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right, 0px));
+  bottom: max(80px, calc(60px + env(safe-area-inset-bottom, 0px)));
+  z-index: 999;
+}
+
+.sw-overlay {
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.sw {
+  width: min(720px, 100%);
+  padding: 30px 18px 12px;
+}
+
+.sw__main {
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.sw__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 110px);
+  gap: 10px;
+  align-content: start;
+}
+
+.sw__spell {
+  --size: 110px;
+  width: 110px;
+  height: 104px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-family: var(--vx-font-pixel);
+  color: var(--vx-cream);
+}
+.sw__spell img {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+.sw__spell.is-on {
+  outline: 3px solid #ffe08a;
+  outline-offset: -3px;
+}
+.sw__spell.is-poor img { opacity: 0.45; }
+.sw__dot { width: 32px; height: 32px; border: 3px solid #07080b; }
+.sw__name { font-size: 13px; line-height: 1.1; text-align: center; }
+.sw__cost { font-size: 11px; color: #8fc0ff; }
+.sw__cost.is-poor { color: #ff8a7a; }
+.sw__empty { grid-column: 1 / -1; color: var(--vx-cream-dim); }
+
+.sw__detail {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+}
+.sw__detail-name { margin: 0 0 6px; }
+.sw__desc { margin: 0 0 12px; font-size: 15px; line-height: 1.35; }
+.sw__stats { display: grid; gap: 4px; }
+.sw__stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 15px;
+  border-bottom: 2px dotted rgba(58, 36, 16, 0.35);
+}
+.sw__stat b { font-weight: 700; }
+.sw__bad { color: var(--vx-ink-bad); }
+.sw__good { color: var(--vx-ink-good); }
+
+.sw__pages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.sw__hint {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--vx-cream-dim);
+}
+
+/* Phones: grid above the details, two or three columns */
+.sw--mobile { padding: 56px 10px 16px; align-items: flex-start; }
+.sw--mobile .sw { border-width: 12px; border-image-width: 12px; padding: 22px 8px 8px; }
+.sw--mobile .sw__title { font-size: 20px; top: -40px; }
+.sw--mobile .sw__main { flex-direction: column; }
+.sw--mobile .sw__grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+.sw--mobile .sw__spell { width: auto; height: 96px; }

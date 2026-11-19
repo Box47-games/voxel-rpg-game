@@ -10,6 +10,8 @@
 
 import React, { useEffect } from 'react';
 import useGameStore from '../stores/useGameStore';
+import FramedPanel from './ui/FramedPanel';
+import { DEBUG_TOOLS_ENABLED } from '../utils/debugFlags';
 import './KeyboardShortcutsPanel.css';
 
 // Only keys that are actually bound (see useKeyboard.js and the components named)
@@ -93,40 +95,32 @@ function KeyboardShortcutsPanel() {
 
   const handleClose = () => useGameStore.getState().setHelpOpen(false);
 
+  const sections = Object.entries(shortcuts).filter(([id]) => id !== 'debug' || DEBUG_TOOLS_ENABLED);
+
   return (
-    <div className="keyboard-shortcuts-panel-overlay" onClick={handleClose}>
-      <div className="keyboard-shortcuts-panel" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="shortcuts-header">
-          <h2 className="shortcuts-title">Key Assignments</h2>
-          <button className="shortcuts-close" onClick={handleClose} aria-label="Close">
-            ✕
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="shortcuts-content">
-          {Object.entries(shortcuts).map(([id, category]) => (
-            <div key={id} className="shortcuts-section">
-              <h3 className="shortcuts-category">{category.title}</h3>
-              <div className="shortcuts-list">
-                {category.keys.map((shortcut, index) => (
-                  <div key={index} className="shortcut-item">
-                    <kbd className="shortcut-key">{shortcut.key}</kbd>
-                    <span className="shortcut-desc">{shortcut.description}</span>
-                  </div>
-                ))}
+    <FramedPanel
+      title="Controls"
+      label="Key assignments"
+      onClose={handleClose}
+      modal
+      width={980}
+      className="kh"
+      footer={<>Press <kbd className="vx-key">?</kbd> any time to show or hide this</>}
+    >
+      <div className="kh__grid">
+        {sections.map(([id, category]) => (
+          <section key={id} className="kh__section">
+            <h3 className="fp__h">{category.title}</h3>
+            {category.keys.map((shortcut) => (
+              <div key={shortcut.key} className="kh__row">
+                <kbd className="vx-key kh__key">{shortcut.key}</kbd>
+                <span>{shortcut.description}</span>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="shortcuts-footer">
-          <p>Press <kbd>?</kbd> anytime to toggle this panel</p>
-        </div>
+            ))}
+          </section>
+        ))}
       </div>
-    </div>
+    </FramedPanel>
   );
 }
 

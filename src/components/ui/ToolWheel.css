@@ -22,59 +22,45 @@
 
 /* Ring: items sit on a circle of radius --r around the close button */
 .tw-ring {
-  --r: 92px;
-  --item: 68px;
+  --r: 100px;
+  --item: 78px;
   position: relative;
   width: calc(2 * var(--r) + var(--item));
   height: calc(2 * var(--r) + var(--item));
   flex-shrink: 0;
 }
 
+/* Ring items and the close button are .vx-tbtn carved buttons */
 .tw-item,
 .tw-close {
   position: absolute;
   left: 50%;
   top: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border-radius: 50%;
-  border: 3px solid var(--vx-edge);
-  color: #fff;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
+  opacity: 1;
 }
 
 .tw-item {
-  width: var(--item);
-  height: var(--item);
+  --s: var(--item);
   transform: translate(calc(-50% + var(--x) * var(--r)), calc(-50% + var(--y) * var(--r)));
-  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--tw) 75%, #fff 5%), color-mix(in srgb, var(--tw) 50%, #000));
-  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.25), inset 0 -4px 0 rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.4);
-  font-family: var(--vx-font-ui);
-  font-size: 11px;
-  font-weight: 700;
-  text-shadow: 0 1px 2px #000;
+  gap: 3px;
 }
 
-.tw-item svg {
-  width: 24px;
-  height: 24px;
+.tw-item img {
+  width: 40%;
+  height: 40%;
+}
+
+.tw-item:active {
+  transform: translate(calc(-50% + var(--x) * var(--r)), calc(-50% + var(--y) * var(--r) + 2px));
 }
 
 .tw-close {
-  width: 52px;
-  height: 52px;
+  --s: 52px;
   transform: translate(-50%, -50%);
-  background: var(--vx-panel-raised);
 }
 
-.tw-close svg {
-  width: 22px;
-  height: 22px;
+.tw-close:active {
+  transform: translate(-50%, calc(-50% + 2px));
 }
 
 /* Block strip */
@@ -155,3 +141,16 @@
 .tw-block { width: 52px; height: 52px; padding: 0; display: flex; align-items: center; justify-content: center; background: #1d1f26; }
 .tw-block img { width: 36px; height: 36px; pointer-events: none; }
 .tw-block--unset { background: rgba(29, 31, 38, 0.55); border-style: dashed; }
+
+/* Recessed stone slots, like the Bag's (.vx-slot) */
+.tw-block {
+  border: 3px solid #07080b;
+  border-radius: 0;
+  background: #121419;
+  box-shadow: inset 4px 4px 0 rgba(0, 0, 0, 0.6), inset -3px -3px 0 rgba(255, 255, 255, 0.07);
+}
+.tw-block--hand img { width: 26px; height: 26px; image-rendering: pixelated; }
+.tw-block--held { outline: 3px solid #ffe08a; outline-offset: 2px; }
+.tw-block__count { font-family: var(--vx-font-display); font-size: 12px; text-shadow: 2px 2px 0 #07080b; }
+.tw-hint { font-family: var(--vx-font-pixel); font-size: 13px; text-shadow: 2px 2px 0 #07080b; }
+.tw-item .vx-tbtn__label { font-size: 9px; letter-spacing: 0; }

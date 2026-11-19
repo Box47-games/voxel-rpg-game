@@ -8,21 +8,21 @@
  */
 
 import React from 'react';
-import { Package, Hammer, Pickaxe, MapPin, Users, X } from 'lucide-react';
 import useGameStore, { selectHotbar } from '../../stores/useGameStore';
 import { BlockProperties } from '../../systems/chunks/blockTypes';
 import { countPlaceable, blockForMaterial } from '../../data/blockDrops';
 import { materialName } from '../../data/pieces';
-import { materialArt } from './art';
+import { artUrl, materialArt } from './art';
 import { blockArt } from './BlockHotbar';
 import './ToolWheel.css';
 
 const RING = [
-  { id: 'bag', label: 'Bag', Icon: Package, color: '#4f8cf7', run: (st) => st.togglePanel('inventory') },
-  { id: 'craft', label: 'Craft', Icon: Hammer, color: '#f2c14e', run: (st) => st.togglePanel('crafting') },
-  { id: 'build', label: 'Build', Icon: Pickaxe, color: '#ffb02e', run: (st) => st.openCatalog() },
-  { id: 'plan', label: 'Plan', Icon: MapPin, color: '#ff8c1a', run: (st) => st.enterMode('plan') },
-  { id: 'settlement', label: 'Settlement', Icon: Users, color: '#5cc36b', run: (st) => st.togglePanel('settlement') },
+  // Same icons as the HUD's mode buttons
+  { id: 'bag', label: 'Bag', icon: 'bag', color: '#3d6fd0', run: (st) => st.togglePanel('inventory') },
+  { id: 'craft', label: 'Craft', icon: 'wrench', color: '#a8711f', run: (st) => st.togglePanel('crafting') },
+  { id: 'build', label: 'Build', icon: 'hammer', color: '#b8792a', run: (st) => st.openCatalog() },
+  { id: 'plan', label: 'Plan', icon: 'mapPin', color: '#c9661a', run: (st) => st.enterMode('plan') },
+  { id: 'settlement', label: 'Settlement', icon: 'people', color: '#3f8a3a', run: (st) => st.togglePanel('settlement') },
 ];
 
 export default function ToolWheel() {
@@ -49,28 +49,28 @@ export default function ToolWheel() {
     <div className="tw-backdrop" onClick={close}>
       <div className="tw" role="dialog" aria-label="Tools" onClick={(e) => e.stopPropagation()}>
         <div className="tw-ring">
-          {RING.map(({ id, label, Icon, color, run }, i) => {
+          {RING.map(({ id, label, icon, color, run }, i) => {
             // Evenly round the circle, starting at the top
             const angle = -Math.PI / 2 + (i * 2 * Math.PI) / RING.length;
             return (
               <button
                 key={id}
                 type="button"
-                className="tw-item"
+                className="vx-tbtn tw-item"
                 style={{
-                  '--tw': color,
+                  '--c': color,
                   '--x': `${Math.cos(angle).toFixed(3)}`,
                   '--y': `${Math.sin(angle).toFixed(3)}`,
                 }}
                 onClick={() => run(st())}
               >
-                <Icon aria-hidden="true" />
-                <span>{label}</span>
+                <img src={artUrl('ui', icon)} alt="" />
+                <span className="vx-tbtn__label">{label}</span>
               </button>
             );
           })}
-          <button type="button" className="tw-close" onClick={close} aria-label="Close tools">
-            <X aria-hidden="true" />
+          <button type="button" className="vx-tbtn tw-close" style={{ '--c': '#b8392f' }} onClick={close} aria-label="Close tools">
+            <img src={artUrl('ui', 'close')} alt="" />
           </button>
         </div>
 
@@ -82,7 +82,7 @@ export default function ToolWheel() {
             aria-label="Empty hand"
             onClick={emptyHand}
           >
-            ✋
+            <img src={artUrl('ui', 'hand')} alt="" />
           </button>
           {hotbar.map((key, i) => {
             if (!key) {
