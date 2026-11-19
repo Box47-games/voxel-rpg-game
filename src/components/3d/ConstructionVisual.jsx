@@ -21,11 +21,18 @@ const unitBox = new THREE.BoxGeometry(1, 1, 1);
 const ghostMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.28, depthWrite: false });
 const nextMat = new THREE.MeshBasicMaterial({ color: '#9fd3ff', transparent: true, opacity: 0.5, depthWrite: false });
 const scaffoldMat = new THREE.MeshLambertMaterial({ color: '#9a6a3c' });
+const braceMat = new THREE.MeshLambertMaterial({ color: '#7a5230' });
+const padMat = new THREE.MeshLambertMaterial({ color: '#8f949c' });
 const plankMat = new THREE.MeshLambertMaterial({ color: '#b98551' });
 const BLUEPRINT = new THREE.Color('#7cc4ff');
 const tmpM = new THREE.Matrix4();
 const ONE = [1, 1, 1];
 const tmpC = new THREE.Color();
+const tmpQ = new THREE.Quaternion();
+const tmpE = new THREE.Euler();
+const tmpP = new THREE.Vector3();
+const tmpS = new THREE.Vector3();
+const STOREY = VOXEL_SIZE * 2; // a ledger rail and a brace every two blocks up
 
 /** Posts at the ramp's outer corners, up to the site's height. */
 function scaffoldPosts(site, size) {
@@ -36,6 +43,64 @@ function scaffoldPosts(site, size) {
   const o = SCAFFOLD_OFFSET + SCAFFOLD_WIDTH / 2 + 0.15;
   return [[x0 - o, z0 - o], [x0 + w + o, z0 - o], [x0 - o, z0 + d + o], [x0 + w + o, z0 + d + o]]
     .map(([cx, cz]) => ({ p: [cx, y0 + h / 2, cz], s: [0.3, h, 0.3] }));
+}
+
+/**
+ * The rest of the frame between the posts: a ledger rail at every storey on
+ * each side, a diagonal brace per storey (zigzagging up), and a stone pad
+ * under each post. Items are { p, s, r? } (position, size, euler rotation).
+ */
+export function scaffoldFrame(site, size) {
+  const [x0, y0, z0] = site.position;
+  const w = size.width * VOXEL_SIZE;
+  const d = size.depth * VOXEL_SIZE;
+  const h = size.height * VOXEL_SIZE;
+  const o = SCAFFOLD_OFFSET + SCAFFOLD_WIDTH / 2 + 0.15;
+  const xa = x0 - o;
+  const xb = x0 + w + o;
+  const za = z0 - o;
+  const zb = z0 + d + o;
+  const storeys = Math.max(1, Math.round(h / STOREY));
+  const sh = h / storeys;
+  const rails = [];
+  const braces = [];
+  // Sides along X (at za, zb) and along Z (at xa, xb)
+  const sides = [
+    { along: 'x', fixed: za, from: xa, to: xb },
+    { along: 'x', fixed: zb, from: xa, to: xb },
+    { along: 'z', fixed: xa, from: za, to: zb },
+    { along: 'z', fixed: xb, from: za, to: zb },
+  ];
+  for (const side of sides) {
+    const len = side.to - side.from;
+    const mid = (side.from + side.to) / 2;
+    const at = (u, y) => (side.along === 'x' ? [u, y, side.fixed] : [side.fixed, y, u]);
+    for (let k = 1; k <= storeys; k++) {
+      const y = y0 + k * sh - 0.1;
+      rails.push({ p: at(mid, y), s: side.along === 'x' ? [len, 0.18, 0.18] : [0.18, 0.18, len] });
+    }
+    for (let k = 0; k < storeys; k++) {
+      const yc = y0 + (k + 0.5) * sh;
+      const diag = Math.sqrt(len * len + sh * sh);
+      const tilt = Math.atan2(sh, len) * (k % 2 ? -1 : 1);
+      braces.push(side.along === 'x'
+        ? { p: at(mid, yc), s: [diag, 0.12, 0.12], r: [0, 0, tilt] }
+        : { p: at(mid, yc), s: [0.12, 0.12, diag], r: [-tilt, 0, 0] });
+    }
+  }
+  const pads = [[xa, za], [xb, za], [xa, zb], [xb, zb]].map(([cx, cz]) => ({ p: [cx, y0 + 0.1, cz], s: [0.6, 0.2, 0.6] }));
+  return { rails, braces, pads };
+}
+
+/** Fill an instanced mesh from { p, s, r? } items. */
+function fillInstances(mesh, items) {
+  if (!mesh) return;
+  items.forEach((b, i) => {
+    tmpQ.setFromEuler(tmpE.set(...(b.r || [0, 0, 0])));
+    tmpM.compose(tmpP.set(...b.p), tmpQ, tmpS.set(...b.s));
+    mesh.setMatrixAt(i, tmpM);
+  });
+  mesh.instanceMatrix.needsUpdate = true;
 }
 
 /** All the blueprint blocks as one instanced mesh (block colour, tinted blue). */
@@ -54,18 +119,13 @@ function GhostBlocks({ blocks }) {
   return <instancedMesh key={blocks.length} ref={ref} args={[boxGeo, ghostMat, blocks.length]} frustumCulled={false} />;
 }
 
-function Scaffold({ posts, route }) {
-  const ref = (mesh) => {
-    if (!mesh) return;
-    posts.forEach((b, i) => {
-      tmpM.makeScale(...b.s).setPosition(...b.p);
-      mesh.setMatrixAt(i, tmpM);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-  };
+function Scaffold({ posts, frame, route }) {
+  const wood = [...posts, ...frame.rails];
   return (
     <>
-      <instancedMesh key={posts.length} ref={ref} args={[unitBox, scaffoldMat, posts.length]} />
+      <instancedMesh key={`w${wood.length}`} ref={(m) => fillInstances(m, wood)} args={[unitBox, scaffoldMat, wood.length]} />
+      <instancedMesh key={`b${frame.braces.length}`} ref={(m) => fillInstances(m, frame.braces)} args={[unitBox, braceMat, frame.braces.length]} />
+      <instancedMesh key={`p${frame.pads.length}`} ref={(m) => fillInstances(m, frame.pads)} args={[unitBox, padMat, frame.pads.length]} />
       {/* The walkway: one plank run per side, spiralling up */}
       {route?.segments.map((seg, i) => {
         const box = segmentBox(route, seg);
@@ -84,7 +144,14 @@ function Scaffold({ posts, route }) {
   );
 }
 const barBgGeo = new THREE.PlaneGeometry(4, 0.4);
-const barBorderGeo = new THREE.PlaneGeometry(4.1, 0.5);
+const barBorderGeo = new THREE.PlaneGeometry(4.16, 0.56);
+const unitPlane = new THREE.PlaneGeometry(1, 1);
+const barEdgeMat = new THREE.MeshBasicMaterial({ color: '#07080b', side: THREE.DoubleSide, depthTest: false });
+const barBackMat = new THREE.MeshBasicMaterial({ color: '#2b1d10', side: THREE.DoubleSide, depthTest: false });
+const BAR_SEGMENTS = 10;
+const BAR_PAD = 0.08;
+const BAR_GAP = 0.06;
+const BAR_SEG_W = (4 - BAR_PAD * 2 - BAR_GAP * (BAR_SEGMENTS - 1)) / BAR_SEGMENTS;
 
 function ConstructionSiteVisual({ site }) {
   const barGroupRef = useRef();
@@ -119,6 +186,10 @@ function ConstructionSiteVisual({ site }) {
     () => (building ? scaffoldPosts(site, building.size) : []),
     [building, site]
   );
+  const frame = useMemo(
+    () => (building ? scaffoldFrame(site, building.size) : { rails: [], braces: [], pads: [] }),
+    [building, site]
+  );
   const route = useMemo(() => getScaffoldRoute(site), [site]);
 
   // Billboard the progress bar; pulse the next block to place
@@ -141,7 +212,6 @@ function ConstructionSiteVisual({ site }) {
 
   // Same colours as the HUD: blue while building, gold while waiting for materials
   const barColor = paid ? '#4dabf7' : '#f2c14e';
-  const barWidth = 4 * Math.min(1, progress);
 
   return (
     <>
@@ -153,25 +223,24 @@ function ConstructionSiteVisual({ site }) {
       {ghostBlocks[0] && !paid && <GhostBlocks blocks={ghostBlocks.slice(0, 1)} />}
 
       {/* Wooden scaffolding: corner posts and a ramp spiralling up to the top */}
-      <Scaffold posts={posts} route={route} />
+      <Scaffold posts={posts} frame={frame} route={route} />
 
-      {/* Progress bar */}
+      {/* Progress bar: notched segments in a dark frame, like the HUD bars */}
       <group ref={barGroupRef} position={[barX, barY, barZ]}>
-        {/* Border */}
-        <mesh geometry={barBorderGeo} position={[0, 0, -0.01]}>
-          <meshBasicMaterial color="#0b0e15" side={THREE.DoubleSide} depthTest={false} />
-        </mesh>
-        {/* Background */}
-        <mesh geometry={barBgGeo}>
-          <meshBasicMaterial color="#171c27" transparent opacity={0.9} side={THREE.DoubleSide} depthTest={false} />
-        </mesh>
-        {/* Fill bar */}
-        {barWidth > 0 && (
-          <mesh position={[-(4 - barWidth) / 2, 0, 0.01]} scale={[barWidth, 1, 1]}>
-            <planeGeometry args={[1, 0.3]} />
-            <meshBasicMaterial color={barColor} side={THREE.DoubleSide} depthTest={false} />
-          </mesh>
-        )}
+        <mesh geometry={barBorderGeo} position={[0, 0, -0.01]} material={barEdgeMat} />
+        <mesh geometry={barBgGeo} material={barBackMat} />
+        {Array.from({ length: BAR_SEGMENTS }, (_, i) => {
+          const filled = (i + 1) / BAR_SEGMENTS <= progress + 1e-6;
+          const partial = !filled && i / BAR_SEGMENTS < progress;
+          if (!filled && !partial) return null;
+          const segW = BAR_SEG_W * (filled ? 1 : (progress * BAR_SEGMENTS - i));
+          const x = -2 + BAR_PAD + i * (BAR_SEG_W + BAR_GAP) + segW / 2;
+          return (
+            <mesh key={i} geometry={unitPlane} position={[x, 0, 0.01]} scale={[segW, 0.28, 1]}>
+              <meshBasicMaterial color={barColor} side={THREE.DoubleSide} depthTest={false} toneMapped={false} />
+            </mesh>
+          );
+        })}
       </group>
     </>
   );

@@ -1,141 +1,102 @@
 /**
- * NPCThoughtBubble — Mesh-based icons above NPC heads.
+ * NPCThoughtBubble — a pixel speech bubble over a settler's head with the
+ * game's own icon for what they are doing or need (pickaxe, crate, hammer,
+ * sprout, axe, berry, food, sleep, talk).
  *
- * No drei Text/Billboard (causes WebGL shader corruption).
- * Rendered as child of SettlerNPC group at Y=3.2 above ground.
- *
- * Icon types: mining, hauling, building, farming, hungry, sleeping, socializing
+ * A three.js sprite (always faces the camera; no drei Text/Billboard, which
+ * corrupts shaders here). One canvas texture per thought, shared by every
+ * settler thinking it. Rendered as a child of the SettlerNPC group.
  */
 
-import React, { useRef, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { artUrl } from '../ui/art';
 
-// Shared geometries
-const handleGeo = new THREE.BoxGeometry(0.06, 0.3, 0.06);
-const headGeo = new THREE.BoxGeometry(0.15, 0.1, 0.06);
-const cubeGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-const hammerHandleGeo = new THREE.BoxGeometry(0.06, 0.25, 0.06);
-const hammerHeadGeo = new THREE.BoxGeometry(0.18, 0.08, 0.08);
-const coneGeo = new THREE.ConeGeometry(0.06, 0.2, 6);
-const sphereGeo = new THREE.SphereGeometry(0.06, 6, 6);
-const zSphereGeo = new THREE.SphereGeometry(0.05, 4, 4);
-
-// Materials (created once)
-const orangeMat = new THREE.MeshBasicMaterial({ color: '#ff8c00' });
-const yellowMat = new THREE.MeshBasicMaterial({ color: '#ffcc00' });
-const blueMat = new THREE.MeshBasicMaterial({ color: '#4488ff' });
-const redMat = new THREE.MeshBasicMaterial({ color: '#ff4444' });
-const purpleMat = new THREE.MeshBasicMaterial({ color: '#8844cc' });
-const magentaMat = new THREE.MeshBasicMaterial({ color: '#ff88ff' });
-const brownMat = new THREE.MeshBasicMaterial({ color: '#8B4513' });
-const greenMat = new THREE.MeshBasicMaterial({ color: '#44cc44' });
-
-// Pickaxe icon: two crossed boxes (handle + head)
-function PickaxeIcon() {
-  return (
-    <group>
-      <mesh geometry={handleGeo} material={brownMat} rotation={[0, 0, 0.5]} position={[0, 0, 0]} />
-      <mesh geometry={headGeo} material={orangeMat} position={[0.08, 0.12, 0]} rotation={[0, 0, 0.5]} />
-    </group>
-  );
-}
-
-// Box icon: small cube
-function BoxIcon() {
-  return <mesh geometry={cubeGeo} material={yellowMat} />;
-}
-
-// Hammer icon: L-shape from two boxes
-function HammerIcon() {
-  return (
-    <group>
-      <mesh geometry={hammerHandleGeo} material={brownMat} position={[0, -0.05, 0]} />
-      <mesh geometry={hammerHeadGeo} material={blueMat} position={[0, 0.1, 0]} />
-    </group>
-  );
-}
-
-// Drumstick icon: cone + sphere
-function DrumstickIcon() {
-  return (
-    <group rotation={[0, 0, -0.4]}>
-      <mesh geometry={coneGeo} material={brownMat} position={[0, -0.05, 0]} />
-      <mesh geometry={sphereGeo} material={redMat} position={[0, 0.1, 0]} />
-    </group>
-  );
-}
-
-// Zzz icon: three ascending spheres
-function SleepIcon() {
-  return (
-    <group>
-      <mesh geometry={zSphereGeo} material={purpleMat} position={[-0.08, -0.05, 0]} />
-      <mesh geometry={zSphereGeo} material={purpleMat} position={[0, 0.05, 0]} scale={1.3} />
-      <mesh geometry={zSphereGeo} material={purpleMat} position={[0.08, 0.15, 0]} scale={1.6} />
-    </group>
-  );
-}
-
-// Chat icon: two overlapping spheres
-function ChatIcon() {
-  return (
-    <group>
-      <mesh geometry={sphereGeo} material={magentaMat} position={[-0.04, 0, 0]} scale={1.5} />
-      <mesh geometry={sphereGeo} material={magentaMat} position={[0.06, 0.06, 0]} scale={1.2} />
-    </group>
-  );
-}
-
-// Sprout icon: green cone on a brown base
-function SproutIcon() {
-  return (
-    <group>
-      <mesh geometry={cubeGeo} material={brownMat} position={[0, -0.08, 0]} scale={[1, 0.4, 1]} />
-      <mesh geometry={coneGeo} material={greenMat} position={[0, 0.05, 0]} />
-    </group>
-  );
-}
-
-const ICON_COMPONENTS = {
-  mining: PickaxeIcon,
-  hauling: BoxIcon,
-  building: HammerIcon,
-  farming: SproutIcon,
-  chopping: PickaxeIcon,
-  foraging: SproutIcon,
-  hungry: DrumstickIcon,
-  sleeping: SleepIcon,
-  socializing: ChatIcon,
+/** Thought type → [art group, id]. */
+export const THOUGHT_ART = {
+  mining: ['ui', 'pickaxe'],
+  hauling: ['ui', 'crate'],
+  building: ['ui', 'hammer'],
+  farming: ['ui', 'sprout'],
+  chopping: ['items', 'stoneAxe'],
+  foraging: ['materials', 'berry'],
+  hungry: ['ui', 'food'],
+  sleeping: ['ui', 'sleep'],
+  socializing: ['ui', 'talk'],
 };
 
+// Bubble drawn on a 16×18 pixel grid, 8 canvas pixels per grid pixel
+const PX = 8;
+const W = 16;
+const H = 18;
+const SIZE = 0.62; // world units wide
+
+const textures = new Map();
+
+/** Shared texture for a thought: dark stone bubble, wood rim, tail, icon. */
+export function thoughtTexture(type) {
+  if (textures.has(type)) return textures.get(type);
+  const canvas = document.createElement('canvas');
+  canvas.width = W * PX;
+  canvas.height = H * PX;
+  const ctx = canvas.getContext('2d');
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  if (ctx) {
+    const px = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x * PX, y * PX, w * PX, h * PX); };
+    // Outline, rim and body with clipped corners; a tail at the bottom left
+    px(1, 0, 14, 15, '#07080b');
+    px(0, 1, 16, 13, '#07080b');
+    px(1, 1, 14, 13, '#7a5230');
+    px(2, 2, 12, 11, '#2a2c33');
+    px(3, 2, 10, 1, '#3a3d46');
+    px(4, 15, 3, 1, '#07080b');
+    px(4, 14, 3, 1, '#7a5230');
+    px(5, 16, 1, 1, '#07080b');
+    const [group, id] = THOUGHT_ART[type] || [];
+    const url = group ? artUrl(group, id) : null;
+    if (url && typeof Image !== 'undefined') {
+      const img = new Image();
+      img.onload = () => {
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 3 * PX, 2.5 * PX, 10 * PX, 10 * PX);
+        texture.needsUpdate = true;
+      };
+      img.src = url;
+    }
+  }
+  const entry = { texture, aspect: W / H };
+  textures.set(type, entry);
+  return entry;
+}
+
 const NPCThoughtBubble = React.memo(({ type }) => {
-  const groupRef = useRef();
+  const spriteRef = useRef();
   const startTime = useMemo(() => Date.now() / 1000, [type]); // eslint-disable-line react-hooks/exhaustive-deps
+  const known = !!(type && THOUGHT_ART[type]);
+  const material = useMemo(
+    () => (known ? new THREE.SpriteMaterial({ map: thoughtTexture(type).texture, transparent: true, toneMapped: false }) : null),
+    [type, known]
+  );
+  useEffect(() => () => material?.dispose(), [material]);
 
   useFrame(() => {
-    if (!groupRef.current) return;
+    if (!spriteRef.current) return;
     const t = Date.now() / 1000 - startTime;
-    // Gentle bob animation
-    groupRef.current.position.y = 3.2 + Math.sin(t * 2) * 0.08;
-    // Always face camera (billboard via lookAt won't work reliably, just reset rotation)
-    groupRef.current.rotation.y = 0;
+    // Pop in, then bob gently
+    const pop = Math.min(1, t * 6);
+    spriteRef.current.position.y = 3.3 + Math.sin(t * 2) * 0.06;
+    spriteRef.current.scale.set(SIZE * pop, (SIZE / (W / H)) * pop, 1);
   });
 
-  if (!type) return null;
-  const IconComponent = ICON_COMPONENTS[type];
-  if (!IconComponent) return null;
+  if (!known || !material) return null;
 
-  return (
-    <group ref={groupRef} position={[0, 3.2, 0]}>
-      {/* Background bubble (translucent white) */}
-      <mesh>
-        <sphereGeometry args={[0.22, 8, 8]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.4} />
-      </mesh>
-      <IconComponent />
-    </group>
-  );
+  return <sprite ref={spriteRef} material={material} position={[0, 3.3, 0]} scale={[0.01, 0.01, 1]} />;
 });
 
 NPCThoughtBubble.displayName = 'NPCThoughtBubble';
