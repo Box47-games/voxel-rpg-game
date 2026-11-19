@@ -45,105 +45,104 @@
 }
 
 /* ── Panel ─────────────────────────────────────────────── */
+/* Older screens use these names; they now wear the "carved" look below:
+   a stone-brick strip in a thin wood frame, and pixel buttons. */
 
 .vx-panel {
-  background: var(--vx-panel);
-  color: var(--vx-text);
-  border: 2px solid var(--vx-edge);
-  border-radius: 3px;
-  box-shadow:
-    inset 0 2px 0 var(--vx-bevel-light),
-    inset 0 -3px 0 var(--vx-bevel-dark),
-    0 4px 0 rgba(0, 0, 0, 0.3),
-    0 8px 24px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  font-family: var(--vx-font-body);
+  color: var(--vx-cream, #f1e6cc);
+  font-family: var(--vx-font-pixel, var(--vx-font-body));
+  background: url('../assets/art/textures/stonewall.svg') 0 0 / 64px 64px, #2a2c33;
+  image-rendering: pixelated;
+  border: 10px solid transparent;
+  border-image: url('../assets/art/textures/frame-wood.svg') 8 / 14px stretch;
+  border-radius: 0;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.45);
 }
 
 .vx-heading {
   font-family: var(--vx-font-display);
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--vx-text);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.06em;
+  color: #ffe08a;
+  text-shadow: 3px 3px 0 #07080b;
   margin: 0;
 }
 
 /* ── Buttons ───────────────────────────────────────────── */
+/* Same shapes as .vx-pbtn: hard bevels, black edge, a drop step */
 
 .vx-btn {
-  --btn-top: #3d4860;
-  --btn-bottom: #2a3244;
-  --btn-text: var(--vx-text);
+  --btn-face: #6f747d;
+  --btn-hi: #9ca1a9;
+  --btn-lo: #44484f;
+  --btn-text: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 8px 16px 11px;
   min-height: 44px;
   font-family: var(--vx-font-display);
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--btn-text);
-  background: linear-gradient(var(--btn-top), var(--btn-bottom));
-  border: 2px solid var(--vx-edge);
-  border-radius: 3px;
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -4px 0 rgba(0, 0, 0, 0.3),
-    0 3px 0 rgba(0, 0, 0, 0.35);
+  text-shadow: 2px 2px 0 #07080b;
+  background: var(--btn-face);
+  border: 3px solid #07080b;
+  border-radius: 0;
+  box-shadow: inset 4px 4px 0 var(--btn-hi), inset -4px -5px 0 var(--btn-lo), 0 4px 0 #07080b;
   cursor: pointer;
   touch-action: manipulation;
   user-select: none;
-  transition: transform 80ms ease, filter 120ms ease, box-shadow 80ms ease;
+  transition: transform 80ms ease, filter 120ms ease;
 }
 
 .vx-btn:hover:not(:disabled) {
-  filter: brightness(1.15);
+  filter: brightness(1.1);
 }
 
 .vx-btn:active:not(:disabled) {
   transform: translateY(2px);
-  box-shadow:
-    inset 0 2px 0 rgba(0, 0, 0, 0.25),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.1),
-    0 1px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: inset 4px 4px 0 var(--btn-hi), inset -4px -5px 0 var(--btn-lo), 0 2px 0 #07080b;
 }
 
 .vx-btn:focus-visible {
-  outline: 2px solid var(--vx-gold-light);
+  outline: 3px solid #ffe08a;
   outline-offset: 2px;
 }
 
 .vx-btn:disabled {
   cursor: default;
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .vx-btn--primary {
-  --btn-top: #ffd36a;
-  --btn-bottom: #e0a73a;
-  --btn-text: #2a1b06;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  --btn-face: #e8b443;
+  --btn-hi: #ffe08a;
+  --btn-lo: #a8711f;
+  --btn-text: #2a1806;
+  text-shadow: none;
 }
 
 .vx-btn--danger {
-  --btn-top: #e8605a;
-  --btn-bottom: #b8342e;
+  --btn-face: #b8392f;
+  --btn-hi: #e0675c;
+  --btn-lo: #7a2018;
 }
 
+/* Plank: the quiet choice */
 .vx-btn--ghost {
-  --btn-top: rgba(255, 255, 255, 0.08);
-  --btn-bottom: rgba(255, 255, 255, 0.03);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.08);
+  --btn-hi: rgba(255, 255, 255, 0.18);
+  --btn-lo: rgba(0, 0, 0, 0.45);
+  background: url('../assets/art/textures/planks.svg') 0 0 / 64px 32px, #7a5230;
+  image-rendering: pixelated;
 }
 
 .vx-btn--lg {
-  font-size: 1.25rem;
-  padding: 14px 24px;
+  font-size: 19px;
+  padding: 12px 22px 15px;
   min-height: 56px;
 }
 
@@ -160,15 +159,15 @@
   justify-content: center;
   min-width: 1.7em;
   padding: 1px 6px 2px;
-  font-family: var(--vx-font-ui);
-  font-size: 0.78rem;
+  font-family: var(--vx-font-pixel, var(--vx-font-ui));
+  font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.3;
-  color: #1d2029;
-  background: #ece6d4;
-  border: 1px solid var(--vx-edge);
-  border-radius: 3px;
-  box-shadow: inset 0 -3px 0 #a9a28c;
+  color: #2a1806;
+  background: #ece2c6;
+  border: 2px solid #07080b;
+  border-radius: 0;
+  box-shadow: inset 0 -3px 0 #b0a382, 0 2px 0 #07080b;
   white-space: nowrap;
 }
 
@@ -546,5 +545,65 @@ button.vx-slot:hover { filter: brightness(1.25); }
   line-height: 1;
   color: #fff;
   text-shadow: 1px 0 0 #07080b, -1px 0 0 #07080b, 0 1px 0 #07080b, 0 -1px 0 #07080b;
+  pointer-events: none;
+}
+
+/* ── Touch buttons (art pass 3) ───────────────────────────────────────
+ * .vx-tbtn  square carved button for thumbs: a coloured stone face (--c),
+ *           hard bevel, black edge and a drop step; a pixel icon inside and
+ *           an optional .vx-tbtn__label under it. Size with --s.
+ */
+.vx-tbtn {
+  --c: #5a5f69;
+  --s: 48px;
+  flex: none;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: var(--s);
+  height: var(--s);
+  padding: 0 0 3px;
+  color: #fff;
+  font-family: var(--vx-font-display);
+  font-size: 18px;
+  line-height: 1;
+  text-shadow: 2px 2px 0 #07080b;
+  background: var(--c);
+  border: 3px solid #07080b;
+  border-radius: 0;
+  box-shadow:
+    inset 3px 3px 0 color-mix(in srgb, var(--c) 55%, #fff),
+    inset -3px -4px 0 color-mix(in srgb, var(--c) 55%, #000),
+    0 4px 0 #07080b;
+  opacity: 0.92;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.vx-tbtn:active,
+.vx-tbtn.is-on {
+  transform: translateY(2px);
+  box-shadow:
+    inset 3px 3px 0 color-mix(in srgb, var(--c) 55%, #fff),
+    inset -3px -4px 0 color-mix(in srgb, var(--c) 55%, #000),
+    0 2px 0 #07080b;
+  filter: brightness(1.15);
+}
+.vx-tbtn img {
+  width: 52%;
+  height: 52%;
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 2px 0 #07080b);
+  pointer-events: none;
+}
+.vx-tbtn__label {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   pointer-events: none;
 }

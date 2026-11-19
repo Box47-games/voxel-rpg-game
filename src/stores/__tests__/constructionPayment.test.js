@@ -35,7 +35,7 @@ describe('placing a construction site pays from the player inventory', () => {
 
   test('a short site builds as far as its materials go, then waits', () => {
     giveMaterials({ wood: 5 });
-    s().placeConstructionSite('wooden_shelter', [0, 0, 0], { wood: 25 }, 21);
+    s().placeConstructionSite('wooden_shelter', [0, 0, 0], { wood: 63 }, 74);
     const id = s().constructionSites[0].id;
     let placed = 0;
     while (canPlaceNext(s().constructionSites[0]) && placed < 50) {
@@ -49,11 +49,11 @@ describe('placing a construction site pays from the player inventory', () => {
     // What it built cost no more than what was delivered
     expect(materialsUsed(site).wood).toBeLessThanOrEqual(5 + 1e-9);
     // More wood arrives: it carries on to the end
-    giveMaterials({ wood: 30 });
-    s().deliverToConstruction(id, 'wood', 20);
+    giveMaterials({ wood: 60 });
+    s().deliverToConstruction(id, 'wood', 58);
     while (canPlaceNext(s().constructionSites[0])) s().advanceConstruction(id);
     expect(s().constructionSites[0].status).toBe('COMPLETE');
-    expect(materialsUsed(s().constructionSites[0]).wood).toBeCloseTo(25, 9);
+    expect(materialsUsed(s().constructionSites[0]).wood).toBeCloseTo(63, 9);
   });
 
   test('cancelling a part-built site takes down what went up and refunds everything delivered', () => {

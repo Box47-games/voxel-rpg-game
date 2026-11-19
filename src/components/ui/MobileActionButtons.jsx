@@ -9,8 +9,8 @@ import React, { useCallback, useRef } from 'react';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import { setVirtualKey } from '../../hooks/useKeyboard';
 import useGameStore from '../../stores/useGameStore';
+import { artUrl } from './art';
 
-const BUTTON_SIZE = 44;
 const GAP = 6;
 
 const containerStyle = {
@@ -30,21 +30,6 @@ const containerStyle = {
   WebkitUserSelect: 'none',
 };
 
-const buttonStyle = {
-  width: BUTTON_SIZE,
-  height: BUTTON_SIZE,
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.2)',
-  background: 'rgba(20, 15, 30, 0.6)',
-  color: 'rgba(255,255,255,0.8)',
-  fontSize: 18,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  touchAction: 'manipulation',
-  WebkitTapHighlightColor: 'transparent',
-};
 
 const MobileActionButtons = () => {
   const jumpTimeout = useRef(null);
@@ -80,9 +65,15 @@ const MobileActionButtons = () => {
 
   return (
     <div style={containerStyle}>
-      <button style={buttonStyle} onTouchStart={(e) => { e.preventDefault(); handleJump(); }} onClick={handleJump} aria-label="Jump">⬆</button>
-      <button style={buttonStyle} onTouchStart={(e) => { e.preventDefault(); handleInteract(); }} onClick={handleInteract} aria-label="Interact">E</button>
-      <button style={buttonStyle} onTouchStart={(e) => { e.preventDefault(); handleDodge(); }} onClick={handleDodge} aria-label="Dodge">💨</button>
+      <button type="button" className="vx-tbtn" onTouchStart={(e) => { e.preventDefault(); handleJump(); }} onClick={handleJump} aria-label="Jump">
+        <img src={artUrl('ui', 'jump')} alt="" />
+      </button>
+      <button type="button" className="vx-tbtn" style={{ '--c': '#7a5a2a' }} onTouchStart={(e) => { e.preventDefault(); handleInteract(); }} onClick={handleInteract} aria-label="Interact">
+        E
+      </button>
+      <button type="button" className="vx-tbtn" onTouchStart={(e) => { e.preventDefault(); handleDodge(); }} onClick={handleDodge} aria-label="Dodge">
+        <img src={artUrl('ui', 'dash')} alt="" />
+      </button>
     </div>
   );
 };

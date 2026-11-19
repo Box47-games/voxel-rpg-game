@@ -29,7 +29,6 @@ export function unlockAnnouncements(before, now) {
   if (gear.length) {
     out.push({
       type: 'achievement',
-      icon: '🔓',
       art: { group: 'ui', id: 'lock' },
       title: gear.length === 1 ? 'New recipe unlocked' : `${gear.length} new recipes unlocked`,
       description: `${gear.join(', ')}. Find ${gear.length === 1 ? 'it' : 'them'} in the Craft tab.`,
@@ -39,7 +38,6 @@ export function unlockAnnouncements(before, now) {
   for (const name of buildings) {
     out.push({
       type: 'achievement',
-      icon: '🏗',
       art: { group: 'ui', id: 'hammer' },
       title: 'New building unlocked',
       description: `${name}. Find it in the Build catalog or Plan mode.`,

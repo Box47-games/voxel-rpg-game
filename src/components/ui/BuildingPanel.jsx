@@ -7,7 +7,8 @@
 import React, { useCallback, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
-import './settlementPanels.css';
+import FramedPanel, { NotchedBar } from './FramedPanel';
+import { materialArt } from './art';
 import { getBuildingById } from '../../data/buildings';
 import { getTask } from '../../systems/settlement/TaskAssignmentEngine';
 import {
@@ -26,52 +27,32 @@ const MATERIAL_COLORS = {
   wood: '#8B4513', stone: '#808080', iron: '#C0C0C0', coal: '#333333',
 };
 
-// Badge per stage: a site builds as materials arrive, so it can be waiting part way
+// Tag per stage: a site builds as materials arrive, so it can be waiting part way
 const STAGE_BADGE = {
-  waiting: { text: 'WAITING', color: '#ffaa00' },
-  building: { text: 'BUILDING', color: '#44aaff' },
-  complete: { text: 'COMPLETE', color: '#44ff44' },
+  waiting: { text: 'WAITING', tag: 'vx-tag--lock', bar: '#e8b443' },
+  building: { text: 'BUILDING', tag: 'vx-tag--info', bar: '#5b9ae8' },
+  complete: { text: 'COMPLETE', tag: 'vx-tag--ready', bar: '#6cbf4a' },
 };
 
 function MaterialDeliveryRow({ material, required, delivered, playerQty, siteId }) {
   const deliverToConstruction = useGameStore((s) => s.deliverToConstruction);
   const remaining = required - delivered;
-
-  const btnStyle = (enabled) => ({
-    padding: '4px 8px',
-    minWidth: 36,
-    background: enabled ? '#444' : '#2a2a2a',
-    color: enabled ? '#fff' : '#666',
-    border: '1px solid #555',
-    borderRadius: 3,
-    cursor: enabled ? 'pointer' : 'default',
-    fontFamily: 'monospace',
-    fontSize: 13,
-    touchAction: 'manipulation',
-  });
-
   const canDeliver = remaining > 0 && playerQty > 0;
+  const icon = materialArt(material);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0', borderBottom: '1px solid #333' }}>
-      <div style={{
-        width: 14, height: 14, borderRadius: 2,
-        background: MATERIAL_COLORS[material] || '#888',
-        flexShrink: 0,
-      }} />
-      <div style={{ width: 60, fontWeight: 'bold', textTransform: 'capitalize', fontSize: 13 }}>
-        {material}
-      </div>
-      <div style={{ width: 65, textAlign: 'right', fontSize: 12, color: delivered >= required ? '#44ff44' : '#ffaa00' }}>
-        {formatBlocks(delivered)}/{required}
-      </div>
-      <div style={{ width: 45, textAlign: 'right', color: '#aaa', fontSize: 12 }}>
-        inv:{formatBlocks(playerQty)}
-      </div>
-
-      <button style={btnStyle(canDeliver)} onClick={() => deliverToConstruction(siteId, material, 1)} disabled={!canDeliver}>+1</button>
-      <button style={btnStyle(canDeliver && playerQty >= 10)} onClick={() => deliverToConstruction(siteId, material, 10)} disabled={!canDeliver || playerQty < 10}>+10</button>
-      <button style={btnStyle(canDeliver)} onClick={() => deliverToConstruction(siteId, material, remaining)} disabled={!canDeliver}>All&rarr;</button>
+    <div className="fp__row bd-row">
+      {icon
+        ? <img src={icon} alt="" width="20" height="20" />
+        : <span className="fp__swatch" style={{ background: MATERIAL_COLORS[material] || '#888' }} />}
+      <span className="fp__grow" style={{ textTransform: 'capitalize' }}>{material}</span>
+      <span className={`fp__num ${delivered >= required ? 'fp__good' : 'fp__warn'}`}>{formatBlocks(delivered)}/{required}</span>
+      <span className="fp__num fp__dim" title="In your bag">bag {formatBlocks(playerQty)}</span>
+      <span className="bd-row__btns">
+        <button type="button" className="vx-pbtn vx-pbtn--stone fp__mini" onClick={() => deliverToConstruction(siteId, material, 1)} disabled={!canDeliver}>+1</button>
+        <button type="button" className="vx-pbtn vx-pbtn--stone fp__mini" onClick={() => deliverToConstruction(siteId, material, 10)} disabled={!canDeliver || playerQty < 10}>+10</button>
+        <button type="button" className="vx-pbtn vx-pbtn--stone fp__mini" onClick={() => deliverToConstruction(siteId, material, remaining)} disabled={!canDeliver}>All&rarr;</button>
+      </span>
     </div>
   );
 }
@@ -119,24 +100,16 @@ function UpgradeSection({ site, building }) {
   const from = building.effects || {};
   const to = target.effects || {};
   return (
-    <div style={{ marginTop: 12, padding: 8, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 4, fontSize: 13 }}>
-      <div style={{ color: '#88aaff', marginBottom: 4 }}>Upgrade to {target.name}</div>
-      <div style={{ color: '#aaa', fontSize: 12 }}>
+    <div className="fp__well">
+      <h3 className="fp__h">Upgrade to {target.name}</h3>
+      <div className="fp__muted">
         Beds {from.housing || 0} → {to.housing || 0}, attractiveness +{from.attractiveness || 0} → +{to.attractiveness || 0}
       </div>
-      <div style={{ color: '#aaa', fontSize: 12, marginBottom: 8 }}>
+      <div className="fp__muted" style={{ marginBottom: 8 }}>
         Costs {formatMaterials(upgrade.cost)}; needs {upgrade.settlers} settler{upgrade.settlers === 1 ? '' : 's'}
       </div>
-      {problem && <div style={{ color: '#ffb347', fontSize: 12, marginBottom: 8 }}>{problem}</div>}
-      <button
-        onClick={start}
-        disabled={!!problem}
-        style={{
-          width: '100%', padding: '6px 0', borderRadius: 4, fontFamily: 'monospace', fontSize: 13, touchAction: 'manipulation',
-          background: problem ? '#2a2a2a' : '#2a3a5a', color: problem ? '#666' : '#9cf',
-          border: '1px solid #456', cursor: problem ? 'default' : 'pointer',
-        }}
-      >
+      {problem && <div className="fp__warn" style={{ marginBottom: 8 }}>{problem}</div>}
+      <button type="button" className="vx-pbtn vx-pbtn--green vx-pbtn--block" onClick={start} disabled={!!problem}>
         Upgrade
       </button>
     </div>
@@ -157,78 +130,69 @@ function CompletedBuilding({ site, building, onDemolished }) {
     store.setActiveNPC(id);
   };
 
-  const row = { fontSize: 13, padding: '4px 0', borderBottom: '1px solid #333' };
   return (
-    <div>
-      <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>{building.description}</div>
+    <>
+      <p className="fp__muted" style={{ margin: 0 }}>{building.description}</p>
 
-      {effects.housing > 0 && (
-        <div style={row}>
-          Beds: {residents.length} / {effects.housing}
-          {residents.length === 0 ? <span style={{ color: '#888' }}> (empty)</span> : (
-            <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {residents.map((r) => {
-                const [id, name] = r.split('|');
-                return (
-                  <button
-                    key={id}
-                    onClick={() => openResident(id)}
-                    style={{ background: '#223', color: '#9cf', border: '1px solid #345', borderRadius: 3, padding: '2px 8px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 12 }}
-                  >
-                    {name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+      <div className="fp__rows">
+        {effects.housing > 0 && (
+          <div className="fp__row" style={{ flexWrap: 'wrap' }}>
+            <span className="fp__grow">
+              Beds: {residents.length} / {effects.housing}
+              {residents.length === 0 && <span className="fp__dim"> (empty)</span>}
+            </span>
+            {residents.length > 0 && (
+              <div className="fp__chips" style={{ width: '100%' }}>
+                {residents.map((r) => {
+                  const [id, name] = r.split('|');
+                  return (
+                    <button key={id} type="button" className="vx-pbtn vx-pbtn--stone fp__mini" onClick={() => openResident(id)}>
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
-      {effects.enablesFarming && (
-        <div style={row}>
-          {farms.length === 0
-            ? 'No farm yet: create a Farm zone (Z) next to this plot'
-            : `Powers ${farms.length} farm${farms.length === 1 ? '' : 's'}`}
-        </div>
-      )}
+        {effects.enablesFarming && (
+          <div className="fp__row">
+            {farms.length === 0
+              ? 'No farm yet: create a Farm zone (Z) next to this plot'
+              : `Powers ${farms.length} farm${farms.length === 1 ? '' : 's'}`}
+          </div>
+        )}
 
-      {effects.attractiveness > 0 && (
-        <div style={row}>Attractiveness +{effects.attractiveness}</div>
-      )}
+        {effects.attractiveness > 0 && (
+          <div className="fp__row">Attractiveness +{effects.attractiveness}</div>
+        )}
+      </div>
 
       {building.upgrade && <UpgradeSection site={site} building={building} />}
 
       {!confirming ? (
-        <button
-          onClick={() => setConfirming(true)}
-          style={{ marginTop: 12, width: '100%', padding: '6px 0', background: '#4a2a2a', color: '#ff8888', border: '1px solid #6a4a4a', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace', fontSize: 13, touchAction: 'manipulation' }}
-        >
+        <button type="button" className="vx-pbtn vx-pbtn--red vx-pbtn--block" onClick={() => setConfirming(true)}>
           Demolish
         </button>
       ) : (
-        <div style={{ marginTop: 12, padding: 8, border: '1px solid #6a4a4a', borderRadius: 4, fontSize: 13 }}>
-          <div style={{ marginBottom: 8 }}>
+        <div className="fp__well fp__well--danger">
+          <p style={{ margin: '0 0 8px' }}>
             Demolish the {building.name}?
             {Object.keys(refund).length > 0 && ` You get back ${formatMaterials(refund)}.`}
             {residents.length > 0 && ` ${residents.length} settler${residents.length === 1 ? ' loses their' : 's lose their'} bed.`}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => onDemolished(useGameStore.getState().demolishBuilding(site.id))}
-              style={{ flex: 1, padding: '6px 0', background: '#7a2a2a', color: '#fff', border: '1px solid #a44', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace' }}
-            >
+          </p>
+          <div className="fp__btns">
+            <button type="button" className="vx-pbtn vx-pbtn--red" onClick={() => onDemolished(useGameStore.getState().demolishBuilding(site.id))}>
               Demolish
             </button>
-            <button className="sp-btn"
-              onClick={() => setConfirming(false)}
-              style={{ flex: 1, padding: '6px 0', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace' }}
-            >
+            <button type="button" className="vx-pbtn vx-pbtn--stone" onClick={() => setConfirming(false)}>
               Keep it
             </button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -287,160 +251,77 @@ export default function BuildingPanel() {
     : null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000,
-        pointerEvents: 'none',
-        padding: 16,
-        boxSizing: 'border-box',
-      }}
+    <FramedPanel
+      title={building.name}
+      onClose={closePanel}
+      width={480}
+      header={(
+        <>
+          <span className={`vx-tag ${badge.tag}`}>{badge.text}</span>
+          {site.upgradeFrom && site.status !== 'COMPLETE' && (
+            <span className="fp__sub">upgrading the {getBuildingById(site.upgradeFrom)?.name}</span>
+          )}
+        </>
+      )}
+      footer="Press E or Esc to close"
     >
-      <div
-        role="dialog"
-        aria-label={building.name}
-        className="sp-panel"
-        style={{
-          background: 'rgba(10, 10, 20, 0.92)',
-          border: '2px solid #4488ff',
-          borderRadius: 8,
-          padding: 16,
-          width: '100%',
-          maxWidth: 480,
-          boxSizing: 'border-box',
-          overflowY: 'auto',
-          maxHeight: '80vh',
-          color: '#eee',
-          fontFamily: 'monospace',
-          pointerEvents: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div>
-            <span className="sp-title" style={{ fontSize: 16, fontWeight: 'bold', color: '#4488ff' }}>{building.name}</span>
-            {site.upgradeFrom && site.status !== 'COMPLETE' && (
-              <span style={{ marginLeft: 6, fontSize: 11, color: '#aaa' }}>
-                upgrading the {getBuildingById(site.upgradeFrom)?.name}
-              </span>
-            )}
-            <span style={{
-              marginLeft: 8,
-              fontSize: 11,
-              padding: '2px 6px',
-              borderRadius: 3,
-              background: badge.color,
-              color: '#000',
-              fontWeight: 'bold',
-            }}>
-              {badge.text}
-            </span>
-          </div>
-          <button className="sp-btn"
-            onClick={closePanel}
-            style={{
-              background: '#333', color: '#fff', border: '1px solid #555',
-              borderRadius: 4, padding: '4px 10px', cursor: 'pointer',
-              fontFamily: 'monospace', fontSize: 14,
-            }}
-          >
-            X
-          </button>
+      <div>
+        <div className="fp__sub" style={{ marginBottom: 4 }}>
+          {site.status === 'COMPLETE' ? 'Complete!' : `Built: ${site.blocksPlaced}/${site.totalBlocks}`}
         </div>
-
-        {/* Progress bar */}
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 12, color: '#aaa', marginBottom: 3 }}>
-            {site.status === 'COMPLETE' ? 'Complete!' : `Built: ${site.blocksPlaced}/${site.totalBlocks}`}
-          </div>
-          <div style={{ width: '100%', height: 8, background: '#222', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{
-              width: `${blockPct * 100}%`,
-              height: '100%',
-              background: badge.color,
-              borderRadius: 4,
-              transition: 'width 0.2s',
-            }} />
-          </div>
-        </div>
-
-        {/* Material delivery: while anything is still to come (building goes on meanwhile) */}
-        {stillNeeded && (
-          <>
-            <div style={{ overflowY: 'auto', maxHeight: '40vh' }}>
-              {Object.entries(site.materialsRequired).map(([mat, req]) => (
-                <MaterialDeliveryRow
-                  key={mat}
-                  material={mat}
-                  required={req}
-                  delivered={site.materialsDelivered[mat] || 0}
-                  playerQty={blocksAvailable(materials, mat)}
-                  siteId={activeSiteId}
-                />
-              ))}
-            </div>
-
-            {/* Bulk deliver */}
-            <button
-              onClick={handleDeliverAll}
-              style={{
-                marginTop: 8, padding: '6px 0', background: '#2a4a2a', color: '#88ff88',
-                border: '1px solid #4a6a4a', borderRadius: 4, cursor: 'pointer',
-                fontFamily: 'monospace', fontSize: 13, touchAction: 'manipulation',
-              }}
-            >
-              Deliver All
-            </button>
-          </>
-        )}
-
-        {stage === 'waiting' && shortText && (
-          <div style={{ padding: 10, color: '#ffaa00', fontSize: 13, textAlign: 'center' }}>
-            {site.blocksPlaced > 0 ? 'Paused' : 'Not started'}: the next {site.blocksPlaced > 0 ? 'piece' : 'block'} needs {shortText} more
-          </div>
-        )}
-
-        {stage === 'building' && (() => {
-          const [builderName, skill] = builder ? builder.split('|') : [null, null];
-          const eta = formatEta(getConstructionEta(site, builder ? Number(skill) : null));
-          return (
-            <div style={{ padding: 10, color: '#44aaff', fontSize: 13, textAlign: 'center' }}>
-              <div>Building as materials arrive ({site.blocksPlaced}/{site.totalBlocks} placed){eta ? `, ${eta} left` : ''}</div>
-              <div style={{ color: '#aaa', fontSize: 12, marginTop: 4 }}>
-                {builderName ? `Builder: ${builderName}` : 'No settler building it: it builds itself slowly'}
-              </div>
-            </div>
-          );
-        })()}
-
-        {site.status === 'COMPLETE' && (
-          <CompletedBuilding site={site} building={building} onDemolished={handleDemolished} />
-        )}
-
-        {/* Cancel button (only for non-complete sites) */}
-        {site.status !== 'COMPLETE' && !(site.upgradeFrom && site.status !== 'PLACED') && (
-          <button
-            onClick={handleCancel}
-            style={{
-              marginTop: 8, padding: '6px 0', background: '#4a2a2a', color: '#ff8888',
-              border: '1px solid #6a4a4a', borderRadius: 4, cursor: 'pointer',
-              fontFamily: 'monospace', fontSize: 13, touchAction: 'manipulation',
-            }}
-          >
-            {site.upgradeFrom ? 'Cancel upgrade' : 'Cancel Construction'}
-          </button>
-        )}
-
-        {/* Footer */}
-        <div style={{ marginTop: 8, fontSize: 11, color: '#666', textAlign: 'center' }}>
-          Press E or Escape to close
-        </div>
+        <NotchedBar value={blockPct} color={badge.bar} label="Built" />
       </div>
-    </div>
+
+      {/* Material delivery: while anything is still to come (building goes on meanwhile) */}
+      {stillNeeded && (
+        <>
+          <div className="fp__rows">
+            {Object.entries(site.materialsRequired).map(([mat, req]) => (
+              <MaterialDeliveryRow
+                key={mat}
+                material={mat}
+                required={req}
+                delivered={site.materialsDelivered[mat] || 0}
+                playerQty={blocksAvailable(materials, mat)}
+                siteId={activeSiteId}
+              />
+            ))}
+          </div>
+          <button type="button" className="vx-pbtn vx-pbtn--green vx-pbtn--block" onClick={handleDeliverAll}>
+            Deliver All
+          </button>
+        </>
+      )}
+
+      {stage === 'waiting' && shortText && (
+        <p className="fp__warn fp__center" style={{ margin: 0 }}>
+          {site.blocksPlaced > 0 ? 'Paused' : 'Not started'}: the next {site.blocksPlaced > 0 ? 'piece' : 'block'} needs {shortText} more
+        </p>
+      )}
+
+      {stage === 'building' && (() => {
+        const [builderName, skill] = builder ? builder.split('|') : [null, null];
+        const eta = formatEta(getConstructionEta(site, builder ? Number(skill) : null));
+        return (
+          <div className="fp__center">
+            <div className="fp__info">Building as materials arrive ({site.blocksPlaced}/{site.totalBlocks} placed){eta ? `, ${eta} left` : ''}</div>
+            <div className="fp__sub">
+              {builderName ? `Builder: ${builderName}` : 'No settler building it: it builds itself slowly'}
+            </div>
+          </div>
+        );
+      })()}
+
+      {site.status === 'COMPLETE' && (
+        <CompletedBuilding site={site} building={building} onDemolished={handleDemolished} />
+      )}
+
+      {/* Cancel button (only for non-complete sites) */}
+      {site.status !== 'COMPLETE' && !(site.upgradeFrom && site.status !== 'PLACED') && (
+        <button type="button" className="vx-pbtn vx-pbtn--red vx-pbtn--block" onClick={handleCancel}>
+          {site.upgradeFrom ? 'Cancel upgrade' : 'Cancel Construction'}
+        </button>
+      )}
+    </FramedPanel>
   );
 }

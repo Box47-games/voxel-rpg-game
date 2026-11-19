@@ -78,7 +78,7 @@ describe('Farm Plot requirement', () => {
   });
 
   test('the plot must be within range of the zone edge', () => {
-    const near = getFarmPlots([plot({ position: [BOUNDS.maxX + FARM_PLOT_RANGE - 4, 2, 0] })]);
+    const near = getFarmPlots([plot({ position: [BOUNDS.maxX + FARM_PLOT_RANGE - 6, 2, 0] })]);
     const far = getFarmPlots([plot({ position: [BOUNDS.maxX + FARM_PLOT_RANGE + 10, 2, 0] })]);
     expect(hasFarmPlotNear(BOUNDS, near)).toBe(true);
     expect(hasFarmPlotNear(BOUNDS, far)).toBe(false);

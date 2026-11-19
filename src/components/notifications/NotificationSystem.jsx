@@ -88,8 +88,7 @@ export const showAchievementNotification = (title, description, reward) => {
       type: 'achievement',
       title,
       description,
-      reward,
-      icon: '🏆'
+      reward
     });
   }
 };
@@ -101,7 +100,6 @@ export const showRaidNotification = (raidType, wave, totalWaves, difficulty) => 
       title: 'RAID APPROACHING!',
       description: `${raidType} - Wave ${wave}/${totalWaves}`,
       extra: `Difficulty: ${difficulty}`,
-      icon: '⚔️',
       duration: 7000
     });
   }
@@ -113,8 +111,7 @@ export const showLevelUpNotification = (npcName, level, statsGained) => {
       type: 'levelup',
       title: 'LEVEL UP!',
       description: `${npcName} reached Level ${level}`,
-      extra: statsGained,
-      icon: '✨'
+      extra: statsGained
     });
   }
 };
@@ -124,8 +121,7 @@ export const showSuccessNotification = (title, description) => {
     window.addNotification({
       type: 'success',
       title,
-      description,
-      icon: '✓'
+      description
     });
   }
 };
@@ -135,8 +131,7 @@ export const showWarningNotification = (title, description) => {
     window.addNotification({
       type: 'warning',
       title,
-      description,
-      icon: '⚠️'
+      description
     });
   }
 };
@@ -146,8 +141,7 @@ export const showInfoNotification = (title, description) => {
     window.addNotification({
       type: 'info',
       title,
-      description,
-      icon: 'ℹ️'
+      description
     });
   }
 };

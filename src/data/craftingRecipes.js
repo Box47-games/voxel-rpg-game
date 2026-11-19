@@ -44,7 +44,7 @@ export const CRAFTING_RECIPES = {
       damage: 5,
       critChance: 2,
     },
-    icon: '⚔️',
+    icon: 'sword',
   },
   steelSword: {
     id: 'steelSword',
@@ -62,7 +62,7 @@ export const CRAFTING_RECIPES = {
       critChance: 5,
       critDamage: 10,
     },
-    icon: '⚔️',
+    icon: 'sword',
   },
   crystalSword: {
     id: 'crystalSword',
@@ -80,7 +80,7 @@ export const CRAFTING_RECIPES = {
       critChance: 10,
       critDamage: 25,
     },
-    icon: '⚔️',
+    icon: 'sword',
   },
 
   // Armor
@@ -98,7 +98,7 @@ export const CRAFTING_RECIPES = {
       defense: 5,
       maxHealth: 10,
     },
-    icon: '🛡️',
+    icon: 'shield',
   },
   ironArmor: {
     id: 'ironArmor',
@@ -114,7 +114,7 @@ export const CRAFTING_RECIPES = {
       defense: 10,
       maxHealth: 25,
     },
-    icon: '🛡️',
+    icon: 'shield',
   },
   crystalArmor: {
     id: 'crystalArmor',
@@ -132,7 +132,7 @@ export const CRAFTING_RECIPES = {
       maxHealth: 50,
       maxMana: 20,
     },
-    icon: '🛡️',
+    icon: 'shield',
   },
 
   // Helmets
@@ -150,7 +150,7 @@ export const CRAFTING_RECIPES = {
       defense: 3,
       maxHealth: 5,
     },
-    icon: '⛑️',
+    icon: 'helmet',
   },
 
   // Rings
@@ -166,7 +166,7 @@ export const CRAFTING_RECIPES = {
     stats: {
       damage: 2,
     },
-    icon: '💍',
+    icon: 'ring',
   },
   crystalRing: {
     id: 'crystalRing',
@@ -183,7 +183,7 @@ export const CRAFTING_RECIPES = {
       maxMana: 15,
       critChance: 3,
     },
-    icon: '💍',
+    icon: 'ring',
   },
 
   // === HARVESTING TOOLS ===
@@ -205,7 +205,7 @@ export const CRAFTING_RECIPES = {
     },
     maxDurability: DURABILITY_STONE,
     craftingBonus: 5, // Bonus to crafting quality when equipped
-    icon: '🪓',
+    icon: 'pickaxe',
   },
 
   stonePickaxe: {
@@ -226,7 +226,7 @@ export const CRAFTING_RECIPES = {
     },
     maxDurability: DURABILITY_STONE,
     craftingBonus: 5,
-    icon: '⛏️',
+    icon: 'pickaxe',
   },
 
   ironAxe: {
@@ -246,7 +246,7 @@ export const CRAFTING_RECIPES = {
     },
     maxDurability: DURABILITY_IRON,
     craftingBonus: 10,
-    icon: '🪓',
+    icon: 'pickaxe',
   },
 
   ironPickaxe: {
@@ -268,7 +268,7 @@ export const CRAFTING_RECIPES = {
     },
     maxDurability: DURABILITY_IRON,
     craftingBonus: 10,
-    icon: '⛏️',
+    icon: 'pickaxe',
   },
 
   steelAxe: {
@@ -288,7 +288,7 @@ export const CRAFTING_RECIPES = {
     },
     maxDurability: DURABILITY_STEEL,
     craftingBonus: 20,
-    icon: '🪓',
+    icon: 'pickaxe',
   },
 
   steelPickaxe: {
@@ -310,7 +310,7 @@ export const CRAFTING_RECIPES = {
     },
     maxDurability: DURABILITY_STEEL,
     craftingBonus: 20,
-    icon: '⛏️',
+    icon: 'pickaxe',
   },
 
   // === BASIC WEAPONS ===
@@ -328,7 +328,7 @@ export const CRAFTING_RECIPES = {
       damage: 3,
       critChance: 1,
     },
-    icon: '🏏',
+    icon: 'sword',
   },
 
   stoneSword: {
@@ -345,7 +345,7 @@ export const CRAFTING_RECIPES = {
       damage: 4,
       critChance: 2,
     },
-    icon: '⚔️',
+    icon: 'sword',
   },
 
   // Consumables
@@ -363,7 +363,7 @@ export const CRAFTING_RECIPES = {
       type: 'heal',
       value: 50,
     },
-    icon: '🧪',
+    icon: 'flask',
   },
   manaPotion: {
     id: 'manaPotion',
@@ -379,7 +379,7 @@ export const CRAFTING_RECIPES = {
       type: 'mana',
       value: 50,
     },
-    icon: '🧪',
+    icon: 'flask',
   },
   ragePotion: {
     id: 'ragePotion',
@@ -395,7 +395,7 @@ export const CRAFTING_RECIPES = {
       type: 'rage',
       value: 100,
     },
-    icon: '🧪',
+    icon: 'flask',
   },
 
   // === HERBAL CONSUMABLES ===
@@ -415,7 +415,7 @@ export const CRAFTING_RECIPES = {
       type: 'heal',
       value: 30,
     },
-    icon: '🌿',
+    icon: 'sprout',
   },
 
   berryJam: {
@@ -431,7 +431,7 @@ export const CRAFTING_RECIPES = {
       type: 'food',
       value: 15,
     },
-    icon: '🫐',
+    icon: 'food',
   },
 
   cookedMeat: {
@@ -448,7 +448,7 @@ export const CRAFTING_RECIPES = {
       type: 'food',
       value: 35,
     },
-    icon: '🍖',
+    icon: 'food',
   },
 
   mushroomStew: {
@@ -466,7 +466,7 @@ export const CRAFTING_RECIPES = {
       type: 'food',
       value: 30,
     },
-    icon: '🍄',
+    icon: 'food',
   },
 
   crystalElixir: {
@@ -485,7 +485,7 @@ export const CRAFTING_RECIPES = {
       value: 10,
       duration: 600, // 10 minutes
     },
-    icon: '✨',
+    icon: 'wand',
   },
 };
 

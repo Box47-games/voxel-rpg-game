@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   color: var(--vx-text);
-  font-family: var(--vx-font-body);
+  font-family: var(--vx-font-pixel);
   overflow-y: auto;
   animation: start-screen-in 0.6s ease-out both;
 }
@@ -256,3 +256,6 @@
     animation: none;
   }
 }
+
+/* Touch controls drawn as icons (attack, tools, wand buttons) */
+.start-screen__icon-key img { width: 16px; height: 16px; image-rendering: pixelated; }

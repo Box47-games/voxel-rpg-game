@@ -22,10 +22,11 @@ import {
 // block's share); a cost no cell uses (or an upgrade's) is spread over every
 // cell. Building waits only when the next cell's share hasn't arrived.
 
-/** The cost material a blueprint cell's block counts toward ('wood', 'stone', 'iron'). */
+/** The cost material a blueprint cell's block counts toward ('wood', 'stone', 'iron', 'coal'). */
 const MATERIAL_OF_BLOCK = {
   ...Object.fromEntries(Object.entries(MATERIAL_BLOCK).map(([mat, type]) => [type, mat])),
   [BlockTypes.IRON_ORE]: 'iron',
+  [BlockTypes.COAL_ORE]: 'coal',
 };
 
 const EPS = 1e-6;

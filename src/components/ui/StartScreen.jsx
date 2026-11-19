@@ -8,6 +8,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import useGameStore from '../../stores/useGameStore';
+import { artUrl } from './art';
 import { game3DSaveManager } from '../../persistence/Game3DSaveManager';
 import './StartScreen.css';
 
@@ -35,10 +36,10 @@ const TOUCH_CONTROLS = [
   [['Stick'], 'Move'],
   [['Drag'], 'Look around'],
   [['Tap'], 'Attack / cast'],
-  [['⚔'], 'Act: attack, mine, place'],
-  [['▦'], 'Tools: bag, build, plan'],
+  [[{ icon: 'sword', label: 'Attack button' }], 'Attack (hold a block to mine)'],
+  [[{ icon: 'grid', label: 'Tools button' }], 'Tools: bag, build, plan'],
   [['Pinch'], 'Zoom'],
-  [['🪄'], 'Spell wheel'],
+  [[{ icon: 'wand', label: 'Wand button' }], 'Spell wheel'],
 ];
 
 /** Start playing from whatever state the store is in. */
@@ -187,11 +188,15 @@ const StartScreen = ({ isMobile = false }) => {
             {controls.map(([keys, action]) => (
               <li key={action}>
                 <span className="start-screen__keys">
-                  {keys.map((k) => (
+                  {keys.map((k) => (typeof k === 'string' ? (
                     <kbd key={k} className="vx-key">
                       {k}
                     </kbd>
-                  ))}
+                  ) : (
+                    <kbd key={k.icon} className="vx-key start-screen__icon-key" aria-label={k.label}>
+                      <img src={artUrl('ui', k.icon)} alt="" />
+                    </kbd>
+                  )))}
                 </span>
                 <span className="start-screen__action">{action}</span>
               </li>

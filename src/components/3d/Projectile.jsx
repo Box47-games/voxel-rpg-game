@@ -4,6 +4,7 @@ import { RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
 import { isSolid } from '../../systems/chunks/blockTypes';
+import { SpellBolt } from './spellBolts';
 
 // Distance at which the fallback hit check registers a hit
 const HIT_RADIUS = 1.5;
@@ -56,6 +57,9 @@ const Projectile = ({
     store.updatePlayer({ comboCount: player.comboCount + 1, comboTimer: 3 });
 
     hitData.takeDamage(Math.round(finalDamage));
+
+    // Impact: voxel chips in the spell's colour
+    store.addParticleEffect({ position: hitPos, color, type: 'burst', count: 14 });
 
     // Status effect (freeze, poison, ...)
     if (effectType && effectDuration && hitData.applyStatusEffect) {
@@ -177,42 +181,6 @@ const Projectile = ({
     }
   });
 
-  // Render different projectile types with unique visuals
-  const renderProjectile = () => {
-    if (type === 'beam') {
-      // Beam spell - elongated cylinder
-      return (
-        <group>
-          <mesh castShadow>
-            <cylinderGeometry args={[beamWidth, beamWidth, 3, 8]} />
-            <meshBasicMaterial color={color} />
-          </mesh>
-          <pointLight color={color} intensity={3} distance={10} />
-        </group>
-      );
-    }
-
-    // Default projectile sphere with enhancements
-    return (
-      <group>
-        {/* Projectile core */}
-        <mesh castShadow>
-          <sphereGeometry args={[0.3, 16, 16]} />
-          <meshBasicMaterial color={color} />
-        </mesh>
-
-        {/* Glow effect */}
-        <pointLight color={color} intensity={2} distance={5} />
-
-        {/* Particle trail effect */}
-        <mesh position={[-velocity.current.x * 0.02, -velocity.current.y * 0.02, -velocity.current.z * 0.02]}>
-          <sphereGeometry args={[0.2, 8, 8]} />
-          <meshBasicMaterial color={color} transparent opacity={0.5} />
-        </mesh>
-      </group>
-    );
-  };
-
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -224,7 +192,7 @@ const Projectile = ({
       linearVelocity={velocity.current.toArray()}
       onIntersectionEnter={handleIntersection}
     >
-      {renderProjectile()}
+      <SpellBolt spellId={spellId} color={color} direction={direction} type={type} beamWidth={beamWidth} />
     </RigidBody>
   );
 };

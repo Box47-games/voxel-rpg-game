@@ -60,8 +60,8 @@ describe('BlockInteraction E key with settlers', () => {
     expect(useGameStore.getState().activeStockpileZoneId).toBeNull();
   });
 
-  // Wooden Shelter is 3x3 voxels: its centre is position + 3 on x and z
-  const shelterCenteredAt = (x) => ({ id: 'home', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [x - 3, 0, -3] });
+  // Wooden Shelter is 5x4 voxels: its centre is position + 5 on x and + 4 on z
+  const shelterCenteredAt = (x) => ({ id: 'home', buildingId: 'wooden_shelter', status: 'COMPLETE', position: [x - 5, 0, -4] });
 
   test('a completed building close by opens its panel', () => {
     useGameStore.setState({ constructionSites: [shelterCenteredAt(4)] });

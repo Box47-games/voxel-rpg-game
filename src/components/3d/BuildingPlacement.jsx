@@ -2,13 +2,14 @@
  * BuildingPlacement — Ghost preview + click-to-place for construction sites.
  *
  * Active when placingBuildingId !== null. Raycasts from the cursor (or the
- * screen centre in first person) to find the terrain surface, renders a
- * translucent preview, validates placement, and commits on click.
+ * screen centre in first person) to find the terrain surface, renders the
+ * building as a blueprint (BlueprintGhost: blue when the spot is good, red
+ * when not), validates placement, and commits on click.
  * Touch: tap to move the preview there, tap the same spot again to place.
  * Right-click (without dragging the camera) cancels.
  */
 
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
@@ -16,8 +17,8 @@ import { getBuildingById, parseLayers, cellBox } from '../../data/buildings';
 import { VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { isSolid } from '../../systems/chunks/blockTypes';
 import { getBlockColor } from '../../systems/chunks/blockTypes';
+import BlueprintGhost, { BLUEPRINT_COLOR, BLUEPRINT_BAD } from './BlueprintGhost';
 
-const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
 const MAX_RAY_DISTANCE = 160;
 const DRAG_PX = 8; // more movement than this is a camera drag, not a click
 const RETAP_PX = 40; // touch: a second tap this close to the first confirms
@@ -31,6 +32,7 @@ export default function BuildingPlacement({ chunkManager }) {
   const previewRef = useRef(null);
   const positionRef = useRef([0, 0, 0]);
   const validRef = useRef(false);
+  const [spotOk, setSpotOk] = useState(true); // drawn colour; flips only when it changes
   const rayDir = useRef(new THREE.Vector3());
   const raycaster = useRef(new THREE.Raycaster());
   // Screen point the preview follows (NDC); null = screen centre
@@ -40,14 +42,10 @@ export default function BuildingPlacement({ chunkManager }) {
   const building = useMemo(() => placingBuildingId ? getBuildingById(placingBuildingId) : null, [placingBuildingId]);
   const blocks = useMemo(() => building ? parseLayers(building) : [], [building]);
 
-  // Create instanced mesh data for the ghost blocks
+  // Blueprint cells; a piece (slab, plank floor) shows as the part of the cell it fills
   const blockData = useMemo(() => {
     if (!building || blocks.length === 0) return null;
-    return blocks.map((b) => {
-      // A piece (slab, plank floor) shows as the part of the cell it fills
-      const { center, size } = cellBox(b, VOXEL_SIZE);
-      return { center, scale: size.map((v) => v / VOXEL_SIZE), color: getBlockColor(b.blockType) };
-    });
+    return blocks.map((b) => ({ ...cellBox(b, VOXEL_SIZE), color: getBlockColor(b.blockType) }));
   }, [building, blocks]);
 
   // Raycast from camera center to find terrain placement position
@@ -135,20 +133,8 @@ export default function BuildingPlacement({ chunkManager }) {
       }
     }
 
+    if (validRef.current !== valid) setSpotOk(valid);
     validRef.current = valid;
-
-    // Update ghost block colors (green = valid, red = invalid)
-    const children = previewRef.current.children;
-    for (let i = 0; i < children.length; i++) {
-      const mesh = children[i];
-      if (mesh.isMesh && mesh.material) {
-        mesh.material.color.setRGB(
-          valid ? 0 : 1,
-          valid ? 1 : 0,
-          0
-        );
-      }
-    }
   });
 
   // Handle click to place + right-click/Escape to cancel
@@ -224,21 +210,13 @@ export default function BuildingPlacement({ chunkManager }) {
 
   return (
     <group ref={previewRef} visible={false}>
-      {blockData.map((b, i) => (
-        <mesh
-          key={i}
-          geometry={boxGeo}
-          position={b.center}
-          scale={b.scale}
-        >
-          <meshBasicMaterial
-            color="#00ff00"
-            transparent
-            opacity={0.3}
-            depthWrite={false}
-          />
-        </mesh>
-      ))}
+      <BlueprintGhost
+        boxes={blockData}
+        size={building.size}
+        voxelSize={VOXEL_SIZE}
+        color={spotOk ? BLUEPRINT_COLOR : BLUEPRINT_BAD}
+        tint={false}
+      />
     </group>
   );
 }

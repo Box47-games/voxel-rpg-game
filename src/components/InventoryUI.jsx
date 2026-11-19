@@ -11,6 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 import ToolDurability from './ui/ToolDurability';
 import BagFrame from './ui/BagFrame';
 import { artUrl, itemArt, materialArt, rarityClass, RARITY_INK } from './ui/art';
+import LivePlayerView from './ui/LivePlayerView';
 import { materialName, pieceInfo, isBuildingMaterial, PIECES } from '../data/pieces';
 import { hotbarAllows } from '../data/blockDrops';
 import BagHotbar from './ui/BagHotbar';
@@ -69,7 +70,7 @@ const fmt = (v) => (typeof v === 'number' ? +v.toFixed(1) : v);
 /** An item's picture: generated art, else its emoji. */
 function ItemPicture({ item }) {
   const url = itemArt(item);
-  return url ? <img src={url} alt="" /> : <span className="vx-slot__emoji" aria-hidden="true">{item.icon}</span>;
+  return url ? <img src={url} alt="" /> : <img src={artUrl('ui', item.icon) || artUrl('ui', 'box')} alt="" />;
 }
 
 function EquipSlot({ def, item, selected, onSelect }) {
@@ -200,7 +201,7 @@ const InventoryUI = () => {
               ))}
             </div>
             <div className="inv__niche">
-              <img src={artUrl('portraits', 'player')} alt="Your character" />
+              <LivePlayerView />
             </div>
             <div className="inv__doll-col">
               {RIGHT_SLOTS.map((def) => (

@@ -63,6 +63,11 @@ export const BUILDING_MILESTONES = {
     met: (s) => settledCount(s) >= HOUSE,
     progress: (s) => `${Math.min(HOUSE, settledCount(s))}/${HOUSE} settlers`,
   },
+  blacksmith: {
+    goal: `Have ${HOUSE} settlers`,
+    met: (s) => settledCount(s) >= HOUSE,
+    progress: (s) => `${Math.min(HOUSE, settledCount(s))}/${HOUSE} settlers`,
+  },
   watchtower: {
     goal: 'Close a rift',
     met: (s) => riftsClosed(s) >= 1,

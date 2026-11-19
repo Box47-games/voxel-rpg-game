@@ -1,164 +1,133 @@
 /**
- * Companion.jsx — 3D voxel companion that follows the player.
+ * Companion.jsx — the companion that follows the player, on the same voxel
+ * rigs as everyone else: a robed mage, a helmeted mercenary or a gatherer in
+ * a straw hat (humanoidModel), or a wolf pet and a deer mount (animalModels).
+ * Above it, a small pixel plaque: a health bar, a state block and a bond
+ * block that grows with the bond.
  *
- * Renders a voxel humanoid similar to SettlerNPC but with distinct appearance
- * based on companion type. Shows health bar, bond indicator, and state color.
+ * Only `active` and `type` are subscribed to; the position (written every
+ * frame by CompanionController) is read inside useFrame.
  */
 
-import React, { useRef, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import useGameStore from '../../stores/useGameStore';
+import { createHumanoidInstance } from './characters/humanoidModel';
+import { createHumanoidAnimState, stepHumanoidAnimation, triggerAction } from './characters/humanoidAnimation';
+import { applyBonePose } from './voxelRig';
+import { ANIMAL_MODELS, createAnimalInstance } from './wildlife/animalModels';
+import { createAnimState, stepAnimation } from './wildlife/animalAnimation';
+import { applyAnimalPose } from './WildlifeAnimal';
 
-// Shared geometries
-const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-const bodyGeo = new THREE.BoxGeometry(0.6, 0.8, 0.4);
-const legGeo = new THREE.BoxGeometry(0.2, 0.5, 0.2);
-const armGeo = new THREE.BoxGeometry(0.18, 0.45, 0.18);
-const healthBarBgGeo = new THREE.PlaneGeometry(1.0, 0.08);
-const healthBarFgGeo = new THREE.PlaneGeometry(1.0, 0.08);
-const bondGeo = new THREE.SphereGeometry(0.1, 6, 6);
-
-// Type-specific colors
-const TYPE_COLORS = {
-  PET: { primary: '#886644', secondary: '#aa8866', skin: '#ccaa88' },
-  MERCENARY: { primary: '#444488', secondary: '#666699', skin: '#ddccbb' },
-  MAGE: { primary: '#663388', secondary: '#8844aa', skin: '#eeddcc' },
-  MOUNT: { primary: '#664422', secondary: '#886644', skin: '#bbaa88' },
-  GATHERER: { primary: '#448844', secondary: '#66aa66', skin: '#ddccbb' },
+const BASE_LOOK = {
+  skin: '#e8b98f', hair: '#4a3020', hairStyle: 'short', eye: '#2a2420',
+  shirt: '#5a5a66', trim: '#c9a85a', pants: '#3e3428', boots: '#3a2a1e', belt: '#5b3a22',
+  gloves: null, cape: null, satchel: false, sheathedSword: false, hat: null, beard: false, apron: null,
 };
 
-// State colors
+/** Humanoid companions by type. */
+export const COMPANION_LOOKS = {
+  MAGE: { ...BASE_LOOK, shirt: '#5b3f8a', trim: '#d2ad52', pants: '#3e2c5a', boots: '#2e2438', hair: '#dcdce4', hairStyle: 'long', beard: true, cape: '#33224f' },
+  MERCENARY: { ...BASE_LOOK, shirt: '#44506a', trim: '#9aa3ad', jerkin: '#5a4632', hat: 'helmet', sheathedSword: true, gloves: '#4a3a2c', hairStyle: 'short' },
+  GATHERER: { ...BASE_LOOK, shirt: '#4f8a4a', trim: '#e3c46b', hat: 'straw', satchel: true, hairStyle: 'ponytail', hair: '#8a5a2a' },
+};
+
+/** Animal companions by type (species in animalModels). */
+export const COMPANION_ANIMALS = { PET: 'WOLF', MOUNT: 'DEER' };
+
 const STATE_COLORS = {
-  IDLE: '#44cc44',
-  FOLLOWING: '#44cc44',
-  ATTACKING: '#ff4444',
-  DEFENDING: '#4488ff',
-  GATHERING: '#ffcc00',
-  SCOUTING: '#00ccff',
-  RESTING: '#8844cc',
-  DEAD: '#666666',
+  IDLE: '#6cbf4a', FOLLOWING: '#6cbf4a', ATTACKING: '#d9473f', DEFENDING: '#5b9ae8',
+  GATHERING: '#e8b443', SCOUTING: '#7fe3ff', RESTING: '#8a55d8', DEAD: '#6d717a',
 };
+
+const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
+const BAR_W = 0.9;
+
+/** The rig for a companion type: { rig, animal } (animal is the species or null). */
+export function createCompanionRig(type) {
+  const species = COMPANION_ANIMALS[type];
+  if (species) return { rig: createAnimalInstance(species), animal: species };
+  return { rig: createHumanoidInstance(COMPANION_LOOKS[type] || COMPANION_LOOKS.MAGE), animal: null };
+}
 
 const Companion = React.memo(() => {
-  const groupRef = useRef();
-  const leftLegRef = useRef();
-  const rightLegRef = useRef();
-  const leftArmRef = useRef();
-  const rightArmRef = useRef();
-  const healthBarRef = useRef();
-  const walkPhase = useRef(0);
-  const prevPos = useRef([0, 0, 0]);
+  const active = useGameStore((s) => s.companion.active);
+  const type = useGameStore((s) => s.companion.type);
 
-  const companion = useGameStore((s) => s.companion);
+  const { rig, animal } = useMemo(() => createCompanionRig(type), [type]);
+  useEffect(() => () => rig?.dispose(), [rig]);
+  const anim = useRef(null);
+  anim.current = anim.current || (animal ? createAnimState(0.4) : createHumanoidAnimState(0.4));
+  useEffect(() => {
+    anim.current = animal ? createAnimState(0.4) : createHumanoidAnimState(0.4);
+  }, [animal]);
 
-  const colors = TYPE_COLORS[companion.type] || TYPE_COLORS.MAGE;
+  const rootRef = useRef();
+  const plaqueRef = useRef();
+  const healthRef = useRef();
+  const bondRef = useRef();
+  const prev = useRef(null);
+  const yaw = useRef(0);
 
   const materials = useMemo(() => ({
-    skin: new THREE.MeshLambertMaterial({ color: colors.skin }),
-    primary: new THREE.MeshLambertMaterial({ color: colors.primary }),
-    secondary: new THREE.MeshLambertMaterial({ color: colors.secondary }),
-    healthBg: new THREE.MeshBasicMaterial({ color: '#333333', transparent: true, opacity: 0.6, side: THREE.DoubleSide }),
-    healthFg: new THREE.MeshBasicMaterial({ color: '#44cc44', side: THREE.DoubleSide }),
-    bond: new THREE.MeshBasicMaterial({ color: '#ff6688' }),
-    state: new THREE.MeshBasicMaterial({ color: '#44cc44' }),
-  }), [colors]);
+    bg: new THREE.MeshBasicMaterial({ color: '#07080b', toneMapped: false }),
+    health: new THREE.MeshBasicMaterial({ color: '#6cbf4a', toneMapped: false }),
+    state: new THREE.MeshBasicMaterial({ color: '#6cbf4a', toneMapped: false }),
+    bond: new THREE.MeshBasicMaterial({ color: '#ff6f9a', toneMapped: false }),
+  }), []);
+  useEffect(() => () => Object.values(materials).forEach((m) => m.dispose()), [materials]);
 
-  useFrame((_, delta) => {
-    if (!companion.active) return;
+  useFrame(({ camera }, delta) => {
+    if (!rootRef.current || !rig) return;
+    const store = useGameStore.getState();
+    if (store.gameState === 'paused') return;
+    const c = store.companion;
+    const [x, y, z] = c.position;
 
-    const pos = companion.position;
-    const dx = pos[0] - prevPos.current[0];
-    const dz = pos[2] - prevPos.current[2];
-    const moving = Math.abs(dx) + Math.abs(dz) > 0.05;
-    prevPos.current = [...pos];
+    // Speed and heading from how far it moved this frame
+    const last = prev.current || [x, y, z];
+    const dx = x - last[0];
+    const dz = z - last[2];
+    prev.current = [x, y, z];
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    const speed = delta > 0 ? Math.min(dist / delta, 8) : 0;
+    if (dist > 0.01) yaw.current = Math.atan2(dx, dz);
+    rootRef.current.position.set(x, y, z);
+    rig.mesh.rotation.y = yaw.current;
 
-    // Walk animation
-    if (moving) {
-      walkPhase.current += delta * 7;
-      const swing = Math.sin(walkPhase.current) * 0.4;
-      if (leftLegRef.current) leftLegRef.current.rotation.x = swing;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = -swing;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = -swing * 0.3;
-      if (rightArmRef.current) rightArmRef.current.rotation.x = swing * 0.3;
-
-      // Face movement direction
-      if (groupRef.current && (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01)) {
-        groupRef.current.rotation.y = Math.atan2(dx, dz);
-      }
+    if (animal) {
+      applyAnimalPose(rig, stepAnimation(anim.current, ANIMAL_MODELS[animal].anim, { speed, verticalSpeed: 0, fleeing: false }, delta));
     } else {
-      walkPhase.current = 0;
-      if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
-      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
-      if (leftArmRef.current) leftArmRef.current.rotation.x = 0;
-      if (rightArmRef.current) rightArmRef.current.rotation.x = 0;
+      const activity = c.state === 'GATHERING' ? 'mine' : null;
+      if (c.state === 'ATTACKING' && !anim.current.action) triggerAction(anim.current, 'melee');
+      applyBonePose(rig, stepHumanoidAnimation(anim.current, { speed, activity, alert: c.state === 'DEFENDING' }, delta));
     }
 
-    // Health bar scale
-    if (healthBarRef.current) {
-      const healthPct = companion.maxHealth > 0 ? companion.health / companion.maxHealth : 1;
-      healthBarRef.current.scale.x = Math.max(0.01, healthPct);
-      healthBarRef.current.position.x = -(1 - healthPct) * 0.5;
-      materials.healthFg.color.set(healthPct > 0.5 ? '#44cc44' : healthPct > 0.25 ? '#ffcc00' : '#ff4444');
+    // Plaque: faces the camera, health bar shrinks from the right
+    if (plaqueRef.current) plaqueRef.current.quaternion.copy(camera.quaternion);
+    const pct = c.maxHealth > 0 ? Math.max(0, Math.min(1, c.health / c.maxHealth)) : 1;
+    if (healthRef.current) {
+      healthRef.current.scale.x = Math.max(0.001, BAR_W * pct);
+      healthRef.current.position.x = -(BAR_W * (1 - pct)) / 2;
     }
-
-    // State color
-    const stateColor = STATE_COLORS[companion.state] || '#44cc44';
-    materials.state.color.set(stateColor);
-
-    // Bond indicator size (scales with bond level)
-    // Bond visual handled by scale in JSX
+    materials.health.color.set(pct > 0.5 ? '#6cbf4a' : pct > 0.25 ? '#e8b443' : '#d9473f');
+    materials.state.color.set(STATE_COLORS[c.state] || '#6cbf4a');
+    if (bondRef.current) bondRef.current.scale.setScalar(0.1 + (c.bondLevel / 100) * 0.12);
   });
 
-  if (!companion.active) return null;
+  if (!active || !rig) return null;
 
-  const bondScale = 0.5 + (companion.bondLevel / 100) * 1.5;
-
+  const plaqueY = animal ? 2 : 3.3;
   return (
-    <group position={companion.position}>
-      <group ref={groupRef}>
-        {/* Head */}
-        <mesh geometry={headGeo} material={materials.skin} position={[0, 1.85, 0]} />
-        {/* Body */}
-        <mesh geometry={bodyGeo} material={materials.primary} position={[0, 1.2, 0]} />
-        {/* Left arm */}
-        <group ref={leftArmRef} position={[-0.4, 1.35, 0]}>
-          <mesh geometry={armGeo} material={materials.secondary} position={[0, -0.22, 0]} />
-        </group>
-        {/* Right arm */}
-        <group ref={rightArmRef} position={[0.4, 1.35, 0]}>
-          <mesh geometry={armGeo} material={materials.secondary} position={[0, -0.22, 0]} />
-        </group>
-        {/* Left leg */}
-        <group ref={leftLegRef} position={[-0.15, 0.55, 0]}>
-          <mesh geometry={legGeo} material={materials.secondary} position={[0, 0, 0]} />
-        </group>
-        {/* Right leg */}
-        <group ref={rightLegRef} position={[0.15, 0.55, 0]}>
-          <mesh geometry={legGeo} material={materials.secondary} position={[0, 0, 0]} />
-        </group>
+    <group ref={rootRef}>
+      <primitive object={rig.mesh} dispose={null} />
+      <group ref={plaqueRef} position={[0, plaqueY, 0]}>
+        <mesh geometry={UNIT_BOX} material={materials.bg} scale={[BAR_W + 0.08, 0.16, 0.02]} />
+        <mesh ref={healthRef} geometry={UNIT_BOX} material={materials.health} scale={[BAR_W, 0.09, 0.03]} position={[0, 0, 0.01]} />
+        <mesh geometry={UNIT_BOX} material={materials.state} scale={[0.12, 0.12, 0.04]} position={[-BAR_W / 2 - 0.16, 0, 0]} />
+        <mesh ref={bondRef} geometry={UNIT_BOX} material={materials.bond} scale={[0.1, 0.1, 0.04]} position={[BAR_W / 2 + 0.16, 0, 0]} />
       </group>
-
-      {/* Health bar */}
-      <group position={[0, 2.4, 0]} rotation={[0, 0, 0]}>
-        <mesh geometry={healthBarBgGeo} material={materials.healthBg} />
-        <mesh ref={healthBarRef} geometry={healthBarFgGeo} material={materials.healthFg} position={[0, 0, 0.001]} />
-      </group>
-
-      {/* Bond indicator (pink heart that grows) */}
-      <mesh
-        geometry={bondGeo}
-        material={materials.bond}
-        position={[0.4, 2.4, 0]}
-        scale={[bondScale, bondScale, bondScale]}
-      />
-
-      {/* State indicator */}
-      <mesh
-        geometry={bondGeo}
-        material={materials.state}
-        position={[-0.4, 2.4, 0]}
-      />
     </group>
   );
 });

@@ -26,7 +26,7 @@ const materialLabel = (key) => key.charAt(0).toUpperCase() + key.slice(1).replac
 
 function RecipePicture({ recipe }) {
   const url = itemArt(recipe);
-  return url ? <img src={url} alt="" /> : <span className="vx-slot__emoji" aria-hidden="true">{recipe.icon}</span>;
+  return url ? <img src={url} alt="" /> : <img src={artUrl('ui', recipe.icon) || artUrl('ui', 'box')} alt="" />;
 }
 
 const CraftingUI = () => {

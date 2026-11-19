@@ -1,6 +1,5 @@
 import { notePlayerAction } from '../systems/playerActions';
 import { damageEnemy, getEnemiesInRadius, getEnemyPosition, isEnemyHittable, rollPlayerDamage } from '../systems/combat/enemyHits';
-import { Flame, Zap, Snowflake, Wind, Heart, Shield, Wand2, Cloud, Zap as Lightning, Droplets, Skull } from 'lucide-react';
 
 /**
  * Expanded Magic System - Spell Database
@@ -43,7 +42,6 @@ export const STATUS_EFFECTS = {
  *
  * Common properties:
  * - name: Display name
- * - icon: Lucide icon component
  * - color: Hex color code
  * - category: Spell category (damage, control, support, status)
  * - type: Spell type (projectile, aoe, beam, buff, heal, debuff)
@@ -68,7 +66,6 @@ export const SPELLS = [
   {
     id: 'fireball',
     name: 'Fireball',
-    icon: Flame,
     color: '#ff6b00',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.PROJECTILE,
@@ -83,7 +80,6 @@ export const SPELLS = [
   {
     id: 'lightning',
     name: 'Lightning Bolt',
-    icon: Zap,
     color: '#00bfff',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.PROJECTILE,
@@ -98,7 +94,6 @@ export const SPELLS = [
   {
     id: 'iceShard',
     name: 'Ice Shard',
-    icon: Snowflake,
     color: '#a8dadc',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.PROJECTILE,
@@ -116,7 +111,6 @@ export const SPELLS = [
   {
     id: 'windBlast',
     name: 'Wind Blast',
-    icon: Wind,
     color: '#90e0ef',
     category: SPELL_CATEGORIES.CONTROL,
     type: SPELL_TYPES.PROJECTILE,
@@ -133,7 +127,6 @@ export const SPELLS = [
   {
     id: 'meteor',
     name: 'Meteor',
-    icon: Flame,
     color: '#ff4500',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.AOE,
@@ -149,7 +142,6 @@ export const SPELLS = [
   {
     id: 'chainLightning',
     name: 'Chain Lightning',
-    icon: Lightning,
     color: '#0099ff',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.PROJECTILE,
@@ -166,7 +158,6 @@ export const SPELLS = [
   {
     id: 'poisonCloud',
     name: 'Poison Cloud',
-    icon: Cloud,
     color: '#8b00ff',
     category: SPELL_CATEGORIES.STATUS,
     type: SPELL_TYPES.AOE,
@@ -185,7 +176,6 @@ export const SPELLS = [
   {
     id: 'frostNova',
     name: 'Frost Nova',
-    icon: Snowflake,
     color: '#6ee7ff',
     category: SPELL_CATEGORIES.CONTROL,
     type: SPELL_TYPES.AOE,
@@ -205,7 +195,6 @@ export const SPELLS = [
   {
     id: 'heal',
     name: 'Heal',
-    icon: Heart,
     color: '#ff69b4',
     category: SPELL_CATEGORIES.SUPPORT,
     type: SPELL_TYPES.HEAL,
@@ -221,7 +210,6 @@ export const SPELLS = [
   {
     id: 'shield',
     name: 'Shield Spell',
-    icon: Shield,
     color: '#ffd700',
     category: SPELL_CATEGORIES.SUPPORT,
     type: SPELL_TYPES.BUFF,
@@ -239,7 +227,6 @@ export const SPELLS = [
   {
     id: 'haste',
     name: 'Haste',
-    icon: Wind,
     color: '#00ff00',
     category: SPELL_CATEGORIES.SUPPORT,
     type: SPELL_TYPES.BUFF,
@@ -259,7 +246,6 @@ export const SPELLS = [
   {
     id: 'inferno',
     name: 'Inferno',
-    icon: Flame,
     color: '#ff0000',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.AOE,
@@ -278,7 +264,6 @@ export const SPELLS = [
   {
     id: 'arcaneBarrage',
     name: 'Arcane Barrage',
-    icon: Wand2,
     color: '#9966ff',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.PROJECTILE,
@@ -295,7 +280,6 @@ export const SPELLS = [
   {
     id: 'waterjet',
     name: 'Water Jet',
-    icon: Droplets,
     color: '#4da6ff',
     category: SPELL_CATEGORIES.CONTROL,
     type: SPELL_TYPES.PROJECTILE,
@@ -312,7 +296,6 @@ export const SPELLS = [
   {
     id: 'deathRay',
     name: 'Death Ray',
-    icon: Skull,
     color: '#000000',
     category: SPELL_CATEGORIES.DAMAGE,
     type: SPELL_TYPES.BEAM,

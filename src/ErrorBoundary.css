@@ -1,0 +1,49 @@
+/* ErrorBoundary.css — the crash screen */
+
+.err-screen {
+  z-index: 20000;
+  overflow-y: auto;
+  background: #0b0c10;
+}
+
+.err-screen__panel {
+  width: min(620px, 100%);
+  padding: 30px 20px 18px;
+}
+
+.err-screen__lead {
+  margin: 0 0 12px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.err-screen__msg,
+.err-screen__details pre {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: #ffb3a8;
+  background: rgba(0, 0, 0, 0.55);
+  border: 3px solid #07080b;
+}
+
+.err-screen__details {
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: var(--vx-cream-dim);
+}
+
+.err-screen__details summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.err-screen__details pre {
+  max-height: 240px;
+  overflow: auto;
+  font-size: 11px;
+  color: var(--vx-cream-dim);
+}

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronUp, ChevronDown, Wand2 } from 'lucide-react';
 import useGameStore from '../stores/useGameStore';
 import { SPELLS } from '../data/spells';
+import { artUrl } from './ui/art';
+import './SpellWheel.css';
 
 /**
  * SpellWheel component - Spell selection wheel: hold Q (or the touch button), pick, release
@@ -117,57 +118,23 @@ const SpellWheel = () => {
 
   return (
     <>
-      {/* Mobile Floating Spell Button */}
+      {/* Touch: the wand button opens and closes the wheel */}
       {isMobile && (
         <button
+          type="button"
           onClick={toggleSpellWheel}
-          style={{
-            position: 'fixed',
-            bottom: 'max(80px, calc(60px + env(safe-area-inset-bottom, 0px)))',
-            right: 'max(20px, env(safe-area-inset-right, 0px))',
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: isActive ? 'linear-gradient(135deg, #9333ea, #7e22ce)' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
-            border: '3px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: isActive
-              ? '0 0 30px rgba(147, 51, 234, 0.8), 0 8px 20px rgba(0, 0, 0, 0.4)'
-              : '0 0 20px rgba(99, 102, 241, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4)',
-            cursor: 'pointer',
-            zIndex: 999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.3s ease',
-            transform: isActive ? 'scale(1.1) rotate(180deg)' : 'scale(1)',
-            touchAction: 'manipulation',
-          }}
+          className={`vx-tbtn sw-fab${isActive ? ' is-on' : ''}`}
+          style={{ '--c': '#5a3fa8' }}
           aria-label="Toggle Spell Wheel"
+          aria-pressed={isActive}
         >
-          <Wand2 size={28} color="white" />
+          <img src={artUrl('ui', 'wand')} alt="" />
         </button>
       )}
 
-      {/* Spell Wheel Overlay */}
       {isActive && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0, 0, 0, 0.85)',
-            zIndex: 1000,
-            pointerEvents: 'all',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'Arial, sans-serif',
-            overflowY: 'auto',
-            padding: isMobile ? '20px 10px' : '0',
-          }}
+          className={`vx-overlay sw-overlay${isMobile ? ' sw--mobile' : ''}`}
           onClick={(e) => {
             // Close on backdrop click (mobile only)
             if (isMobile && e.target === e.currentTarget) {
@@ -175,252 +142,70 @@ const SpellWheel = () => {
             }
           }}
         >
-      {/* Header */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: '#00ffff',
-          fontSize: '1.5rem',
-          fontWeight: 'bold',
-          textShadow: '0 0 10px #00ffff',
-        }}
-      >
-        SPELL SELECTION
-      </div>
+          <section className="vx-frame sw" role="dialog" aria-label="Spells">
+            <h2 className="vx-sign-title sw__title">Spells</h2>
 
-      {/* Main content area */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? '20px' : '40px',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%',
-          maxWidth: isMobile ? '100%' : 'none',
-        }}
-      >
-        {/* Spell grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile
-              ? (window.innerWidth <= 480 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)')
-              : 'repeat(3, 1fr)',
-            gap: isMobile ? '12px' : '15px',
-            padding: isMobile ? '15px' : '20px',
-            backgroundColor: 'rgba(20, 20, 40, 0.8)',
-            borderRadius: '10px',
-            border: '2px solid rgba(100, 150, 255, 0.5)',
-            width: isMobile ? '100%' : 'auto',
-            maxWidth: isMobile ? '420px' : 'none',
-          }}
-        >
-          {spellsOnPage.map((spell, localIndex) => {
-            const globalIndex = page * SPELLS_PER_PAGE + localIndex;
-            const isSelected = globalIndex === selectedIndex;
-            const Icon = spell.icon;
-            const canAfford = playerMana >= spell.manaCost;
+            <div className="sw__main">
+              <div className="sw__grid">
+                {spellsOnPage.length === 0 && <p className="sw__empty">No spells learned yet.</p>}
+                {spellsOnPage.map((spell, localIndex) => {
+                  const globalIndex = page * SPELLS_PER_PAGE + localIndex;
+                  const isSelected = globalIndex === selectedIndex;
+                  const canAfford = playerMana >= spell.manaCost;
+                  const art = artUrl('spells', spell.id);
+                  return (
+                    <button
+                      key={spell.id}
+                      type="button"
+                      className={`vx-slot sw__spell${isSelected ? ' is-on' : ''}${canAfford ? '' : ' is-poor'}`}
+                      style={{ '--r': isSelected ? spell.color : undefined }}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        setSelectedIndex(globalIndex);
+                        setActiveSpellId(spell.id);
+                      }}
+                    >
+                      {art ? <img src={art} alt="" /> : <span className="sw__dot" style={{ background: spell.color }} />}
+                      <span className="sw__name">{spell.name}</span>
+                      <span className={`sw__cost${canAfford ? '' : ' is-poor'}`}>{spell.manaCost} mana</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-            return (
-              <div
-                key={spell.id}
-                style={{
-                  width: isMobile ? '100%' : '100px',
-                  height: isMobile ? '100px' : '100px',
-                  minWidth: isMobile ? '90px' : '100px',
-                  minHeight: '90px',
-                  borderRadius: '10px',
-                  background: isSelected
-                    ? `linear-gradient(135deg, ${spell.color}, ${spell.color}dd)`
-                    : 'rgba(0, 0, 0, 0.6)',
-                  border: `3px solid ${isSelected ? spell.color : 'rgba(255, 255, 255, 0.2)'}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: isSelected
-                    ? `0 0 20px ${spell.color}, inset 0 0 20px ${spell.color}40`
-                    : '0 0 5px rgba(0, 0, 0, 0.5)',
-                  opacity: canAfford ? 1 : 0.4,
-                  transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                  touchAction: 'manipulation',
-                }}
-                onClick={() => {
-                  setSelectedIndex(globalIndex);
-                  setActiveSpellId(spell.id);
-                }}
-              >
-                <Icon
-                  size={isSelected ? 36 : 28}
-                  color={isSelected ? 'white' : spell.color}
-                  style={{ marginBottom: '3px' }}
-                />
-                <div
-                  style={{
-                    color: 'white',
-                    fontSize: isMobile ? '0.75rem' : '0.65rem',
-                    fontWeight: isSelected ? 'bold' : 'normal',
-                    textAlign: 'center',
-                    lineHeight: '1.2',
-                  }}
-                >
-                  {spell.name}
-                </div>
-                <div
-                  style={{
-                    color: canAfford ? '#4dabf7' : '#ff6b6b',
-                    fontSize: isMobile ? '0.7rem' : '0.55rem',
-                    marginTop: '2px',
-                  }}
-                >
-                  {spell.manaCost}M
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Detail panel */}
-        {selectedSpell && (
-          <div
-            style={{
-              width: isMobile ? '100%' : '280px',
-              maxWidth: isMobile ? '420px' : '280px',
-              backgroundColor: 'rgba(20, 20, 40, 0.8)',
-              border: `2px solid ${selectedSpell.color}`,
-              borderRadius: '10px',
-              padding: isMobile ? '15px' : '20px',
-              color: 'white',
-              boxShadow: `0 0 30px ${selectedSpell.color}40`,
-            }}
-          >
-            <div style={{ fontSize: isMobile ? '1.1rem' : '1.2rem', fontWeight: 'bold', color: selectedSpell.color, marginBottom: '10px' }}>
-              {selectedSpell.name}
-            </div>
-            <div style={{ fontSize: isMobile ? '0.9rem' : '0.8rem', color: '#ccc', marginBottom: '15px', lineHeight: '1.4' }}>
-              {selectedSpell.description}
-            </div>
-            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.2)', paddingTop: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
-                <span>Mana Cost:</span>
-                <span style={{ color: selectedSpell.color }}>{selectedSpell.manaCost}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
-                <span>Cooldown:</span>
-                <span style={{ color: selectedSpell.color }}>{selectedSpell.cooldown.toFixed(1)}s</span>
-              </div>
-              {selectedSpell.damage > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
-                  <span>Damage:</span>
-                  <span style={{ color: '#ff6b6b' }}>{selectedSpell.damage}</span>
-                </div>
-              )}
-              {selectedSpell.healAmount && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
-                  <span>Heal:</span>
-                  <span style={{ color: '#ff69b4' }}>{selectedSpell.healAmount}</span>
-                </div>
-              )}
-              {selectedSpell.aoeRadius && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '5px' }}>
-                  <span>AOE Radius:</span>
-                  <span style={{ color: selectedSpell.color }}>{selectedSpell.aoeRadius}</span>
+              {selectedSpell && (
+                <div className="vx-parch sw__detail">
+                  <h3 className="vx-h sw__detail-name">{selectedSpell.name}</h3>
+                  <p className="sw__desc">{selectedSpell.description}</p>
+                  <div className="sw__stats">
+                    <div className="sw__stat"><span>Mana</span><b>{selectedSpell.manaCost}</b></div>
+                    <div className="sw__stat"><span>Cooldown</span><b>{selectedSpell.cooldown.toFixed(1)}s</b></div>
+                    {selectedSpell.damage > 0 && <div className="sw__stat"><span>Damage</span><b className="sw__bad">{selectedSpell.damage}</b></div>}
+                    {selectedSpell.healAmount && <div className="sw__stat"><span>Heal</span><b className="sw__good">{selectedSpell.healAmount}</b></div>}
+                    {selectedSpell.aoeRadius && <div className="sw__stat"><span>Area</span><b>{selectedSpell.aoeRadius}</b></div>}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Page navigation */}
-      {totalPages > 1 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '80px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '15px',
-            color: 'white',
-          }}
-        >
-          <button
-            onClick={() => page > 0 && setPage(page - 1)}
-            style={{
-              background: page > 0 ? 'rgba(100, 150, 255, 0.6)' : 'rgba(100, 150, 255, 0.2)',
-              border: 'none',
-              borderRadius: '50%',
-              width: isMobile ? '44px' : '30px',
-              height: isMobile ? '44px' : '30px',
-              minWidth: '44px',
-              minHeight: '44px',
-              cursor: page > 0 ? 'pointer' : 'default',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              touchAction: 'manipulation',
-            }}
-          >
-            <ChevronUp size={isMobile ? 24 : 20} />
-          </button>
-          <span style={{ fontSize: isMobile ? '1rem' : '0.85rem' }}>Page {page + 1} / {totalPages}</span>
-          <button
-            onClick={() => page < totalPages - 1 && setPage(page + 1)}
-            style={{
-              background: page < totalPages - 1 ? 'rgba(100, 150, 255, 0.6)' : 'rgba(100, 150, 255, 0.2)',
-              border: 'none',
-              borderRadius: '50%',
-              width: isMobile ? '44px' : '30px',
-              height: isMobile ? '44px' : '30px',
-              minWidth: '44px',
-              minHeight: '44px',
-              cursor: page < totalPages - 1 ? 'pointer' : 'default',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              touchAction: 'manipulation',
-            }}
-          >
-            <ChevronDown size={isMobile ? 24 : 20} />
-          </button>
-        </div>
-      )}
+            {totalPages > 1 && (
+              <div className="sw__pages">
+                <button type="button" className="vx-pbtn vx-pbtn--stone vx-pbtn--sm" onClick={() => page > 0 && setPage(page - 1)} disabled={page === 0} aria-label="Previous page">
+                  <img src={artUrl('ui', 'up')} alt="" width="14" height="14" />
+                </button>
+                <span>Page {page + 1} / {totalPages}</span>
+                <button type="button" className="vx-pbtn vx-pbtn--stone vx-pbtn--sm" onClick={() => page < totalPages - 1 && setPage(page + 1)} disabled={page >= totalPages - 1} aria-label="Next page">
+                  <img src={artUrl('ui', 'down')} alt="" width="14" height="14" />
+                </button>
+              </div>
+            )}
 
-      {/* Instructions */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: '#aaa',
-          fontSize: isMobile ? '0.8rem' : '0.85rem',
-          textAlign: 'center',
-          lineHeight: '1.5',
-          padding: isMobile ? '0 20px' : '0',
-          width: isMobile ? '100%' : 'auto',
-        }}
-      >
-        {isMobile ? (
-          <>
-            <div>Tap spells to select</div>
-            <div>Tap outside or 🪄 button to close</div>
-          </>
-        ) : (
-          <>
-            <div>← → / A / D to navigate | ↑ ↓ / W / S to change page</div>
-            <div>A / D or arrows to choose · release Q to select</div>
-          </>
-        )}
-      </div>
+            <p className="sw__hint">
+              {isMobile
+                ? 'Tap a spell to ready it · tap outside or the wand to close'
+                : 'A / D or arrows to choose · W / S to change page · release Q to ready it'}
+            </p>
+          </section>
         </div>
       )}
     </>

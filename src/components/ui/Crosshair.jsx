@@ -12,6 +12,8 @@ import './Crosshair.css';
 
 const Crosshair = () => {
   const firstPerson = useGameStore((state) => state.camera.firstPerson);
+  // The hint is for play: not over the start screen, and its 6 s start when play does
+  const playing = useGameStore((state) => state.gameState === 'playing');
   const [isMobile, setIsMobile] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
 
@@ -22,11 +24,11 @@ const Crosshair = () => {
 
   // Auto-dismiss all hints after 6 seconds
   useEffect(() => {
-    if (isMobile || firstPerson) return;
+    if (isMobile || firstPerson || !playing) return;
     setHintDismissed(false);
     const timer = setTimeout(() => setHintDismissed(true), 6000);
     return () => clearTimeout(timer);
-  }, [isMobile, firstPerson]);
+  }, [isMobile, firstPerson, playing]);
 
   // Mobile: no crosshair or hint needed (controls hint is in GameUI)
   if (isMobile) {
@@ -35,7 +37,7 @@ const Crosshair = () => {
 
   // Desktop third-person: show brief toast hint, then auto-dismiss
   if (!firstPerson) {
-    if (hintDismissed) return null;
+    if (hintDismissed || !playing) return null;
     return (
       <div className="vx-hudpanel crosshair-hint" role="status">
         <div className="crosshair-hint__title">Press <kbd className="vx-key">V</kbd> for first-person</div>

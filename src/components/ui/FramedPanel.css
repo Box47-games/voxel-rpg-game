@@ -1,0 +1,154 @@
+/*
+ * FramedPanel — the settler, stockpile and building panels and the
+ * Settlement dashboard in the "carved from the world" look (voxel-ui.css):
+ * a wood frame round a stone-brick body, a hanging sign title, Pixelify text,
+ * pixel buttons, notched bars and metal tags.
+ */
+
+.fp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 16px 16px; /* room for the sign */
+  box-sizing: border-box;
+  pointer-events: none; /* the world stays clickable round a small panel */
+}
+.fp-overlay--modal { pointer-events: auto; background: rgba(4, 5, 8, 0.55); }
+
+.fp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(var(--fp-width, 460px), 100%);
+  max-height: calc(100vh - 90px);
+  padding: 14px 16px 12px;
+  font-size: 16px;
+  line-height: 1.3;
+  pointer-events: auto;
+}
+.fp.vx-frame { border-width: 18px; border-image-width: 18px; }
+.fp__title { font-size: 22px; top: -46px; padding: 6px 22px 8px; max-width: calc(100% + 20px); overflow: hidden; text-overflow: ellipsis; }
+.fp__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 40px; }
+.fp__head-main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.fp__close { padding: 6px 10px 8px; min-height: 40px; }
+.fp__body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.fp__foot { font-size: 13px; color: var(--vx-cream-dim); text-align: center; }
+
+/* Phones: full width, sign inline */
+.fp--mobile.vx-frame { border-width: 12px; border-image-width: 12px; }
+.fp-overlay:has(.fp--mobile) { padding: 8px; }
+.fp--mobile { max-height: calc(100vh - 16px); }
+.fp--mobile .fp__title { position: static; transform: none; padding: 0; font-size: 18px; line-height: 1.4; overflow: visible; background: none; border: 0; box-shadow: none; text-align: left; }
+
+/* Text */
+.fp__sub { font-size: 14px; color: var(--vx-cream-dim); }
+.fp__muted { color: var(--vx-cream-dim); }
+.fp__dim { color: #8f8670; }
+.fp__good { color: #9be07e; }
+.fp__warn { color: #ffc260; }
+.fp__bad { color: #ff9a8f; }
+.fp__info { color: #9cc8ff; }
+.fp__center { text-align: center; }
+.fp__h { margin: 4px 0 0; font-family: var(--vx-font-display); font-size: 14px; font-weight: 400; color: #ffd977; text-shadow: 2px 2px 0 #07080b; }
+
+/* Rows with a dark dotted rule between them */
+.fp__rows { display: flex; flex-direction: column; }
+.fp__row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 3px dotted rgba(0, 0, 0, 0.45); }
+.fp__row:last-child { border-bottom: 0; }
+.fp__grow { flex: 1; min-width: 0; }
+.fp__swatch { width: 16px; height: 16px; flex: none; border: 2px solid #07080b; box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.25); }
+.fp__num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* A recessed stone box for a section (upgrade, confirm, stats) */
+.fp__well {
+  padding: 10px 12px;
+  background: rgba(8, 9, 12, 0.55);
+  border: 3px solid #07080b;
+  box-shadow: inset 4px 4px 0 rgba(0, 0, 0, 0.45), inset -2px -2px 0 rgba(255, 255, 255, 0.05);
+}
+.fp__well--danger { border-color: #4a1612; }
+
+/* Buttons: the kit's pixel buttons, with a red one and a small strip */
+.fp .vx-pbtn { min-height: 40px; font-size: 13px; }
+.vx-pbtn--red {
+  color: #fff;
+  text-shadow: 2px 2px 0 #07080b;
+  background: #a8382e;
+  box-shadow: inset 4px 4px 0 #d9675c, inset -4px -5px 0 #6b1d17, 0 4px 0 #07080b;
+}
+.fp__btns { display: flex; gap: 8px; }
+.fp__btns > * { flex: 1; }
+.fp__mini { min-height: 32px !important; padding: 2px 8px 4px !important; font-size: 11px !important; }
+.fp__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Tags: the kit's plus a blue one */
+.vx-tag--info { background: #1c3a5a; color: #b8dcff; box-shadow: inset 0 3px 0 #2f5a85; }
+.vx-tag--sm { padding: 1px 6px 3px; font-size: 10px; border-width: 2px; }
+
+/* Bars: notched, thinner in rows */
+.fp .vx-nbar { height: 14px; flex-shrink: 0; }
+.fp__nbar-sm { height: 10px !important; border-width: 2px !important; }
+
+/* Tab strips inside a panel (dashboard) */
+.fp__tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.fp__tabs .vx-tab { min-height: 36px; padding: 4px 10px 6px; font-size: 12px; }
+
+/* Tables (dashboard) */
+.fp__table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.fp__table th {
+  text-align: left; font-family: var(--vx-font-display); font-weight: 400; font-size: 11px; color: #ffd977;
+  padding: 4px 6px; border-bottom: 3px solid #07080b; cursor: pointer; white-space: nowrap; text-shadow: 1px 1px 0 #07080b;
+}
+.fp__table td { padding: 5px 6px; border-bottom: 3px dotted rgba(0, 0, 0, 0.45); vertical-align: middle; }
+.fp__table tr.is-click { cursor: pointer; }
+.fp__table tr.is-click:hover td { background: rgba(255, 224, 138, 0.08); }
+
+/* Stat tiles (dashboard) */
+.fp__tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.fp__tile { padding: 8px 10px; background: rgba(8, 9, 12, 0.55); border: 3px solid #07080b; box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.45); min-width: 0; }
+.fp__tile-label { font-family: var(--vx-font-display); font-size: 10px; color: var(--vx-cream-dim); text-transform: uppercase; }
+.fp__tile-value { font-size: 20px; margin-top: 2px; }
+
+/* Stockpile rows: name, bag count, put in, stockpile count, take out (wraps on phones) */
+.sp-row { flex-wrap: wrap; }
+.sp-row__name { display: flex; align-items: center; gap: 8px; width: 132px; min-width: 0; }
+/* Phones: name and bag count on one line, the buttons and count on the next */
+.fp--mobile .sp-row__name { width: auto; flex: 1 1 60%; }
+.fp--mobile .sp-row { gap: 6px; }
+.fp--mobile .sp-row__btns { flex: 1 1 0; gap: 3px; }
+.fp--mobile .sp-row__btns .vx-pbtn { flex: 1 1 0; min-width: 0; padding: 2px 0 4px !important; font-size: 10px !important; }
+.fp--mobile .sp-row__qty { width: 30px; }
+.sp-row__bag { width: 64px; }
+.sp-row__qty { width: 40px; text-align: center; color: var(--vx-gold-light); }
+.sp-row__btns { display: flex; gap: 4px; }
+
+/* Settler panel */
+.npc-top { display: flex; gap: 12px; align-items: flex-start; }
+.npc-top__portrait {
+  width: 72px; height: 88px; object-fit: cover; object-position: top; flex: none;
+  background: #0b0c10; border: 3px solid #07080b; box-shadow: inset 4px 4px 0 rgba(0, 0, 0, 0.6);
+}
+.npc-top__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.npc-bar { display: flex; flex-direction: column; gap: 2px; }
+.npc-bar__label { display: flex; justify-content: space-between; font-size: 13px; color: var(--vx-cream-dim); }
+
+/* Settlement dashboard */
+.dash { height: min(600px, calc(100vh - 90px)); }
+.dash.fp--mobile { height: calc(100vh - 16px); }
+.dash__tabs .vx-tab img { width: 16px; height: 16px; }
+.fp--mobile .dash__tabs { flex-wrap: nowrap; overflow-x: auto; }
+.fp--mobile .dash__tabs .vx-tab { flex: 1; font-size: 10px; padding: 4px 6px 6px; }
+.dash-happy { display: inline-flex; align-items: center; gap: 6px; }
+.dash-happy .vx-nbar { width: 60px; display: inline-block; }
+.dash-mat { display: inline-flex; align-items: center; gap: 8px; }
+.dash-alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.dash-alerts li { display: flex; align-items: center; gap: 10px; border-left-width: 6px; }
+
+/* Building panel material rows: on phones the buttons drop to their own line */
+.bd-row__btns { display: flex; gap: 4px; }
+.fp--mobile .bd-row { flex-wrap: wrap; }
+.fp--mobile .bd-row__btns { flex: 1 0 100%; }
+.fp--mobile .bd-row__btns .vx-pbtn { flex: 1 1 0; }

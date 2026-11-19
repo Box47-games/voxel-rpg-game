@@ -36,7 +36,7 @@ function angleDelta(a, b) {
 }
 
 /** Apply a pose from stepAnimation() to an animal's bones. */
-function applyPose(rig, pose) {
+export function applyAnimalPose(rig, pose) {
   const { bones, rest } = rig;
   bones.body.position.y = rest.body.y + pose.bodyLift;
   bones.body.rotation.set(pose.bodyPitch, 0, pose.bodyRoll);
@@ -208,7 +208,7 @@ const WildlifeAnimal = React.memo(({ animalData, chunkManager }) => {
       verticalSpeed: vel.y,
       fleeing: stateRef.current === 'FLEEING',
     }, delta);
-    applyPose(rig, pose);
+    applyAnimalPose(rig, pose);
   });
 
   if (!typeDef || !rig) return null;

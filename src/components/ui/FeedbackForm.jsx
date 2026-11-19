@@ -10,6 +10,7 @@ import useGameStore from '../../stores/useGameStore';
 import {
   FEEDBACK_CATEGORIES, FEEDBACK_MAX_MESSAGE, gameContext, captureScreenshot, sendFeedback,
 } from '../../systems/feedback/feedback';
+import { artUrl } from './art';
 import './FeedbackForm.css';
 
 const FeedbackForm = () => {
@@ -72,7 +73,7 @@ function FeedbackDialog() {
       >
         <header className="feedback__head">
           <h2 id="feedback-title" className="vx-heading feedback__title">Send Feedback</h2>
-          <button type="button" className="vx-btn vx-btn--ghost feedback__close" onClick={close} aria-label="Close">✕</button>
+          <button type="button" className="vx-btn vx-btn--ghost feedback__close" onClick={close} aria-label="Close"><img src={artUrl('ui', 'close')} alt="" /></button>
         </header>
 
         {status.kind === 'sent' ? (
@@ -95,7 +96,7 @@ function FeedbackDialog() {
                     className={`feedback__star${rating != null && n <= rating ? ' is-on' : ''}`}
                     onClick={() => setRating(rating === n ? null : n)}
                   >
-                    ★
+                    <img src={artUrl('ui', 'star')} alt="" />
                   </button>
                 ))}
               </div>

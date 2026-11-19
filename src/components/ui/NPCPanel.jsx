@@ -5,7 +5,8 @@
 import React, { useEffect } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import useGameStore from '../../stores/useGameStore';
-import './settlementPanels.css';
+import FramedPanel from './FramedPanel';
+import { artUrl } from './art';
 import { getBuildingById } from '../../data/buildings';
 import { isSettled } from '../../modules/settlement/housing';
 import { getScheduleBlock, getTimeOfDay } from '../../modules/settlement/schedule';
@@ -96,13 +97,13 @@ const selectPanelData = (s) => {
 
 const capitalize = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
-function Bar({ label, value, critical, color = '#4488ff' }) {
+function Bar({ label, value, critical, color = '#5b9ae8' }) {
   const low = value < critical;
   return (
-    <div style={{ marginBottom: 6 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: low ? '#ff7777' : '#aaa' }}>
+    <div className="npc-bar">
+      <div className={`npc-bar__label${low ? ' fp__bad' : ''}`}>
         <span>{label}</span>
-        <span>{value}</span>
+        <span className="fp__num">{value}</span>
       </div>
       <div
         role="meter"
@@ -110,20 +111,14 @@ function Bar({ label, value, critical, color = '#4488ff' }) {
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={100}
-        style={{ width: '100%', height: 7, background: '#222', borderRadius: 4, overflow: 'hidden' }}
+        className="vx-nbar fp__nbar-sm"
+        style={{ '--c': low ? '#d9473f' : color }}
       >
-        <div style={{
-          width: `${Math.max(0, Math.min(100, value))}%`,
-          height: '100%',
-          background: low ? '#ff4444' : color,
-          borderRadius: 4,
-        }} />
+        <i style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
       </div>
     </div>
   );
 }
-
-const sectionTitle = { fontSize: 12, color: '#88aaff', textTransform: 'uppercase', letterSpacing: 1, margin: '12px 0 6px' };
 
 export default function NPCPanel() {
   const data = useGameStore(useShallow(selectPanelData));
@@ -144,79 +139,34 @@ export default function NPCPanel() {
     data.preferredJob && `prefers ${data.preferredJob} work`,
   ].filter(Boolean).join(' · ');
 
+  const portrait = artUrl('portraits', `settler-${data.preferredJob}`) || artUrl('portraits', 'settler-gatherer');
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000,
-        pointerEvents: 'none',
-        padding: 16,
-        boxSizing: 'border-box',
-      }}
-    >
-      <div
-        role="dialog"
-        aria-label={`Settler ${data.name}`}
-        className="sp-panel"
-        style={{
-          background: 'rgba(10, 10, 20, 0.92)',
-          border: '2px solid #4488ff',
-          borderRadius: 8,
-          padding: 16,
-          width: '100%',
-          maxWidth: 360,
-          maxHeight: '80vh',
-          overflowY: 'auto',
-          boxSizing: 'border-box',
-          color: '#eee',
-          fontFamily: 'monospace',
-          pointerEvents: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+    <FramedPanel title={data.name} label={`Settler ${data.name}`} onClose={closePanel} width={400}>
+      <div className="npc-top">
+        {portrait && <img className="npc-top__portrait" src={portrait} alt="" />}
+        <div className="npc-top__text">
+          {traits && <div className="fp__sub">{traits}</div>}
           <div>
-            <div className="sp-title" style={{ fontSize: 18, fontWeight: 'bold', color: '#4488ff' }}>{data.name}</div>
-            {traits && <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>{traits}</div>}
+            {data.activity}
+            {data.schedule && <span className="fp__dim"> · {data.schedule}</span>}
           </div>
-          <button className="sp-btn"
-            onClick={closePanel}
-            aria-label="Close"
-            style={{
-              background: '#333', color: '#fff', border: '1px solid #555',
-              borderRadius: 4, padding: '4px 10px', cursor: 'pointer',
-              fontFamily: 'monospace', fontSize: 14,
-            }}
-          >
-            X
-          </button>
+          {data.home && <div className={data.home.startsWith('Homeless') ? 'fp__warn' : 'fp__muted'}>{data.home}</div>}
+          {mood && <div className="fp__bad">{mood}</div>}
         </div>
-
-        <div style={{ marginTop: 10, fontSize: 14 }}>
-          {data.activity}
-          {data.schedule && <span style={{ color: '#888', fontSize: 12 }}> · {data.schedule}</span>}
-        </div>
-        {data.home && (
-          <div style={{ marginTop: 4, fontSize: 12, color: data.home.startsWith('Homeless') ? '#ffaa44' : '#aaa' }}>
-            {data.home}
-          </div>
-        )}
-        {mood && <div style={{ marginTop: 4, fontSize: 13, color: '#ff7777' }}>{mood}</div>}
-
-        <div style={sectionTitle}>Needs</div>
-        <Bar label="Food" value={data.hunger} critical={NPC_HUNGER_CRITICAL} color="#ffcc00" />
-        <Bar label="Rest" value={data.rest} critical={NPC_REST_CRITICAL} color="#8844cc" />
-        <Bar label="Social" value={data.social} critical={NPC_SOCIAL_CRITICAL} color="#ff88ff" />
-        <Bar label="Happiness" value={data.happiness} critical={NPC_LEAVE_HAPPINESS_THRESHOLD} color="#44cc44" />
-
-        <div style={sectionTitle}>Skills</div>
-        <Bar label="Gathering" value={data.gathering} critical={0} />
-        <Bar label="Mining" value={data.mining} critical={0} />
-        <Bar label="Building" value={data.building} critical={0} />
-        <Bar label="Combat" value={data.combat} critical={0} />
       </div>
-    </div>
+
+      <h3 className="fp__h">Needs</h3>
+      <Bar label="Food" value={data.hunger} critical={NPC_HUNGER_CRITICAL} color="#e0913a" />
+      <Bar label="Rest" value={data.rest} critical={NPC_REST_CRITICAL} color="#8a55d8" />
+      <Bar label="Social" value={data.social} critical={NPC_SOCIAL_CRITICAL} color="#d872c9" />
+      <Bar label="Happiness" value={data.happiness} critical={NPC_LEAVE_HAPPINESS_THRESHOLD} color="#6cbf4a" />
+
+      <h3 className="fp__h">Skills</h3>
+      <Bar label="Gathering" value={data.gathering} critical={0} />
+      <Bar label="Mining" value={data.mining} critical={0} />
+      <Bar label="Building" value={data.building} critical={0} />
+      <Bar label="Combat" value={data.combat} critical={0} />
+    </FramedPanel>
   );
 }

@@ -191,3 +191,8 @@
 .hotbar-ghost img { width: 38px; height: 38px; }
 .hotbar-assign { display: flex; gap: 6px; }
 .hotbar-assign .vx-pbtn { flex: 1; min-height: 36px; }
+
+/* Live turning player (LivePlayerView) fills the niche */
+.inv__niche .live-player { width: 100%; height: 300px; display: block; cursor: grab; touch-action: none; }
+.inv__niche .live-player:active { cursor: grabbing; }
+.live-player__canvas { width: 100%; height: 100%; display: block; }

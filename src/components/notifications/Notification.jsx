@@ -2,8 +2,8 @@
  * Notification.jsx — one toast: a thin wood-framed stone strip with a
  * coloured icon tile. Slides in from the right; click to dismiss.
  *
- * Icon: `art: { group, id }` picks generated art; otherwise the type's
- * symbol is used, and a legacy emoji `icon` is the last resort.
+ * Icon: `art: { group, id }` picks generated art, `icon` names a UI symbol
+ * (src/assets/art/ui), and otherwise the type's symbol is used.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +28,7 @@ function Notification({ notification, index, onDismiss }) {
 
   const { type = 'info', title, description, message, extra, reward, icon, art } = notification;
   const look = TYPE_ART[type] || TYPE_ART.info;
-  const iconUrl = (art && artUrl(art.group, art.id)) || artUrl(...look.art);
+  const iconUrl = (art && artUrl(art.group, art.id)) || (icon && artUrl('ui', icon)) || artUrl(...look.art);
 
   const handleDismiss = () => {
     setIsExiting(true);
@@ -55,7 +55,7 @@ function Notification({ notification, index, onDismiss }) {
       onClick={handleDismiss}
     >
       <div className="notification-icon" style={{ background: look.tile }}>
-        {iconUrl ? <img src={iconUrl} alt="" /> : <span aria-hidden="true">{icon}</span>}
+        <img src={iconUrl} alt="" />
       </div>
 
       <div className="notification-content">

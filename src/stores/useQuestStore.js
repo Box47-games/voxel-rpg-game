@@ -207,7 +207,7 @@ const useQuestStore = create((set, get) => ({
         title: 'Quest Complete!',
         description: quest.title,
         extra: rewardText.length > 0 ? `Rewards: ${rewardText.join(', ')}` : null,
-        icon: '📜',
+        art: { group: 'ui', id: 'trophy' },
         duration: 5000
       });
     }

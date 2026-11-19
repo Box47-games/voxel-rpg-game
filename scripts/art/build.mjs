@@ -190,48 +190,94 @@ function renderBlock(block) {
 
 // ── buildings: their real blueprints as isometric voxels ─────────────────
 
-function renderBuilding(blocks, colorOf, seed) {
+/**
+ * The boxes a blueprint cell draws as, in sub-cube units (2 per block): a
+ * full block or slab is one box; a plank cell is one box per board, so the
+ * boards show.
+ */
+function cellBoxes(c) {
+  const mask = c.shape ? c.shape & 0xff : 0xff;
+  const kind = c.shape ? (c.shape >> 8) & 3 : 0;
+  const axis = (c.shape >> 10) & 3;
+  const groups = new Map();
+  for (let i = 0; i < 8; i++) {
+    if (!((mask >> i) & 1)) continue;
+    const sub = [i & 1, (i >> 1) & 1, (i >> 2) & 1];
+    // Planks: one group per bar (the sub-cubes that differ only along the run)
+    const id = kind === 2 ? sub.map((v, k) => (k === axis ? '*' : v)).join('') : 'all';
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(sub);
+  }
+  return [...groups.values()].map((subs) => {
+    const lo = [0, 1, 2].map((k) => Math.min(...subs.map((q) => q[k])));
+    const hi = [0, 1, 2].map((k) => Math.max(...subs.map((q) => q[k])) + 1);
+    return { lo: [c.x * 2 + lo[0], c.y * 2 + lo[1], c.z * 2 + lo[2]], hi: [c.x * 2 + hi[0], c.y * 2 + hi[1], c.z * 2 + hi[2]] };
+  });
+}
+
+/**
+ * A building as isometric voxels, each block or piece (floor and standing
+ * slabs, plank boards, rails) as a box at its real size. Seen from the
+ * front-right: Z is flipped so the front (row 0, doors) faces the viewer.
+ */
+function renderBuilding(cells, depth, colorOf, seed) {
   const rand = rng(seed);
-  const s = 2;
+  const s = 1; // one sub-cube (half a block)
   const a = Math.cos(Math.PI / 6) * s;
   const b = 0.5 * s;
+  const D = depth * 2;
+  const boxes = [];
+  for (const c of cells) {
+    const base = shade(colorOf(c.blockType), 1 + (rand() - 0.5) * 0.12);
+    for (const bx of cellBoxes(c)) {
+      // Flip Z: the front row ends up nearest the viewer
+      boxes.push({ base, lo: [bx.lo[0], bx.lo[1], D - bx.hi[2]], hi: [bx.hi[0], bx.hi[1], D - bx.lo[2]] });
+    }
+  }
   const key = (x, y, z) => `${x},${y},${z}`;
-  // Height of each cell as a fraction of a block (pieces: slabs and plank floors fill the lower half)
-  const heightOf = (bl) => (bl.box ? (bl.box[4] - bl.box[1]) / 2 : 1);
-  const filled = new Map(blocks.map((bl) => [key(bl.x, bl.y, bl.z), heightOf(bl)]));
-  const order = [...blocks].sort((p, q) => p.x + p.z - (q.x + q.z) || p.y - q.y);
+  const filled = new Set();
+  for (const { lo, hi } of boxes) {
+    for (let x = lo[0]; x < hi[0]; x++) for (let y = lo[1]; y < hi[1]; y++) for (let z = lo[2]; z < hi[2]; z++) filled.add(key(x, y, z));
+  }
+  // Is the whole face covered by filled sub-cubes on its far side?
+  const covered = (xs, ys, zs) => {
+    for (const x of xs) for (const y of ys) for (const z of zs) if (!filled.has(key(x, y, z))) return false;
+    return true;
+  };
+  const range = (from, to) => Array.from({ length: to - from }, (_, i) => from + i);
+  const P = (x, y, z) => [(x - z) * a, (x + z) * b - y * s];
+  const mid = (q) => (q.lo[0] + q.hi[0] + q.lo[2] + q.hi[2]) / 2;
+  boxes.sort((p, q) => mid(p) - mid(q) || p.lo[1] + p.hi[1] - q.lo[1] - q.hi[1]);
+
   const sil = [];
   const body = [];
   let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
-  for (const bl of order) {
-    const { x, y, z, blockType } = bl;
-    const hf = heightOf(bl);
-    const base = shade(colorOf(blockType), 1 + (rand() - 0.5) * 0.12);
-    const ox = (x - z) * a;
-    const oy = (x + z) * b - y * s + (1 - hf) * s; // a half-height piece's top sits lower
-    const hs = hf * s;
-    const top = [[ox, oy], [ox + a, oy + b], [ox, oy + 2 * b], [ox - a, oy + b]];
-    const lf = [[ox - a, oy + b], [ox, oy + 2 * b], [ox, oy + 2 * b + hs], [ox - a, oy + b + hs]];
-    const rt = [[ox, oy + 2 * b], [ox + a, oy + b], [ox + a, oy + b + hs], [ox, oy + 2 * b + hs]];
+  for (const { base, lo, hi } of boxes) {
+    const [x0, y0, z0] = lo;
+    const [x1, y1, z1] = hi;
     const faces = [];
-    // A side hides behind a neighbour at least as tall; a seam line marks each piece
-    const covers = (k) => (filled.get(k) ?? 0) >= hf;
-    if (!(hf === 1 && filled.has(key(x, y + 1, z)))) faces.push([top, shade(base, 1.18)]);
-    if (!covers(key(x, y, z + 1))) faces.push([lf, shade(base, 0.86)]);
-    if (!covers(key(x + 1, y, z))) faces.push([rt, shade(base, 0.64)]);
-    for (const [p, col] of faces) {
-      body.push(`<polygon points="${pts(p)}" fill="${col}" stroke="${shade(col, 0.82)}" stroke-width="0.12"/>`);
-      sil.push(`<polygon points="${pts(p)}"/>`);
-      for (const [px, py] of p) { minX = Math.min(minX, px); maxX = Math.max(maxX, px); minY = Math.min(minY, py); maxY = Math.max(maxY, py); }
+    if (!covered(range(x0, x1), [y1], range(z0, z1))) {
+      faces.push([[P(x0, y1, z0), P(x1, y1, z0), P(x1, y1, z1), P(x0, y1, z1)], shade(base, 1.18)]);
+    }
+    if (!covered(range(x0, x1), range(y0, y1), [z1])) {
+      faces.push([[P(x0, y1, z1), P(x1, y1, z1), P(x1, y0, z1), P(x0, y0, z1)], shade(base, 0.86)]);
+    }
+    if (!covered([x1], range(y0, y1), range(z0, z1))) {
+      faces.push([[P(x1, y1, z1), P(x1, y1, z0), P(x1, y0, z0), P(x1, y0, z1)], shade(base, 0.64)]);
+    }
+    for (const [poly, col] of faces) {
+      body.push(`<polygon points="${pts(poly)}" fill="${col}" stroke="${shade(col, 0.78)}" stroke-width="0.12"/>`);
+      sil.push(`<polygon points="${pts(poly)}"/>`);
+      for (const [px, py] of poly) { minX = Math.min(minX, px); maxX = Math.max(maxX, px); minY = Math.min(minY, py); maxY = Math.max(maxY, py); }
     }
   }
-  const pad = 1.5;
+  const pad = 3;
   const w = maxX - minX + 2 * pad;
   const h = maxY - minY + 2 * pad;
   const side = Math.max(w, h);
   const vx = minX - pad - (side - w) / 2;
   const vy = minY - pad - (side - h) / 2;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx.toFixed(2)} ${vy.toFixed(2)} ${side.toFixed(2)} ${side.toFixed(2)}" width="160" height="160"><g fill="${OUTLINE}" stroke="${OUTLINE}" stroke-width="0.9" stroke-linejoin="round">${sil.join('')}</g>${body.join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx.toFixed(2)} ${vy.toFixed(2)} ${side.toFixed(2)} ${side.toFixed(2)}" width="160" height="160"><g fill="${OUTLINE}" stroke="${OUTLINE}" stroke-width="1.8" stroke-linejoin="round">${sil.join('')}</g>${body.join('')}</svg>`;
 }
 
 // ── UI textures (pixel art, scaled with image-rendering: pixelated) ──────
@@ -353,7 +399,7 @@ async function main() {
     return `#${c.map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('')}`;
   };
   for (const bld of buildings.BUILDINGS) {
-    write('buildings', bld.id, bld.name, renderBuilding(buildings.parseLayers(bld), colorOf, bld.id));
+    write('buildings', bld.id, bld.name, renderBuilding(buildings.parseLayers(bld), bld.size.depth, colorOf, bld.id));
   }
 
   mkdirSync(join(OUT, 'textures'), { recursive: true });

@@ -8,19 +8,20 @@
 import React, { useState, useEffect } from 'react';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import useGameStore from '../../stores/useGameStore';
+import { artUrl } from './art';
 
 const STORAGE_KEY = 'mobileTutorialSeen';
 
 const TIPS = [
-  { icon: '🕹️', text: 'Use the joystick (bottom-left) to move' },
-  { icon: '🏃', text: 'Push joystick to edge to sprint' },
-  { icon: '⚔️', text: 'Tap enemies to attack' },
-  { icon: '🪄', text: 'Tap ground to cast spells' },
-  { icon: '🔄', text: 'Drag to rotate camera' },
-  { icon: '🔍', text: 'Pinch to zoom in/out' },
-  { icon: '⛏️', text: 'Hold a block (within 4) to mine it · tap to place the block in hand' },
-  { icon: '⚔️', text: 'Big button (bottom-right) swings your weapon' },
-  { icon: '🧰', text: 'Tools button: bag, crafting, building, plan, settlement' },
+  { icon: 'stick', text: 'Use the joystick (bottom-left) to move' },
+  { icon: 'dash', text: 'Push joystick to edge to sprint' },
+  { icon: 'swords', text: 'Tap enemies to attack' },
+  { icon: 'wand', text: 'Tap ground to cast spells' },
+  { icon: 'rotate', text: 'Drag to rotate camera' },
+  { icon: 'zoom', text: 'Pinch to zoom in/out' },
+  { icon: 'pickaxe', text: 'Hold a block (within 4) to mine it · tap to place the block in hand' },
+  { icon: 'sword', text: 'Big button (bottom-right) swings your weapon' },
+  { icon: 'grid', text: 'Tools button: bag, crafting, building, plan, settlement' },
 ];
 
 function alreadySeen() {
@@ -85,10 +86,11 @@ const styles = {
     lineHeight: 1.35,
   },
   icon: {
-    fontSize: 20,
     width: 28,
-    textAlign: 'center',
+    height: 28,
     flexShrink: 0,
+    imageRendering: 'pixelated',
+    filter: 'drop-shadow(2px 2px 0 #07080b)',
   },
   dismiss: {
     marginTop: 16,
@@ -133,7 +135,7 @@ const MobileTouchTutorial = () => {
         <ul className="touch-tutorial__list" style={styles.list}>
           {TIPS.map((tip) => (
             <li key={tip.text} style={styles.item}>
-              <span style={styles.icon} aria-hidden="true">{tip.icon}</span>
+              <img src={artUrl('ui', tip.icon)} alt="" style={styles.icon} />
               <span>{tip.text}</span>
             </li>
           ))}

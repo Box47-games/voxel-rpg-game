@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { artUrl } from './art';
 import './StatTooltip.css';
 
 // Only the non-zero entries of a bonus map (an all-zero section is left out)
@@ -17,27 +18,28 @@ const StatTooltip = ({ stat, value, breakdown, position = 'right' }) => {
 
   const getStatIcon = (statName) => {
     const icons = {
-      health: '❤️',
-      mana: '✨',
-      stamina: '⚡',
-      damage: '⚔️',
-      defense: '🛡️',
-      speed: '🏃',
-      critChance: '💥',
+      health: ['hud', 'health'],
+      mana: ['hud', 'mana'],
+      stamina: ['hud', 'stamina'],
+      damage: ['ui', 'sword'],
+      defense: ['ui', 'shield'],
+      speed: ['ui', 'dash'],
+      critChance: ['ui', 'swords'],
     };
-    return icons[statName] || '📊';
+    const [group, id] = icons[statName] || ['ui', 'info'];
+    return <img className="stat-tooltip-img" src={artUrl(group, id)} alt="" />;
   };
 
   const getAttributeIcon = (attr) => {
-    const icons = {
-      combat: '⚔️',
-      magic: '✨',
-      endurance: '🛡️',
-      exploration: '🧭',
-      leadership: '👑',
-      construction: '🔨',
+    const ids = {
+      combat: 'sword',
+      magic: 'wand',
+      endurance: 'shield',
+      exploration: 'mapPin',
+      leadership: 'people',
+      construction: 'hammer',
     };
-    return icons[attr] || '⚡';
+    return <img className="stat-tooltip-img" src={artUrl('ui', ids[attr] || 'info')} alt="" />;
   };
 
   return (
@@ -96,7 +98,7 @@ const StatTooltip = ({ stat, value, breakdown, position = 'right' }) => {
         {/* Skill bonuses */}
         {breakdown.skills && breakdown.skills !== 0 && (
           <div className="stat-tooltip-row skill-bonus">
-            <span className="stat-tooltip-label">🌟 Skills</span>
+            <span className="stat-tooltip-label"><img className="stat-tooltip-img" src={artUrl('ui', 'levelUp')} alt="" /> Skills</span>
             <span className="stat-tooltip-value positive">
               +{Math.round(breakdown.skills)}
             </span>
@@ -117,7 +119,7 @@ const StatTooltip = ({ stat, value, breakdown, position = 'right' }) => {
       {/* Soft cap warning */}
       {breakdown.softCapped && (
         <div className="stat-tooltip-warning">
-          ⚠️ Soft cap reached - reduced effectiveness
+          <img className="stat-tooltip-img" src={artUrl('ui', 'warning')} alt="" /> Soft cap reached - reduced effectiveness
         </div>
       )}
     </div>
