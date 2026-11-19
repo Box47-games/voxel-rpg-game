@@ -61,8 +61,12 @@ export function triggerAction(anim, type) {
 
 /**
  * @param {object} anim - from createHumanoidAnimState (mutated)
- * @param {{ speed: number, airborne?: boolean, vy?: number, activity?: string|null, alert?: boolean }} motion
+ * @param {{ speed: number, airborne?: boolean, vy?: number, activity?: string|null, alert?: boolean,
+ *   held?: string|null, mineTool?: string|null }} motion
  *   vy: vertical velocity (world units/s) picks the rising or falling pose
+ *   held: tool bone carried in the right hand (the player's equipped item; null =
+ *     bare hands). Left out, characters carry nothing and swing a sword in melee.
+ *   mineTool: tool bone shown while mining (left out: a pickaxe; null = fists)
  * @param {number} delta - seconds
  */
 export function stepHumanoidAnimation(anim, motion, delta) {
@@ -82,7 +86,8 @@ export function stepHumanoidAnimation(anim, motion, delta) {
     return pose.bones[name];
   };
   for (const tool of TOOL_BONES) b(tool).sx = b(tool).sy = b(tool).sz = 0;
-  const show = (tool) => { b(tool).sx = b(tool).sy = b(tool).sz = 1; };
+  const show = (tool) => { if (tool) b(tool).sx = b(tool).sy = b(tool).sz = 1; };
+  const hideTools = () => { for (const tool of TOOL_BONES) b(tool).sx = b(tool).sy = b(tool).sz = 0; };
 
   const body = b('body');
   const head = b('head');
@@ -110,9 +115,10 @@ export function stepHumanoidAnimation(anim, motion, delta) {
   body.lift = Math.abs(Math.cos(anim.phase)) * (0.05 + run * 0.06) * walk
     + Math.sin(anim.time * 2.1) * 0.012 * (1 - walk); // breathing
   head.rx = -run * 0.15;
-  // The cape streams back with speed and ripples
-  cape.rx = -(0.1 + anim.speed * 0.07) - Math.sin(anim.time * 7) * 0.05 * walk;
-  cape.rx = Math.max(cape.rx, -1.1);
+  // The cape streams back with speed and ripples (a positive rx swings the
+  // hem backwards, away from the body: the model faces +Z)
+  cape.rx = 0.1 + anim.speed * 0.07 + Math.sin(anim.time * 7) * 0.05 * walk;
+  cape.rx = Math.min(cape.rx, 1.1);
 
   // ── Jumping / falling ──
   const air = anim.airborne;
@@ -130,7 +136,13 @@ export function stepHumanoidAnimation(anim, motion, delta) {
     body.rx = lerp(body.rx, mix(0.08, -0.06), air);
     body.lift = lerp(body.lift, 0, air);
     head.rx = lerp(head.rx, mix(0.15, -0.1), air); // look down at the landing
-    cape.rx = lerp(cape.rx, mix(-1.05, -0.35), air); // streams up as you drop
+    cape.rx = lerp(cape.rx, mix(1.05, 0.35), air); // streams up as you drop
+  }
+
+  // ── Carried item: the equipped tool or weapon rests in the right hand ──
+  if (motion.held) {
+    show(motion.held);
+    armR.rx = armR.rx * 0.55 - 0.25 * (1 - air);
   }
 
   // ── Idle glances ──
@@ -150,8 +162,9 @@ export function stepHumanoidAnimation(anim, motion, delta) {
   const t = anim.time;
   switch (motion.activity) {
     case 'mine': {
-      // Pickaxe overhead, then down hard
-      show('toolPick');
+      // Pickaxe (or axe, or fist) overhead, then down hard
+      hideTools();
+      show(motion.mineTool === undefined ? 'toolPick' : motion.mineTool);
       const c = (t * 1.8) % 1;
       armR.rx = c < 0.55 ? lerp(-0.3, -2.7, c / 0.55) : lerp(-2.7, -0.3, (c - 0.55) / 0.45);
       armL.rx = armR.rx * 0.6;
@@ -160,6 +173,7 @@ export function stepHumanoidAnimation(anim, motion, delta) {
       break;
     }
     case 'build': {
+      hideTools();
       show('toolHammer');
       const c = (t * 2.6) % 1;
       armR.rx = c < 0.6 ? lerp(-0.9, -2.1, c / 0.6) : lerp(-2.1, -0.9, (c - 0.6) / 0.4);
@@ -169,6 +183,7 @@ export function stepHumanoidAnimation(anim, motion, delta) {
     }
     case 'farm': {
       // Hoe with both hands, bowing into each stroke
+      hideTools();
       show('toolHoe');
       const c = (t * 1.3) % 1;
       const stroke = c < 0.5 ? lerp(-1.6, -0.5, c / 0.5) : lerp(-0.5, -1.6, (c - 0.5) / 0.5);
@@ -179,6 +194,7 @@ export function stepHumanoidAnimation(anim, motion, delta) {
       break;
     }
     case 'carry':
+      hideTools();
       show('carry');
       armL.rx = -1.25;
       armR.rx = -1.25;
@@ -205,8 +221,9 @@ export function stepHumanoidAnimation(anim, motion, delta) {
   if (anim.action) {
     const a = anim.action.t / ACTION_DURATION[anim.action.type];
     if (anim.action.type === 'melee') {
-      // Sword from over the shoulder, slashing down and across
-      show('toolSword');
+      // Weapon from over the shoulder, slashing down and across
+      hideTools();
+      show(motion.held === undefined ? 'toolSword' : motion.held);
       armR.rx = a < 0.35 ? lerp(-0.6, -2.6, a / 0.35) : lerp(-2.6, -0.4, clamp((a - 0.35) / 0.4, 0, 1));
       armR.rz = -0.2 + 0.5 * bump(a);
       body.ry = a < 0.35 ? 0.35 * (a / 0.35) : lerp(0.35, -0.3, clamp((a - 0.35) / 0.4, 0, 1));
@@ -220,6 +237,7 @@ export function stepHumanoidAnimation(anim, motion, delta) {
       armR.rz = lerp(armR.rz, 0.2, push);
       body.rx += -0.12 * bump(a / 0.4) + 0.1 * push;
     } else if (anim.action.type === 'place') {
+      hideTools();
       show('toolHammer');
       armR.rx = -0.6 - 1.2 * bump(a);
     }

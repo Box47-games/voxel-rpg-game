@@ -163,6 +163,7 @@ const RiftController = ({ chunkManager }) => {
       // Close fully purified rifts
       for (const riftId of fadeResult.fullyPurified) {
         rm.closeRift(riftId);
+        state.noteRiftClosed();
         if (window.addNotification) {
           window.addNotification({
             type: 'success',

@@ -557,6 +557,23 @@ const useGameStore = create((rawSet, get, api) => {
       : [...state.unlockedSpells, spellId],
   })),
 
+  // Rifts the player has sealed. The first earns the cape (playerGear.js).
+  riftsClosed: 0,
+  /** Count a sealed rift; the first one earns the cape, with a toast. */
+  noteRiftClosed: () => {
+    const first = (get().riftsClosed || 0) === 0;
+    set((state) => ({ riftsClosed: (state.riftsClosed || 0) + 1 }));
+    if (first) {
+      window.addNotification?.({
+        type: 'achievement',
+        title: 'Cape earned',
+        description: 'Sealing your first rift earned you the Riftwarden cape. It is yours to wear from now on.',
+        art: { group: 'misc', id: 'rift' },
+        duration: 7000,
+      });
+    }
+  },
+
   // Debug stats (mutable, written by Canvas-internal components, read by the dev overlay)
   _debugStats: { drawCalls: 0, triangles: 0, geometries: 0, textures: 0, programs: 0, meshRebuilds: 0, meshRebuildMs: 0, useKeyCooldownLeft: 0 },
 

@@ -204,6 +204,7 @@ class Game3DSaveManager {
         zones: state.zones || [],
         constructionSites: state.constructionSites || [],
         unlockedSpells: state.unlockedSpells || null,
+        riftsClosed: state.riftsClosed || 0,
         tutorialHints: state.tutorialHints || null,
         quests: { completedQuestIds: useQuestStore.getState().completedQuestIds || [] },
         rifts: state._riftManager?.serialize ? state._riftManager.serialize() : (state._pendingRiftState || null),
@@ -406,6 +407,7 @@ class Game3DSaveManager {
 
       // ── Progress ──
       if (Array.isArray(saveData.unlockedSpells)) setState({ unlockedSpells: saveData.unlockedSpells });
+      setState({ riftsClosed: Number(saveData.riftsClosed) || 0 }); // older saves: none yet
       if (saveData.tutorialHints?.shownHints) setState({ tutorialHints: saveData.tutorialHints });
       if (Array.isArray(saveData.quests?.completedQuestIds)) {
         useQuestStore.setState({ completedQuestIds: saveData.quests.completedQuestIds });

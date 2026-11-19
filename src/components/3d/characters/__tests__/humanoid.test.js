@@ -135,7 +135,8 @@ describe('animation', () => {
   test('the cape streams back faster at speed', () => {
     const still = run({ speed: 0 }, 1).poses.at(-1);
     const fast = run({ speed: 8 }, 1).poses.at(-1);
-    expect(get(fast, 'cape', 'rx')).toBeLessThan(get(still, 'cape', 'rx') - 0.3);
+    // Positive rx swings the hem back, away from the body
+    expect(get(fast, 'cape', 'rx')).toBeGreaterThan(get(still, 'cape', 'rx') + 0.3);
   });
 
   test('a melee attack shows the sword, raises it and slashes down, then puts it away', () => {

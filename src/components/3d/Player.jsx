@@ -15,6 +15,7 @@ import { isSolid as isBlockSolid, isTransparent as isBlockTransparent } from '..
 import { applyBonePose } from './voxelRig';
 import { getHealthRegenRate, getStaminaRegenMult } from '../../systems/survival/ShelterEffects';
 import { createHumanoidInstance, PLAYER_LOOK } from './characters/humanoidModel';
+import { selectPlayerGearKey, gearLookFromKey, heldBone } from './characters/playerGear';
 import { getActiveScaffoldRoutes, scaffoldHeightAt } from '../../systems/construction/scaffoldRoute';
 import { createHumanoidAnimState, stepHumanoidAnimation, triggerAction } from './characters/humanoidAnimation';
 import { getLastPlayerAction } from '../../systems/playerActions';
@@ -107,7 +108,11 @@ const Player = () => {
   const prevUseRef = useRef(false);
 
   // Voxel adventurer model and its animation state
-  const rig = useMemo(() => createHumanoidInstance(PLAYER_LOOK), []);
+  // Rebuilt only when the visible gear changes (equip, unequip, the earned cape)
+  const gearKey = useGameStore(selectPlayerGearKey);
+  const look = useMemo(() => ({ ...PLAYER_LOOK, ...gearLookFromKey(gearKey) }), [gearKey]);
+  const rig = useMemo(() => createHumanoidInstance(look), [look]);
+  const heldToolBone = heldBone(look.heldKind);
   useEffect(() => () => rig.dispose(), [rig]);
   const animRef = useRef(createHumanoidAnimState(0.2));
   const lastActionSeqRef = useRef(0);
@@ -443,6 +448,8 @@ const Player = () => {
       airborne: looksAirborne(cm, currentPos, currentVel.y, grounded, scaffoldRoutes),
       vy: currentVel.y,
       activity,
+      held: heldToolBone, // the equipped tool or weapon (null: bare hands)
+      mineTool: heldToolBone,
     }, delta);
     applyBonePose(rig, pose);
     // In first person the camera sits in the head: hide it so it doesn't block the view

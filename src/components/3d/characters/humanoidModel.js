@@ -13,14 +13,15 @@
 
 import * as THREE from 'three';
 import { pair, sym, hashString, hash01, buildRigGeometry, createGeometryCache, createRig } from '../voxelRig';
+import { GEAR_TIERS } from './playerGear';
 
 export const HUMANOID_BONES = [
   'body', 'head', 'armL', 'armR', 'legL', 'legR', 'cape',
-  'toolSword', 'toolPick', 'toolHammer', 'toolHoe', 'carry',
+  'toolSword', 'toolPick', 'toolHammer', 'toolHoe', 'toolAxe', 'toolClub', 'carry', 'shield',
 ];
 
 /** Tool bones, all hidden unless an animation shows one. */
-export const TOOL_BONES = ['toolSword', 'toolPick', 'toolHammer', 'toolHoe', 'carry'];
+export const TOOL_BONES = ['toolSword', 'toolPick', 'toolHammer', 'toolHoe', 'toolAxe', 'toolClub', 'carry'];
 
 const HAND = [-4.6, 9.8, 0.6]; // right hand, where every tool is gripped
 
@@ -36,7 +37,10 @@ const BONES = {
   toolPick: { pivot: HAND, parent: 'armR' },
   toolHammer: { pivot: HAND, parent: 'armR' },
   toolHoe: { pivot: HAND, parent: 'armR' },
+  toolAxe: { pivot: HAND, parent: 'armR' },
+  toolClub: { pivot: HAND, parent: 'armR' },
   carry: { pivot: [0, 13, 4], parent: 'body' },
+  shield: { pivot: [4.6, 12.4, 0], parent: 'armL' },
 };
 
 /** Darken (k < 1) or lighten (k > 1) a hex color. */
@@ -122,6 +126,9 @@ export function getSettlerLook(npc) {
 /** Build the voxelRig model for a look. */
 export function buildHumanoidModel(look, unit = 0.1) {
   const skinShade = shade(look.skin, 0.88);
+  // Gear tiers (player): the held tool's head and worn armour take the tier's colours
+  const tier = (t, i = 0) => (t && GEAR_TIERS[t] ? GEAR_TIERS[t][i] : null);
+  const held = (kind, i, fallback) => (look.heldKind === kind && tier(look.heldTier, i)) || fallback;
   const colors = {
     skin: look.skin,
     skinShade,
@@ -134,11 +141,11 @@ export function buildHumanoidModel(look, unit = 0.1) {
     shirtDark: shade(look.shirt, 0.8),
     trim: look.trim,
     pants: look.pants,
-    boots: look.boots,
-    bootCuff: shade(look.boots, 1.3),
+    boots: tier(look.bootsTier) || look.boots,
+    bootCuff: shade(tier(look.bootsTier) || look.boots, 1.3),
     belt: look.belt,
     buckle: '#d9b45a',
-    hands: look.gloves || look.skin,
+    hands: tier(look.glovesTier) || look.gloves || look.skin,
     cape: look.cape || '#000000',
     capeDark: look.cape ? shade(look.cape, 0.75) : '#000000',
     leather: '#7a5634',
@@ -159,7 +166,22 @@ export function buildHumanoidModel(look, unit = 0.1) {
     jerkinDark: look.jerkin ? shade(look.jerkin, 0.72) : '#000000',
     jerkinLight: look.jerkin ? shade(look.jerkin, 1.35) : '#000000',
     pantsDark: shade(look.pants, 0.78),
-    bootSole: shade(look.boots, 0.6),
+    bootSole: shade(tier(look.bootsTier) || look.boots, 0.6),
+    blade: held('sword', 0, '#c8ced6'),
+    bladeLight: held('sword', 1, '#e8edf2'),
+    pickHead: held('pick', 0, '#7d848c'),
+    pickTip: held('pick', 1, '#c8ced6'),
+    axeHead: held('axe', 0, '#7d848c'),
+    axeEdge: held('axe', 1, '#c8ced6'),
+    club: '#8a6239',
+    clubDark: '#6a4a2a',
+    helm: tier(look.helmetTier) || '#9aa3ad',
+    helmLight: tier(look.helmetTier, 1) || '#c8ced6',
+    plate: tier(look.armorTier) || '#000000',
+    plateLight: tier(look.armorTier, 1) || '#000000',
+    plateDark: look.armorTier ? shade(tier(look.armorTier), 0.72) : '#000000',
+    shieldFace: tier(look.shieldTier) || '#000000',
+    shieldRim: look.shieldTier ? shade(tier(look.shieldTier), 0.65) : '#000000',
   };
 
   const parts = [
@@ -197,12 +219,22 @@ export function buildHumanoidModel(look, unit = 0.1) {
     // Tools (hidden until used), all pointing forward from the right hand
     ['toolSword', 'leather', [0.8, 0.8, 1.6], [-4.6, 9.8, 1.2]],
     ['toolSword', 'gold', [2.6, 0.6, 0.6], [-4.6, 9.8, 2.2]],
-    ['toolSword', 'steel', [0.6, 1.4, 8], [-4.6, 9.8, 6.5]],
-    ['toolSword', 'steelLight', [0.62, 0.4, 8], [-4.6, 10.5, 6.5]],
+    ['toolSword', 'blade', [0.6, 1.4, 8], [-4.6, 9.8, 6.5]],
+    ['toolSword', 'bladeLight', [0.62, 0.4, 8], [-4.6, 10.5, 6.5]],
     ['toolPick', 'wood', [0.8, 0.8, 8], [-4.6, 9.8, 4]],
-    ['toolPick', 'iron', [1, 6.4, 1.2], [-4.6, 9.8, 8.4]],
-    ['toolPick', 'steel', [0.6, 1, 0.8], [-4.6, 13.4, 8.4]],
-    ['toolPick', 'steel', [0.6, 1, 0.8], [-4.6, 6.2, 8.4]],
+    ['toolPick', 'pickHead', [1, 6.4, 1.2], [-4.6, 9.8, 8.4]],
+    ['toolPick', 'pickTip', [0.6, 1, 0.8], [-4.6, 13.4, 8.4]],
+    ['toolPick', 'pickTip', [0.6, 1, 0.8], [-4.6, 6.2, 8.4]],
+    // Axe: a long haft with a wide bit on one side
+    ['toolAxe', 'wood', [0.8, 0.8, 8.4], [-4.6, 9.8, 4.2]],
+    ['toolAxe', 'axeHead', [1, 3.6, 2.2], [-4.6, 11.4, 7.6]],
+    ['toolAxe', 'axeEdge', [1.1, 4.4, 0.6], [-4.6, 11.6, 8.9]],
+    ['toolAxe', 'woodDark', [0.9, 0.9, 0.9], [-4.6, 9.8, 8.6]],
+    // Club: a thick knotted branch
+    ['toolClub', 'clubDark', [0.9, 0.9, 2.4], [-4.6, 9.8, 1.6]],
+    ['toolClub', 'club', [1.6, 1.6, 6], [-4.6, 9.8, 5.6]],
+    ['toolClub', 'clubDark', [2, 2, 1.6], [-4.6, 9.8, 8.6]],
+    ['toolClub', 'clubDark', [0.6, 0.8, 0.8], [-4.6, 10.9, 6.2]],
     ['toolHammer', 'wood', [0.7, 0.7, 6], [-4.6, 9.8, 3.4]],
     ['toolHammer', 'iron', [1.8, 3, 2], [-4.6, 9.8, 6.8]],
     ['toolHoe', 'wood', [0.7, 0.7, 10], [-4.6, 9.8, 5.4]],
@@ -356,6 +388,55 @@ export function buildHumanoidModel(look, unit = 0.1) {
       ['body', 'woodDark', [0.9, 0.9, 5.2], [4.2, 10.4, -2.6]],
       ['body', 'gold', [2, 0.6, 0.6], [4.2, 10.4, -0.1]],
       ['body', 'leather', [0.8, 0.8, 1.8], [4.2, 10.4, 1]],
+    );
+  }
+
+  // Worn gear (the player's equipment; see playerGear.js)
+  if (look.armorTier) {
+    if (look.armorTier === 'leather') {
+      // Studded leather cuirass with shoulder caps
+      parts.push(
+        ['body', 'plate', [7.8, 6.4, 4.8], [0, 15.4, 0]],
+        ['body', 'plateDark', [7.9, 0.6, 4.9], [0, 18.3, 0]],
+        ...pair('arm', 'plate', [3, 1.8, 3.1], [4.6, 18, 0]),
+      );
+      for (const [x, y] of [[-2.4, 16.8], [2.4, 16.8], [-2.4, 14], [2.4, 14]]) {
+        parts.push(['body', 'buckle', [0.5, 0.5, 0.2], [x, y, 2.45]]);
+      }
+    } else {
+      // Breastplate with a ridge, a fauld over the belt line, and pauldrons
+      parts.push(
+        ['body', 'plate', [7.8, 6.4, 4.8], [0, 15.4, 0]],
+        ['body', 'plateLight', [1, 5.6, 0.2], [0, 15.6, 2.45]],
+        ['body', 'plateDark', [7.9, 0.6, 4.9], [0, 12.4, 0]],
+        ...pair('arm', 'plate', [3.4, 2.2, 3.4], [4.6, 18.1, 0]),
+        ...pair('arm', 'plateLight', [3.5, 0.5, 3.5], [4.6, 19.1, 0]),
+      );
+    }
+  }
+  if (look.helmetTier) {
+    // Open-faced helm: dome, brim band, nose guard and cheek plates
+    parts.push(
+      ['head', 'helm', [6.8, 3, 6.8], [0, 26.4, 0]],
+      ['head', 'helmLight', [7, 0.6, 7], [0, 25, 0]],
+      ['head', 'helmLight', [0.8, 3, 0.8], [0, 27.2, 3.3]],
+      ['head', 'helm', [0.8, 2.6, 0.6], [0, 23.6, 3.4]],
+      ...sym('head', 'helm', [0.6, 3, 4.6], [3.3, 23.8, -0.6]),
+    );
+  }
+  if (look.bootsTier && look.bootsTier !== 'leather') {
+    // Greaves over the boot tops
+    parts.push(...pair('leg', 'bootCuff', [3.2, 1.6, 3.6], [1.6, 4, 0.2]));
+  }
+  if (look.shieldTier) {
+    // Round-cornered board strapped to the left forearm, facing out
+    parts.push(
+      ['shield', 'shieldFace', [0.8, 6, 5], [6.3, 12.4, 0.4]],
+      ['shield', 'shieldRim', [0.9, 6.4, 0.6], [6.3, 12.4, 3.1]],
+      ['shield', 'shieldRim', [0.9, 6.4, 0.6], [6.3, 12.4, -2.3]],
+      ['shield', 'shieldRim', [0.9, 0.6, 5], [6.3, 15.6, 0.4]],
+      ['shield', 'shieldRim', [0.9, 0.6, 5], [6.3, 9.2, 0.4]],
+      ['shield', 'buckle', [1, 1.4, 1.4], [6.8, 12.4, 0.4]],
     );
   }
 
