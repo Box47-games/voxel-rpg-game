@@ -3,7 +3,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 /**
- * ParticleEffect component - Creates particle explosions for various effects
+ * ParticleEffect component - Creates particle explosions for various effects,
+ * as small voxel chips that fly out, fall and shrink
  */
 const ParticleEffect = ({ position, color = '#ffff00', count = 20, type = 'explosion', onComplete, id }) => {
   const particlesRef = useRef();
@@ -82,7 +83,7 @@ const ParticleEffect = ({ position, color = '#ffff00', count = 20, type = 'explo
         particle.life -= delta * 2;
 
         // Update instance matrix (reuse matrix and scale objects)
-        const s = 0.1 * particle.life;
+        const s = 0.16 * Math.max(particle.life, 0);
         matrix.identity();
         matrix.setPosition(particle.position);
         matrix.scale(scale.set(s, s, s));
@@ -99,8 +100,9 @@ const ParticleEffect = ({ position, color = '#ffff00', count = 20, type = 'explo
 
   return (
     <instancedMesh ref={particlesRef} args={[null, null, count]} position={position}>
-      <sphereGeometry args={[0.1, 8, 8]} />
-      <meshBasicMaterial color={color} transparent opacity={0.8} />
+      {/* Voxel chips: unit cubes scaled per particle */}
+      <boxGeometry args={[1, 1, 1]} />
+      <meshBasicMaterial color={color} transparent opacity={0.9} toneMapped={false} />
     </instancedMesh>
   );
 };
