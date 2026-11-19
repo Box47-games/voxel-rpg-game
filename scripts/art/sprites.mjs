@@ -186,6 +186,7 @@ export const MONO = {
   down: ['###......###', '.###....###.', '..###..###..', '...######...', '....####....', '.....##.....'],
   stick: ['....####....', '...######...', '...######...', '....####....', '.....##.....', '.....##.....', '.##########.', '############', '############'],
   zoom: ['..#####.....', '.#.....#....', '#.......#...', '#..###..#...', '#.......#...', '.#.....#....', '..######....', '.......###..', '........###.', '.........##.'],
+  star: ['.....##.....', '.....##.....', '....####....', '############', '.##########.', '...######...', '...######...', '..###..###..', '.##......##.'],
   skull: ['..#######...', '.#########..', '###########.', '##..###..##.', '##..###..##.', '#####.#####.', '.####.####..', '..#.#.#.#...', '..#######...'],
 };
 
@@ -270,7 +271,7 @@ export const ICONS = {
     'Notifications': { trophy: 'Achievement', swords: 'Raid', levelUp: 'Level up', check: 'Success', warning: 'Warning', info: 'Info' },
     'Settler activities': { sleep: 'Sleeping', food: 'Hungry', talk: 'Socialising' },
     'Touch controls': { jump: 'Jump', dash: 'Sprint', wand: 'Spell', wheel: 'Tool wheel', hand: 'Hand', rotate: 'Turn piece', stick: 'Joystick', zoom: 'Zoom' },
-    'General': { lock: 'Locked', close: 'Close', alert: 'Alert', sun: 'Day', moon: 'Night', home: 'Shelter', up: 'Up', down: 'Down', skull: 'Death' },
+    'General': { lock: 'Locked', close: 'Close', alert: 'Alert', sun: 'Day', moon: 'Night', home: 'Shelter', up: 'Up', down: 'Down', skull: 'Death', star: 'Rating' },
   }).flatMap(([group, entries]) => Object.entries(entries).map(([sprite, label]) => ({ id: sprite, label, kind: 'mono', sprite, group }))),
 };
 

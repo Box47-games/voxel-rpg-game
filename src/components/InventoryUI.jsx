@@ -69,7 +69,7 @@ const fmt = (v) => (typeof v === 'number' ? +v.toFixed(1) : v);
 /** An item's picture: generated art, else its emoji. */
 function ItemPicture({ item }) {
   const url = itemArt(item);
-  return url ? <img src={url} alt="" /> : <span className="vx-slot__emoji" aria-hidden="true">{item.icon}</span>;
+  return url ? <img src={url} alt="" /> : <img src={artUrl('ui', item.icon) || artUrl('ui', 'box')} alt="" />;
 }
 
 function EquipSlot({ def, item, selected, onSelect }) {

@@ -984,7 +984,7 @@ const useGameStore = create((rawSet, get, api) => {
           type: drop.type,
           name: drop.type.charAt(0).toUpperCase() + drop.type.slice(1),
           quantity: drop.quantity,
-          icon: '🥩'
+          icon: 'food'
         }
       });
     });

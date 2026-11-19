@@ -760,6 +760,13 @@
     "uiGroup": "General"
   },
   {
+    "group": "ui",
+    "id": "star",
+    "label": "Rating",
+    "file": "ui/star.svg",
+    "uiGroup": "General"
+  },
+  {
     "group": "blocks",
     "id": "STONE",
     "label": "Stone",

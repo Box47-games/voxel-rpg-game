@@ -108,3 +108,7 @@
   .feedback__text { min-height: 64px; }
   .feedback__shot img { max-height: 80px; }
 }
+
+/* Pixel stars: dim until chosen, then gold */
+.feedback__star img { width: 26px; height: 26px; image-rendering: pixelated; opacity: 0.35; filter: drop-shadow(2px 2px 0 #07080b); }
+.feedback__star.is-on img { opacity: 1; filter: drop-shadow(2px 2px 0 #07080b) sepia(1) saturate(4) hue-rotate(-22deg) brightness(0.98); }

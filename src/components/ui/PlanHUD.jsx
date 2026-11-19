@@ -63,7 +63,6 @@ function selectBlueprint(id) {
     const name = BLUEPRINTS.find((b) => b.id === id)?.name || 'That building';
     window.addNotification?.({
       type: 'warning',
-      icon: '🔒',
       art: { group: 'ui', id: 'lock' },
       title: `${name} is locked`,
       description: `To unlock: ${lockText(lock)}`,

@@ -237,7 +237,7 @@ export const getAttributeInfo = (attribute) => {
   const info = {
     leadership: {
       name: 'Leadership',
-      icon: '👑',
+      icon: 'people',
       color: '#FFD700',
       description: 'Improves NPC efficiency, settlement capacity, and recruitment',
       effects: [
@@ -250,7 +250,7 @@ export const getAttributeInfo = (attribute) => {
     },
     construction: {
       name: 'Construction',
-      icon: '🔨',
+      icon: 'hammer',
       color: '#8B4513',
       description: 'Reduces building costs, increases build speed and durability',
       effects: [
@@ -263,7 +263,7 @@ export const getAttributeInfo = (attribute) => {
     },
     exploration: {
       name: 'Exploration',
-      icon: '🧭',
+      icon: 'mapPin',
       color: '#4CAF50',
       description: 'Improves movement speed, gathering, and discovery',
       effects: [
@@ -276,7 +276,7 @@ export const getAttributeInfo = (attribute) => {
     },
     combat: {
       name: 'Combat',
-      icon: '⚔️',
+      icon: 'sword',
       color: '#F44336',
       description: 'Increases damage, critical strike chance, and attack speed',
       effects: [
@@ -289,7 +289,7 @@ export const getAttributeInfo = (attribute) => {
     },
     magic: {
       name: 'Magic',
-      icon: '✨',
+      icon: 'wand',
       color: '#9C27B0',
       description: 'Boosts spell damage, mana pool, and reduces costs',
       effects: [
@@ -302,7 +302,7 @@ export const getAttributeInfo = (attribute) => {
     },
     endurance: {
       name: 'Endurance',
-      icon: '🛡️',
+      icon: 'shield',
       color: '#2196F3',
       description: 'Increases health, stamina, defense, and resistances',
       effects: [

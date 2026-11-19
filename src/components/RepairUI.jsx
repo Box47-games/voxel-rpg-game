@@ -6,7 +6,7 @@
 import React from 'react';
 import useGameStore from '../stores/useGameStore';
 import BagFrame from './ui/BagFrame';
-import { itemArt, rarityClass } from './ui/art';
+import { artUrl, itemArt, rarityClass } from './ui/art';
 import ToolDurability from './ui/ToolDurability';
 import { isTool, isBroken, getDurability } from '../systems/tools/toolDurability';
 
@@ -44,7 +44,7 @@ export default function RepairUI() {
             return (
               <li key={target.slot ?? `i${target.index}`} className={`vx-parch repair__item${isBroken(item) ? ' is-broken' : ''}`}>
                 <div className={`vx-slot ${rarityClass(item)}`}>
-                  {url ? <img src={url} alt="" /> : <span className="vx-slot__emoji" aria-hidden="true">{item.icon}</span>}
+                  {url ? <img src={url} alt="" /> : <img src={artUrl('ui', item.icon) || artUrl('ui', 'box')} alt="" />}
                 </div>
                 <div className="repair__text">
                   <div className="detail__name">{item.name}</div>

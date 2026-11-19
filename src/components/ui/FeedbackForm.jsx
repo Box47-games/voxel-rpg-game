@@ -96,7 +96,7 @@ function FeedbackDialog() {
                     className={`feedback__star${rating != null && n <= rating ? ' is-on' : ''}`}
                     onClick={() => setRating(rating === n ? null : n)}
                   >
-                    ★
+                    <img src={artUrl('ui', 'star')} alt="" />
                   </button>
                 ))}
               </div>
