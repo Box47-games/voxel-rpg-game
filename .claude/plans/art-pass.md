@@ -60,29 +60,29 @@ npm run art:portraits   # player + settler portraits from the real models (needs
       card, notched bar, tags, key caps, pixel buttons; load Pixelify Sans; retire the slate/blue
       tokens in `tokens.css` (still to do: other screens use them)
 - [x] Bag: Inventory (paper-doll with rendered portrait), Craft, Repair — live 3D player is a later 3D-gap item
-- [x] Toasts / notifications (E prompts, hints, tooltips still to do)
-- [ ] Settlement dashboard (4 tabs), Stockpile, Settler and Building panels
-- [ ] Build catalog, Plan bar + overview
-- [ ] Spell wheel, touch tool wheel, Dialogue
-- [ ] Pause, Start, Death, Help/controls, phone tutorial, error screen
+- [x] Toasts / notifications, E prompts, hints, stat tooltips
+- [x] Settlement dashboard (4 tabs), Stockpile, Settler and Building panels (`FramedPanel`)
+- [x] Build catalog, Plan bar + overview
+- [x] Spell wheel, touch tool wheel, Dialogue
+- [x] Pause, Start, Death, Help/controls, phone tutorial, error screen, feedback form
 - [x] HUD: stat bars (HUD icons), level badge, clock (sun/moon), hotbar (block icons),
       mode buttons, crosshair, tool durability; toasts placed for upright and sideways phones
-      (touch buttons — jump, E, sprint, spell, Attack — still old; with the wheels/Dialogue pass)
-- [ ] Replace emoji/lucide icons everywhere with the manifest icons
+      and the touch buttons (jump, E, sprint, spell wand, Attack, turn piece: `.vx-tbtn`)
+- [x] Replace emoji/lucide icons everywhere with the manifest icons (lucide-react removed)
 
 ### To do: 3D
-- [ ] Live player view in the Bag (turning model with equipped gear)
-- [ ] Companion: a proper voxel rig (today 4 boxes, `Companion.jsx`)
-- [ ] Held tools per tier and an axe in hand (`humanoidModel.js` tool bones)
-- [ ] Worn armour on the body: helmet, armour, gloves, boots, shield
-- [ ] Earned cape (model supports `look.cape`; decide how it's earned)
-- [ ] Spell visuals: a voxel bolt + impact per spell (today spheres/beam, `Projectile.jsx`)
-- [ ] Damage numbers with pixel digits (`DamageNumber.jsx`)
-- [ ] Target marker in pixel style (`TargetMarker.jsx`)
-- [ ] Loot: a chunk per material (`pickups/pickupModels.jsx`)
-- [ ] Stockpile crates that show their contents (`StockpileVisual.jsx`)
-- [ ] Settler thought-bubble icons (`NPCThoughtBubble.jsx`)
-- [ ] Construction scaffolding detail (`ConstructionVisual.jsx`)
+- [x] Live player view in the Bag (turning model with equipped gear; drag to turn)
+- [x] Companion: humanoid (mage, mercenary, gatherer) or animal (wolf pet, deer mount) rig
+- [x] Held tools per tier, axe and club in hand (`playerGear.js`, `humanoidModel.js` tool bones)
+- [x] Worn armour on the body: helmet, armour, gloves, boots, shield
+- [x] Earned cape: sealing the first rift (`riftsClosed`, saved), with a toast
+- [x] Spell visuals: voxel bolt per spell family + voxel-chip impact (`spellBolts.jsx`)
+- [x] Damage numbers with pixel digits (`pixelText.js` sprites)
+- [x] Target marker in pixel style (corner brackets)
+- [x] Loot: a chunk per material (`pickups/pickupModels.jsx`)
+- [x] Stockpile crates that show their contents (`StockpileVisual.jsx`, one merged mesh)
+- [x] Settler thought-bubble icons (`NPCThoughtBubble.jsx`, pixel sprites)
+- [x] Construction scaffolding detail: rails, braces, pads; notched progress bar
 
 ### Later (no screen yet)
 - [ ] Skill tree icons (29, currently emoji in `src/data/skillTrees/settlementTree.json`)
