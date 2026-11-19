@@ -1,265 +1,94 @@
-/* BuildCatalog.css — the B panel (blocks + buildings) */
+/* BuildCatalog.css — the B panel (blocks + buildings), in the framed look */
 
 .bc-backdrop {
-  position: fixed;
-  inset: 0;
   z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   /* Bottom padding keeps the panel clear of the block hotbar */
-  padding: calc(12px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px))
+  padding: calc(64px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px))
     calc(112px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
-  background: rgba(0, 0, 0, 0.25);
-  box-sizing: border-box;
+  background: rgba(4, 5, 8, 0.45);
 }
 
 .bc-panel {
-  width: 100%;
-  max-width: 640px;
+  width: min(760px, 100%);
   /* Fixed height so switching tabs doesn't resize it */
-  height: min(520px, 100%);
+  height: min(560px, 100%);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  background: var(--vx-panel-solid);
-}
-
-.bc-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 2px solid var(--vx-edge);
-}
-
-.bc-title {
-  font-size: 20px;
-  color: var(--vx-gold);
-}
-
-.bc-tabs {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-
-.bc-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font-family: var(--vx-font-ui);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--vx-text-dim);
-  background: transparent;
-  border: 2px solid transparent;
-  border-radius: 3px;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.bc-tab:hover {
-  color: var(--vx-text);
-}
-
-.bc-tab--active {
-  color: var(--vx-text);
-  background: var(--vx-panel-raised);
-  border-color: var(--vx-edge);
-  box-shadow: inset 0 2px 0 var(--vx-bevel-light);
-}
-
-.bc-tab__key {
-  font-size: 10px;
-}
-
-.bc-close {
-  padding: 4px 10px;
-}
-
-.bc-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 12px 14px;
-}
-
-.bc-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 10px;
+  padding: 12px 16px;
 }
+.bc-panel.vx-frame { border-width: 18px; border-image-width: 18px; }
+.bc-title { font-size: 24px; top: -48px; }
 
-.bc-grid--blocks {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
-}
+.bc-header { display: flex; align-items: center; gap: 10px; }
+.bc-tabs { display: flex; gap: 8px; flex: 1; }
+.bc-tabs .vx-tab img { width: 18px; height: 18px; }
+.bc-tab__key { font-size: 10px; }
+.bc-close { padding: 6px 10px 8px; }
 
-/* ── Block tile ── */
+.bc-body { flex: 1; min-height: 0; overflow-y: auto; }
 
+.bc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.bc-grid--blocks { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+
+/* Blocks: a stone slot with the block, its name and cost */
 .bc-block {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 8px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 6px;
+  font: inherit;
   text-align: left;
-  color: var(--vx-text);
-  background: var(--vx-panel-raised);
-  border: 2px solid var(--vx-edge);
-  border-radius: 3px;
-  box-shadow: inset 0 2px 0 var(--vx-bevel-light), inset 0 -3px 0 var(--vx-bevel-dark);
+  color: var(--vx-cream);
+  background: rgba(8, 9, 12, 0.45);
+  border: 3px solid #07080b;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.06);
   cursor: pointer;
   touch-action: manipulation;
-  font-family: var(--vx-font-ui);
 }
+.bc-block:hover { background: rgba(255, 224, 138, 0.08); }
+.bc-block:focus-visible { outline: 3px solid #ffe08a; outline-offset: 1px; }
+.bc-block--held { border-color: #e8b443; box-shadow: 0 0 0 2px #07080b, inset 0 0 0 2px rgba(255, 217, 119, 0.35); }
+.bc-block--none .bc-block__slot img { opacity: 0.45; filter: grayscale(0.6); }
+.bc-block__slot { --size: 48px; flex: none; }
+.bc-block__slot img { width: 34px; height: 34px; image-rendering: pixelated; }
+.bc-block__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bc-block__name { font-family: var(--vx-font-display); font-size: 12px; color: #ffd977; text-shadow: 1px 1px 0 #07080b; }
 
-.bc-block:hover {
-  border-color: var(--vx-gold-dark);
-}
+/* Costs */
+.bc-cost { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; }
+.bc-cost__item { display: inline-flex; align-items: center; gap: 4px; color: #9be07e; }
+.bc-cost__item--short { color: #ff9a8f; }
+.bc-cost__item img { width: 16px; height: 16px; image-rendering: pixelated; }
+.vx-parch .bc-cost__item { color: var(--vx-ink-good); }
+.vx-parch .bc-cost__item--short { color: var(--vx-ink-bad); }
 
-.bc-block--held {
-  outline: 2px solid var(--vx-gold-light);
-  outline-offset: 1px;
-}
+/* Buildings: a parchment card with the building's picture */
+.bc-card { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; }
+.bc-card--locked { filter: saturate(0.6); }
+.bc-card--locked .bc-card__pic { opacity: 0.55; filter: grayscale(0.7); }
+.bc-card__top { display: flex; gap: 10px; align-items: center; }
+.bc-card__pic { width: 64px; height: 64px; object-fit: contain; flex: none; image-rendering: pixelated; }
+.bc-card__head { min-width: 0; }
+.bc-card__name { font-family: var(--vx-font-display); font-size: 15px; color: #6b4a1c; }
+.bc-card__meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--vx-ink-dim); }
+.bc-card__desc { font-size: 14px; line-height: 1.3; }
+.bc-card__lock { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--vx-ink-bad); }
+.bc-card__lock .vx-tag { align-self: flex-start; }
+.bc-card__progress { color: var(--vx-ink-dim); }
+.bc-card .vx-pbtn { min-height: 38px; font-size: 13px; }
 
-.bc-block__swatch {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--vx-edge);
-  border-radius: 2px;
-  box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.3), inset 0 -5px 0 rgba(0, 0, 0, 0.3);
-}
+.bc-footer { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--vx-cream-dim); }
+.bc-footer__keys { margin-left: auto; white-space: nowrap; }
 
-.bc-block__count {
-  position: absolute;
-  top: 2px;
-  left: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000;
-}
-
-.bc-block__name {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-/* ── Building card ── */
-
-.bc-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  background: var(--vx-panel-raised);
-  border: 2px solid var(--vx-edge);
-  border-radius: 3px;
-  box-shadow: inset 0 2px 0 var(--vx-bevel-light), inset 0 -3px 0 var(--vx-bevel-dark);
-  font-family: var(--vx-font-ui);
-}
-
-.bc-card__name {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.bc-card__desc {
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--vx-text-dim);
-}
-
-.bc-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  font-size: 12px;
-  color: #8fb4ff;
-}
-
-.bc-card__meta span:last-child {
-  color: var(--vx-text-faint);
-}
-
-/* ── Milestone lock ── */
-.bc-card--locked .bc-card__name,
-.bc-card--locked .bc-card__desc {
-  opacity: 0.7;
-}
-
-.bc-card__lock {
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: rgba(255, 209, 102, 0.12);
-  color: #ffd166;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.bc-card__progress {
-  color: var(--vx-text-faint);
-}
-
-/* ── Cost line ── */
-
-.bc-cost {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  font-size: 12px;
-}
-
-.bc-cost__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #8fe08f;
-}
-
-.bc-cost__item--short {
-  color: #ff8a80;
-}
-
-.bc-cost__swatch {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  border: 1px solid var(--vx-edge);
-}
-
-.bc-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
-  border-top: 2px solid var(--vx-edge);
-  font-family: var(--vx-font-ui);
-  font-size: 12px;
-  color: var(--vx-text-dim);
-}
-
-.bc-footer__keys {
-  white-space: nowrap;
-}
-
-@media (max-width: 520px), (max-height: 500px) {
-  .bc-backdrop {
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  }
-  .bc-panel {
-    height: 100%;
-  }
-  .bc-grid--blocks {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  }
-  .bc-footer__keys,
-  .bc-tab__key {
-    display: none;
-  }
+/* Phones: full screen, thin frame, sign title inline */
+@media (max-width: 700px), (max-height: 500px) {
+  .bc-backdrop { padding: calc(6px + env(safe-area-inset-top, 0px)) 6px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .bc-panel { height: 100%; padding: 8px 10px; }
+  .bc-panel.vx-frame { border-width: 12px; border-image-width: 12px; }
+  .bc-title { position: static; transform: none; padding: 0; font-size: 18px; background: none; border: 0; box-shadow: none; }
+  .bc-panel { display: grid; grid-template-rows: auto auto 1fr auto; }
+  .bc-tabs .vx-tab { flex: 1; font-size: 12px; padding: 4px 8px 6px; }
+  .bc-tab__key, .bc-footer__keys { display: none; }
+  .bc-grid, .bc-grid--blocks { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 }

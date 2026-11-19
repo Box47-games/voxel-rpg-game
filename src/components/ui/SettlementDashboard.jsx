@@ -9,7 +9,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import useGameStore from '../../stores/useGameStore';
-import './settlementPanels.css';
+import FramedPanel from './FramedPanel';
+import { useIsMobile } from './BagFrame';
+import { artUrl, materialArt } from './art';
 import { isTouchDevice } from '../../utils/deviceDetection';
 import { describeActivity } from './NPCPanel';
 import {
@@ -23,20 +25,13 @@ import { formatBlocks } from '../../data/pieces';
 
 const REFRESH_MS = 1000;
 const TABS = [
-  { id: 'population', label: 'Population', icon: '👥' },
-  { id: 'resources', label: 'Resources', icon: '📦' },
-  { id: 'buildings', label: 'Buildings', icon: '🏠' },
-  { id: 'alerts', label: 'Alerts', icon: '⚠️' },
+  { id: 'population', label: 'Population', icon: 'people' },
+  { id: 'resources', label: 'Resources', icon: 'box' },
+  { id: 'buildings', label: 'Buildings', icon: 'home' },
+  { id: 'alerts', label: 'Alerts', icon: 'alert' },
 ];
-const ALERT_COLORS = { danger: '#ff6b6b', warning: '#ffb347', info: '#8ab4ff' };
-
-const C = {
-  panel: 'rgba(10, 10, 20, 0.95)',
-  border: '#4488ff',
-  text: '#eee',
-  dim: '#999',
-  rowAlt: 'rgba(255,255,255,0.04)',
-};
+const ALERT_COLORS = { danger: '#d9473f', warning: '#e8b443', info: '#5b9ae8' };
+const ALERT_TAG = { danger: 'vx-tag--need', warning: 'vx-tag--lock', info: 'vx-tag--info' };
 
 function snapshot() {
   const s = useGameStore.getState();
@@ -47,25 +42,13 @@ function snapshot() {
   };
 }
 
-function useIsMobile() {
-  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
-  useEffect(() => {
-    const check = () => setMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-  return mobile;
-}
-
 function HappinessBar({ value }) {
   const v = Math.round(value);
-  const color = v < 20 ? '#ff4444' : v < 40 ? '#ffaa00' : '#44cc44';
+  const color = v < 20 ? '#d9473f' : v < 40 ? '#e8b443' : '#6cbf4a';
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ width: 60, height: 7, background: '#222', borderRadius: 4, overflow: 'hidden', display: 'inline-block' }}>
-        <span style={{ display: 'block', width: `${Math.max(0, Math.min(100, v))}%`, height: '100%', background: color }} />
-      </span>
-      <span style={{ minWidth: 24, textAlign: 'right' }}>{v}</span>
+    <span className="dash-happy">
+      <span className="vx-nbar fp__nbar-sm" style={{ '--c': color }}><i style={{ width: `${Math.max(0, Math.min(100, v))}%` }} /></span>
+      <span className="fp__num">{v}</span>
     </span>
   );
 }
@@ -89,7 +72,7 @@ function PopulationTab({ data, onSelectNPC, compact }) {
   const header = (key, label, align = 'left') => (
     <th
       onClick={() => setSort((s) => ({ key, dir: s.key === key ? -s.dir : 1 }))}
-      style={{ textAlign: align, padding: '6px 8px', cursor: 'pointer', color: sort.key === key ? '#88aaff' : C.dim, fontWeight: 'normal', whiteSpace: 'nowrap' }}
+      style={{ textAlign: align, opacity: sort.key === key ? 1 : 0.7 }}
       aria-sort={sort.key === key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none'}
     >
       {label}{sort.key === key ? (sort.dir > 0 ? ' ▲' : ' ▼') : ''}
@@ -98,19 +81,19 @@ function PopulationTab({ data, onSelectNPC, compact }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 12 }}>
+      <div className="fp__tiles">
         {/* Before a campfire founds the settlement there's no cap to count against */}
         <Stat label="Settlers" value={data.settlement?.settlementCenter ? `${pop.count} / ${pop.cap}` : '—'} />
         <Stat label="Beds" value={`${pop.beds}${pop.homeless ? ` (${pop.homeless} homeless)` : ''}`} />
         <Stat label="Happiness" value={pop.avgHappiness == null ? '—' : <HappinessBar value={pop.avgHappiness} />} />
       </div>
-      <div style={{ fontSize: 13, color: C.dim, marginBottom: 12 }}>{pop.immigration}</div>
+      <p className="fp__muted">{pop.immigration}</p>
 
       {npcs.length === 0 ? (
-        <div style={{ color: C.dim, fontSize: 13 }}>No settlers yet.</div>
+        <p className="fp__muted">No settlers yet.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table className="fp__table">
             <thead>
               <tr>
                 {header('name', 'Name')}
@@ -120,19 +103,14 @@ function PopulationTab({ data, onSelectNPC, compact }) {
               </tr>
             </thead>
             <tbody>
-              {npcs.map((npc, i) => (
-                <tr
-                  key={npc.id}
-                  onClick={() => onSelectNPC(npc.id)}
-                  style={{ background: i % 2 ? C.rowAlt : 'transparent', cursor: 'pointer' }}
-                  title="Show details"
-                >
-                  <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{npc.fullName}</td>
-                  <td style={{ padding: '6px 8px', color: C.dim }}>{describeActivity(npc.state, npc.carryingItem)}</td>
-                  <td style={{ padding: '6px 8px', textAlign: 'right' }}>
+              {npcs.map((npc) => (
+                <tr key={npc.id} className="is-click" onClick={() => onSelectNPC(npc.id)} title="Show details">
+                  <td style={{ whiteSpace: 'nowrap' }}>{npc.fullName}</td>
+                  <td className="fp__muted">{describeActivity(npc.state, npc.carryingItem)}</td>
+                  <td style={{ textAlign: 'right' }}>
                     {!isSettled(npc) ? '—' : compact ? Math.round(npc.happiness || 0) : <HappinessBar value={npc.happiness || 0} />}
                   </td>
-                  <td style={{ padding: '6px 8px', color: npc.homeId ? C.dim : '#ffb347' }}>
+                  <td className={npc.homeId || !isSettled(npc) ? 'fp__muted' : 'fp__warn'}>
                     {isSettled(npc) ? (npc.homeId ? 'Housed' : 'Homeless') : 'Arriving'}
                   </td>
                 </tr>
@@ -148,26 +126,30 @@ function PopulationTab({ data, onSelectNPC, compact }) {
 function ResourcesTab({ data }) {
   const res = useMemo(() => summarizeResources(data.zones), [data]);
   if (res.stockpiles === 0) {
-    return <div style={{ color: C.dim, fontSize: 13 }}>No stockpiles yet. Create a Stockpile zone (Z) so settlers have somewhere to store goods.</div>;
+    return <p className="fp__muted">No stockpiles yet. Create a Stockpile zone (Z) so settlers have somewhere to store goods.</p>;
   }
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 12 }}>
+      <div className="fp__tiles" style={{ marginBottom: 10 }}>
         <Stat label="Stockpiles" value={res.stockpiles} />
         <Stat label="Storage used" value={`${res.used} / ${res.capacity}`} />
         <Stat label="Food" value={res.food} />
       </div>
       {res.items.length === 0 ? (
-        <div style={{ color: C.dim, fontSize: 13 }}>The stockpiles are empty.</div>
+        <p className="fp__muted">The stockpiles are empty.</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <table className="fp__table">
           <tbody>
-            {res.items.map((item, i) => (
-              <tr key={item.material} style={{ background: i % 2 ? C.rowAlt : 'transparent' }}>
-                <td style={{ padding: '6px 8px', textTransform: 'capitalize' }}>
-                  {item.material.replace(/_/g, ' ')}{item.isFood ? <span style={{ color: '#44cc44', fontSize: 11 }}> food</span> : null}
+            {res.items.map((item) => (
+              <tr key={item.material}>
+                <td style={{ textTransform: 'capitalize' }}>
+                  <span className="dash-mat">
+                    {materialArt(item.material) && <img src={materialArt(item.material)} alt="" width="20" height="20" />}
+                    {item.material.replace(/_/g, ' ')}
+                    {item.isFood ? <span className="vx-tag vx-tag--ready vx-tag--sm">food</span> : null}
+                  </span>
                 </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right' }}>{item.amount}</td>
+                <td className="fp__num" style={{ textAlign: 'right' }}>{item.amount}</td>
               </tr>
             ))}
           </tbody>
@@ -180,29 +162,29 @@ function ResourcesTab({ data }) {
 function BuildingsTab({ data }) {
   const b = useMemo(() => summarizeBuildings(data.constructionSites), [data]);
   if (b.completed.length === 0 && b.inProgress.length === 0) {
-    return <div style={{ color: C.dim, fontSize: 13 }}>No buildings yet. Open the building catalog with B.</div>;
+    return <p className="fp__muted">No buildings yet. Open the building catalog with B.</p>;
   }
   return (
     <div>
-      <div style={{ fontSize: 12, color: '#88aaff', textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 6px' }}>Completed</div>
-      {b.completed.length === 0 ? <div style={{ color: C.dim, fontSize: 13 }}>None yet.</div> : (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+      <h3 className="fp__h" style={{ marginTop: 0 }}>Completed</h3>
+      {b.completed.length === 0 ? <p className="fp__muted">None yet.</p> : (
+        <div className="fp__tiles" style={{ marginBottom: 6 }}>
           {b.completed.map((c) => <Stat key={c.name} label={c.name} value={c.count} />)}
         </div>
       )}
-      <div style={{ fontSize: 12, color: '#88aaff', textTransform: 'uppercase', letterSpacing: 1, margin: '12px 0 6px' }}>Under construction</div>
-      {b.inProgress.length === 0 ? <div style={{ color: C.dim, fontSize: 13 }}>Nothing being built.</div> : b.inProgress.map((site) => {
+      <h3 className="fp__h">Under construction</h3>
+      {b.inProgress.length === 0 ? <p className="fp__muted">Nothing being built.</p> : b.inProgress.map((site) => {
         const missing = Object.entries(site.missing);
         return (
-          <div key={site.id} style={{ marginBottom: 10, fontSize: 13 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div key={site.id} className="fp__row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
               <span>{site.name}</span>
-              <span style={{ color: C.dim }}>
+              <span className="fp__muted">
                 {`${Math.round(site.progress * 100)}% built`}{site.stage === 'waiting' ? (site.progress > 0 ? ', paused' : ', waiting') : ''}
               </span>
             </div>
             {missing.length > 0 && (
-              <div style={{ color: C.dim, fontSize: 12 }}>
+              <div className="fp__sub">
                 Still needs {missing.map(([m, n]) => `${formatBlocks(n)} ${m.replace(/_/g, ' ')}`).join(', ')}
               </div>
             )}
@@ -214,12 +196,13 @@ function BuildingsTab({ data }) {
 }
 
 function AlertsTab({ alerts }) {
-  if (alerts.length === 0) return <div style={{ color: '#44cc44', fontSize: 13 }}>All quiet. Nothing needs your attention.</div>;
+  if (alerts.length === 0) return <p className="fp__good">All quiet. Nothing needs your attention.</p>;
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+    <ul className="dash-alerts">
       {alerts.map((a, i) => (
-        <li key={i} style={{ padding: '8px 10px', marginBottom: 6, borderLeft: `3px solid ${ALERT_COLORS[a.level]}`, background: C.rowAlt, fontSize: 13 }}>
-          {a.text}
+        <li key={i} className="fp__well" style={{ borderLeftColor: ALERT_COLORS[a.level] }}>
+          <span className={`vx-tag vx-tag--sm ${ALERT_TAG[a.level] || 'vx-tag--info'}`}>{a.level}</span>
+          <span>{a.text}</span>
         </li>
       ))}
     </ul>
@@ -228,9 +211,9 @@ function AlertsTab({ alerts }) {
 
 function Stat({ label, value }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '8px 10px', minWidth: 0 }}>
-      <div style={{ fontSize: 11, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 16, marginTop: 2 }}>{value}</div>
+    <div className="fp__tile">
+      <div className="fp__tile-label">{label}</div>
+      <div className="fp__tile-value">{value}</div>
     </div>
   );
 }
@@ -273,86 +256,39 @@ export default function SettlementDashboard() {
   };
 
   return (
-    <div
-      onClick={close}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.35)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: isMobile ? 0 : 16, boxSizing: 'border-box',
-      }}
+    <FramedPanel
+      title="Settlement"
+      label="Settlement dashboard"
+      onClose={close}
+      modal
+      width={760}
+      className="dash"
+      header={(
+        <div role="tablist" className="fp__tabs dash__tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className="vx-tab"
+              onClick={() => setTab(t.id)}
+            >
+              <img src={artUrl('ui', t.icon)} alt="" width="16" height="16" />
+              {t.label}
+              {t.id === 'alerts' && alerts.length > 0 && (
+                <span className={`vx-tag vx-tag--sm ${ALERT_TAG[alerts[0].level] || 'vx-tag--info'}`}>{alerts.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+      footer={alerts[0]?.text ? `Tip: ${alerts[0].text}` : isTouchDevice() ? 'Tap ✕ to close' : 'Press N or Esc to close'}
     >
-      <div
-        role="dialog"
-        aria-label="Settlement dashboard"
-        onClick={(e) => e.stopPropagation()}
-        className="sp-panel"
-        style={{
-          background: C.panel, color: C.text, fontFamily: 'monospace',
-          border: isMobile ? 'none' : `2px solid ${C.border}`, borderRadius: isMobile ? 0 : 8,
-          width: '100%', maxWidth: isMobile ? '100%' : 720,
-          height: isMobile ? '100%' : 'min(560px, 85vh)',
-          display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflow: 'hidden',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #333' }}>
-          <span className="sp-title" style={{ fontSize: 18, fontWeight: 'bold', color: C.border }}>Settlement</span>
-          <button className="sp-btn"
-            onClick={close}
-            aria-label="Close"
-            style={{ background: '#333', color: '#fff', border: '1px solid #555', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 14 }}
-          >
-            X
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flex: 1, minHeight: 0 }}>
-          <div
-            role="tablist"
-            style={{
-              display: 'flex', flexDirection: isMobile ? 'row' : 'column',
-              borderRight: isMobile ? 'none' : '1px solid #333', borderBottom: isMobile ? '1px solid #333' : 'none',
-              padding: 8, gap: 4, flexShrink: 0, overflowX: 'auto',
-            }}
-          >
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
-                style={{
-                  background: tab === t.id ? 'rgba(68,136,255,0.25)' : 'transparent',
-                  color: tab === t.id ? '#fff' : C.dim,
-                  border: 'none', borderRadius: 4, cursor: 'pointer', fontFamily: 'monospace', whiteSpace: 'nowrap',
-                  // Phones: four equal columns, icon over a small label
-                  ...(isMobile
-                    ? { flex: 1, padding: '6px 2px', fontSize: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }
-                    : { padding: '8px 10px', fontSize: 13, textAlign: 'left' }),
-                }}
-              >
-                <span style={isMobile ? { fontSize: 16 } : undefined}>{t.icon}</span>{isMobile ? '' : ' '}{t.label}
-                {t.id === 'alerts' && alerts.length > 0 && (
-                  <span style={{ marginLeft: 6, background: ALERT_COLORS[alerts[0].level], color: '#111', borderRadius: 8, padding: '0 6px', fontSize: 11 }}>
-                    {alerts.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: 16, minWidth: 0 }}>
-            {tab === 'population' && <PopulationTab data={data} onSelectNPC={selectNPC} compact={isMobile} />}
-            {tab === 'resources' && <ResourcesTab data={data} />}
-            {tab === 'buildings' && <BuildingsTab data={data} />}
-            {tab === 'alerts' && <AlertsTab alerts={alerts} />}
-          </div>
-        </div>
-
-        <div style={{ padding: '8px 16px', borderTop: '1px solid #333', fontSize: 12, color: C.dim }}>
-          {alerts[0]?.text ? `Tip: ${alerts[0].text}` : isTouchDevice() ? 'Tap ✕ to close' : 'Press N or Esc to close'}
-        </div>
-      </div>
-    </div>
+      {tab === 'population' && <PopulationTab data={data} onSelectNPC={selectNPC} compact={isMobile} />}
+      {tab === 'resources' && <ResourcesTab data={data} />}
+      {tab === 'buildings' && <BuildingsTab data={data} />}
+      {tab === 'alerts' && <AlertsTab alerts={alerts} />}
+    </FramedPanel>
   );
 }

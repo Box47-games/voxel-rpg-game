@@ -23,19 +23,20 @@ import {
 } from '../../modules/settlement/settlementSummary';
 import useBuildingLocks from '../../hooks/useBuildingLocks';
 import './PlanHUD.css';
+import { artUrl } from './art';
 import { blocksAvailable, formatBlocks } from '../../data/pieces';
 
 export const DELETE_TOOL = '__DELETE__';
 
 const ZONE_TOOLS = [
-  { type: ZoneType.MINING, label: 'Mining', icon: '⛏' },
-  { type: ZoneType.STOCKPILE, label: 'Stockpile', icon: '📦' },
-  { type: ZoneType.FARMING, label: 'Farm', icon: '🌱' },
-  { type: DELETE_TOOL, label: 'Remove', icon: '🗑' },
+  { type: ZoneType.MINING, label: 'Mining', icon: 'pickaxe' },
+  { type: ZoneType.STOCKPILE, label: 'Stockpile', icon: 'crate' },
+  { type: ZoneType.FARMING, label: 'Farm', icon: 'sprout' },
+  { type: DELETE_TOOL, label: 'Remove', icon: 'trash' },
 ];
 
 const BLUEPRINTS = BUILDINGS.filter((b) => !b.upgradeOnly);
-const ALERT_COLORS = { danger: '#ff6b6b', warning: '#ffb347', info: '#8ab4ff' };
+const ALERT_COLORS = { danger: '#d9473f', warning: '#e8b443', info: '#5b9ae8' };
 const REFRESH_MS = 1000;
 
 const canAfford = (building, materials) =>
@@ -94,8 +95,8 @@ function PlanOverview() {
   const founded = !!data.settlement.settlementCenter;
 
   return (
-    <aside className="plan-overview vx-panel" aria-label="Settlement overview">
-      <h3 className="plan-overview__title vx-heading">Settlement</h3>
+    <aside className="plan-overview vx-hudpanel" aria-label="Settlement overview">
+      <h3 className="plan-overview__title vx-h">Settlement</h3>
       {!founded ? (
         <p className="plan-overview__empty">
           No settlement yet. Light a campfire to found one.
@@ -170,7 +171,7 @@ function PlanOverview() {
       )}
       <button
         type="button"
-        className="vx-btn vx-btn--ghost vx-btn--block plan-overview__more"
+        className="vx-pbtn vx-pbtn--stone vx-pbtn--block vx-pbtn--sm plan-overview__more"
         onClick={() => useGameStore.getState().togglePanel('settlement')}
       >
         Details <kbd className="vx-key">N</kbd>
@@ -241,7 +242,7 @@ export default function PlanHUD() {
     <>
       <PlanOverview />
       <div className="plan-bar" role="toolbar" aria-label="Plan tools">
-        <div className="plan-bar__frame vx-panel">
+        <div className="plan-bar__frame vx-hudpanel">
           <div className="plan-bar__row">
             <div className="plan-bar__group" aria-label="Zones">
               {ZONE_TOOLS.map((t, i) => {
@@ -259,9 +260,7 @@ export default function PlanHUD() {
                     onClick={() => selectTool(t.type)}
                     title={`${t.label} (${i + 1})`}
                   >
-                    <span className="plan-tool__icon" aria-hidden="true">
-                      {t.icon}
-                    </span>
+                    <img className="plan-tool__icon" src={artUrl('ui', t.icon)} alt="" />
                     <span className="plan-tool__label plan-tool__label--zone">
                       {t.label}
                     </span>
@@ -288,7 +287,8 @@ export default function PlanHUD() {
                       onClick={() => selectBlueprint(b.id)}
                       title={`${b.name} — locked: ${why}`}
                     >
-                      <span className="plan-tool__label">🔒 {b.name}</span>
+                      <img className="plan-tool__icon" src={artUrl('ui', 'lock')} alt="" />
+                      <span className="plan-tool__label">{b.name}</span>
                       {!touch && i + ZONE_TOOLS.length + 1 <= 9 && (
                         <kbd className="plan-tool__key">
                           {i + ZONE_TOOLS.length + 1}
@@ -307,6 +307,7 @@ export default function PlanHUD() {
                     onClick={() => selectBlueprint(b.id)}
                     title={`${b.name} — ${costText(b.cost)}${ok ? '' : ' (short: settlers haul the rest from a stockpile)'}`}
                   >
+                    {artUrl('buildings', b.id) && <img className="plan-tool__pic" src={artUrl('buildings', b.id)} alt="" />}
                     <span className="plan-tool__label">{b.name}</span>
                     {!touch && i + ZONE_TOOLS.length + 1 <= 9 && (
                       <kbd className="plan-tool__key">
@@ -320,11 +321,11 @@ export default function PlanHUD() {
           </div>
           <button
             type="button"
-            className="vx-btn vx-btn--danger plan-bar__exit"
+            className="vx-pbtn vx-pbtn--red plan-bar__exit"
             onClick={() => useGameStore.getState().enterMode('play')}
             aria-label="Leave plan mode"
           >
-            ✕
+            <img src={artUrl('ui', 'close')} alt="" width="16" height="16" />
           </button>
         </div>
         <div className="plan-bar__hint">
