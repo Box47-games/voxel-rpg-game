@@ -236,8 +236,8 @@ Each type gets a **behavior profile** (data in `MONSTER_TYPES`, logic in `system
 - [ ] Sealing the heart is the story ending: an ending scene (with the companion once Phase 4 lands)
 - [ ] Afterwards the player chooses: keep playing the freed island (no rifts reopen, raids stop), or start **New Game+** (Decisions 21, 23, 27)
 - [ ] New Game+ happens on the **same island**: every rift, the heart included, reopens (at new spots, per 3.3.2). The settlement and outposts stay but are damaged by the returning corruption. The player keeps spells, level and skill/attribute points, and equipped gear
-- [ ] Starting New Game+ hits the settlements at once: a share of player-built blocks inside the new corruption break outright (`NGPLUS_UPFRONT_BREAK_FRACTION`), then the normal wear continues (Decision 33)
-- [ ] Each New Game+ cycle adds **one** more difficulty mechanic, cumulatively (Decision 34). The pool, in an order to settle in playtests: stronger monsters, faster resurgence, earlier and bigger raids, more rifts per territory, **corruption spreads** (creeps between rifts and joins nearby rings), **rift storms** (occasional storms that drain every sealed rift's stability and boost spawns island-wide). Store the cycle number in the save; settings in `tuning.js`
+- [ ] Starting New Game+ hits the settlements at once: player-built blocks in the space a reopened rift itself takes up (its core and crystal spires) break outright; blocks elsewhere in the new corruption wear down as usual (Decision 33). The same applies whenever a rift reopens on top of buildings
+- [ ] Each New Game+ cycle adds **one** more difficulty mechanic, cumulatively (Decision 34). In this order (Decision 37): stronger monsters → more rifts per territory → earlier and bigger raids → faster resurgence → **corruption spreads** (creeps between rifts and joins nearby rings), **rift storms** (occasional storms that drain every sealed rift's stability and boost spawns island-wide). After the last one, the pool repeats with bigger numbers. Store the cycle number in the save; settings in `tuning.js`
 
 **Tuning constants:**
 ```
@@ -268,6 +268,7 @@ RIFT_RESEAL_COST = { void_shard: 3 }
 #### 3.4.1 Territory
 - [ ] Two layers: the island's fixed **territories** (3.3.0), each reclaimed when its large rift is sealed, and the **settled area** around each settlement and outpost
 - [ ] `systems/territory/TerritoryManager.js`: settled area = union of circles around each settlement/outpost centre and completed buildings (`TERRITORY_RADIUS_PER_BUILDING`); a reclaimed territory has no ambient monster spawns
+- [ ] **Displaced settlers** (Decision 38): if a rift destroys a settlement's or outpost's campfire, its settlers walk to the nearest other settlement or outpost; with none, they wait by the ruins for `DISPLACED_WAIT_DAYS` in-game days for a new campfire nearby, then leave
 - [ ] **Outposts** (Decision 18): one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols
 - [ ] Outposts grow on their own (Decision 25): each campfire runs its own immigration and housing, so a neglected outpost still fills slowly. The player can also send settlers from an established settlement (NPC panel); experienced settlers (high skills) make the outpost grow faster, for example by raising its attractiveness and work speed
 - [ ] Store `territory` (list of circles) and a cheap `isInTerritory(x, z)`
@@ -643,10 +644,12 @@ Resolved November 21, 2026 (world and endgame; from the roadmap review):
 30. **Reopened rifts move.** Every reopening (resurgence or New Game+) picks a new random spot in the rift's tier zone, never inside another rift's existing corruption.
 31. **Corruption damages building.** Player-built blocks and pieces touched by corruption, or built over it, lose HP over time until they're destroyed.
 32. **Reopened rifts can land anywhere in their zone**, including inside a settlement or outpost.
-33. **New Game+ hits settlements at once:** some of the player-built blocks inside the new corruption break outright; the rest wear down as usual.
+33. **New Game+ hits settlements at once:** player-built blocks in the space a reopened rift itself takes up break outright; the rest of the new corruption wears blocks down as usual.
 34. **New Game+ adds one difficulty mechanic per cycle**, cumulatively, not all at once. Pool: stronger monsters, faster resurgence, earlier and bigger raids, more rifts, corruption spreading between rifts, and rift storms. No cycle limit.
 35. **Nothing is protected from a rift.** A rift that reopens inside a settlement can destroy anything, the campfire included; the settlement can be rebuilt. (Raids still never destroy the settlement, 3.7.3.)
 36. **Corruption wear depends on material:** wood breaks in about 2 in-game days, stone in about 5; pieces by their volume.
+37. **New Game+ order:** stronger monsters → more rifts → earlier raids → faster resurgence → corruption spreads → rift storms; then the pool repeats with bigger numbers.
+38. **Displaced settlers:** when a rift destroys a campfire, its settlers move to the nearest settlement or outpost; with none, they wait by the ruins a few in-game days for a new campfire, then leave.
 
 ---
 
