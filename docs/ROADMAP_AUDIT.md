@@ -42,20 +42,20 @@ The 22 open issues checked against the phases above and against the code on `mai
 | Player bugs | #567 main menu, #568 pickup labels, #569 diagonal speed, #572 wildlife count, #575 feedback day | Small, independent fixes. #567 and #575 are confirmed still present in code. |
 | Tooling | #584 ESLint 10 | Fine. |
 
-### Gaps with no issue
+### Gaps found (issues opened November 21)
 
 Ordered by how much they hurt a player today.
 
-1. **No autosave.** `Game3DSaveManager.startAutoSave` has no callers, and nothing saves on `pagehide`/`visibilitychange`. The only saves are the pause menu's Save and the dev overlay. Closing the tab, a crash or a phone killing the page loses everything since the last manual save. #586 assumes autosaves exist; it should follow this fix. If autosave writes to the `autosave` slot, the start screen's Continue (which loads `default`) also has to pick the newest slot.
-2. **Audio is placeholder.** `utils/AudioManager.js` holds 18 inline data-URI beeps, many named for the 2D game (`dungeonEnter`, `bossPhaseChange`). Only 4 calls exist in live code (melee swing, loot pickup, enemy death, and `play('error')` for a sound that doesn't exist, so it is silent). No music, no ambience, no footsteps, mining, building or spell sounds, and no volume control. The 3D plan lists audio as a Phase 5 goal; Phase 3 §3.8 also lists combat audio.
-3. **No settings / accessibility screen.** There's nowhere to set volume, text or UI size, a colour-blind palette, key remapping, mouse sensitivity or graphics quality (render distance, shadows). Phase 5 lists accessibility options, and Phase 1's "colour-blind safe, 375 px readable" was never verified.
-4. **Quests never exist at runtime.** `useQuestStore.initializeAllQuests` has no callers, so `QuestManager` has nothing to track. #581 asks for the UI and for saving progress, but not for this; the log would be empty.
-5. **No Phase 4 / Phase 5 detailed plans.** `docs/phases/` stops at Phase 3. #579 points to a restorable `CompanionStoryManager` (commit `c34db28`) but has no design for the rescue, bond milestones or which spells get taught.
-6. **Settlers lack the "Grow" pillar's social side.** No relationships between settlers, no specialists/merchants, no recruitment (OPEN_QUESTIONS defers recruitment to Phase 5 trade caravans). No issue tracks this.
-7. **Monster count is short of the plan.** 4 rift monster types (slime, goblin, skeleton, shadow creeper) against the plan's "5+". §3.2 in #576 covers behaviour variety but not new types.
-8. **Release basics.** The PWA manifest exists but there's no service worker (no offline play or install-update flow). There's no itch.io/desktop build plan (Phase 7), and `README.md` still shows "production ready" and "v1.0" badges and 2D-era content.
-9. **Performance targets still unmeasured.** #578 covers per-enemy cost only. Nobody has measured the Phase 0 targets (60 FPS, <1 GB memory, <100 ms per chunk) on real hardware, and there's no coverage tooling to back the ">70% coverage" criterion.
-10. **Undecided Phase 3 questions.** A "Peaceful builder" mode (no raids, no rift resurgence) and whether guards wear weapon durability are still open. Tool durability now exists, so the second needs a decision before §3.6. Decision #4 (steering, A* only if needed) was overtaken by the A* pathfinding that shipped.
+1. **No autosave** (#589). `Game3DSaveManager.startAutoSave` has no callers, and nothing saves on `pagehide`/`visibilitychange`. The only saves are the pause menu's Save and the dev overlay. Closing the tab, a crash or a phone killing the page loses everything since the last manual save. #586 assumes autosaves exist; it should follow this fix. If autosave writes to the `autosave` slot, the start screen's Continue (which loads `default`) also has to pick the newest slot.
+2. **Audio is placeholder** (#590). `utils/AudioManager.js` holds 18 inline data-URI beeps, many named for the 2D game (`dungeonEnter`, `bossPhaseChange`). Only 4 calls exist in live code (melee swing, loot pickup, enemy death, and `play('error')` for a sound that doesn't exist, so it is silent). No music, no ambience, no footsteps, mining, building or spell sounds, and no volume control. The 3D plan lists audio as a Phase 5 goal; Phase 3 §3.8 also lists combat audio.
+3. **No settings / accessibility screen** (#591). There's nowhere to set volume, text or UI size, a colour-blind palette, key remapping, mouse sensitivity or graphics quality (render distance, shadows). Phase 5 lists accessibility options, and Phase 1's "colour-blind safe, 375 px readable" was never verified.
+4. **Quests never exist at runtime** (#592). `useQuestStore.initializeAllQuests` has no callers, so `QuestManager` has nothing to track. #581 asks for the UI and for saving progress, but not for this; the log would be empty.
+5. **No Phase 4 / Phase 5 detailed plans** (#593). `docs/phases/` stops at Phase 3. #579 points to a restorable `CompanionStoryManager` (commit `c34db28`) but has no design for the rescue, bond milestones or which spells get taught.
+6. **Settlers lack the "Grow" pillar's social side** (#594). No relationships between settlers, no specialists/merchants, no recruitment (OPEN_QUESTIONS defers recruitment to Phase 5 trade caravans). 
+7. **Monster count is short of the plan** (#595). 4 rift monster types (slime, goblin, skeleton, shadow creeper) against the plan's "5+". §3.2 in #576 covers behaviour variety but not new types.
+8. **Release basics** (#596). The PWA manifest exists but there's no service worker (no offline play or install-update flow). There's no itch.io/desktop build plan (Phase 7), and `README.md` still shows "production ready" and "v1.0" badges and 2D-era content.
+9. **Performance targets still unmeasured** (#597). #578 covers per-enemy cost only. Nobody has measured the Phase 0 targets (60 FPS, <1 GB memory, <100 ms per chunk) on real hardware, and there's no coverage tooling to back the ">70% coverage" criterion.
+10. **Undecided Phase 3 questions** (#598). A "Peaceful builder" mode (no raids, no rift resurgence) and whether guards wear weapon durability are still open. Tool durability now exists, so the second needs a decision before §3.6. Decision #4 (steering, A* only if needed) was overtaken by the A* pathfinding that shipped.
 
 ### Docs that are out of date
 
