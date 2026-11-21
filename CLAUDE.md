@@ -173,6 +173,18 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
   - **Dev overlay** (`src/components/dev/DevOverlay.jsx`): F3 cycles closed → full → mini perf strip; F4 opens the Settlement tab; DEV button on touch devices. Tabs: Perf (frame-time graph vs. 60 fps budget, draw calls, chunks, workers, entities), Player (stats + cheats: heal, god mode, materials, XP, teleports), World (time controls, spawn/kill enemies, a raid "Stress test" (25 enemies + 8 settlers; numbers in `docs/research/PERFORMANCE_BASELINE.md`), rifts, quick save/load in its own slot), Settlement (NPCs, zones, Phase 2 checks). Cheats live in `devActions.js`; renderer stats come from `DebugStatsTick` in Experience.jsx via `store._debugStats`.
   - **QA tracker** (backtick): manual test checklist (`TestTracker.jsx`, criteria in `data/testCriteria.js`).
 
+## Studio playbook
+
+`.claude/skills/studio-playbook/` is the Box47 studio's shared playbook, copied unchanged from Nestfall (Box47-games/Nestfall). Keep it identical: put Riftholm-only rules here, and refresh the copy from Nestfall's when it changes. Where it and this file differ, this file wins. How its rules map onto this repository:
+
+- **The rules module:** the playbook's `src/sim/` is the headless settlement engine here (`src/modules/settlement/` and its helpers, tested with `fakeWorld.js`); its `data.ts` is `src/data/tuning.js` plus the other files under Key Data Files. The store (`useGameStore`) is not headless, so new rules go into the engine, not the store.
+- **Determinism:** gameplay code still uses `Math.random()`; only tests seed it (`src/setupTests.js`). The playbook's seeded-RNG and cross-browser rules apply once Phase 6 multiplayer starts (see the Phase 3+ "plain data with entity IDs" rule in `docs/3D_IMPLEMENTATION_PLAN.md`).
+- **Commands and saves:** there is no command log; store actions change the world. Saves are versioned (schema v8, `migrateSave`), as the playbook asks.
+- **Its *(TS/Vite)* rules:** this repository is JavaScript and React on Vite, tested with Vitest and a Chromium smoke test (`npm run test:smoke`), not a Playwright suite.
+- **Docs:** there is no `CHANGELOG.md`, `DECISIONS.md` or `GAME_DESIGN.md`. The roadmap and its decisions live in `docs/3D_IMPLEMENTATION_PLAN.md` (Roadmap Decisions) and the phase plans in `docs/phases/`; open questions in `docs/OPEN_QUESTIONS.md`.
+- **Releases:** no `ship` or `steward` skill; follow CI and `main`'s protection as described above.
+- **Legal (its section 9):** the per-game items are tracked in `docs/3D_IMPLEMENTATION_PLAN.md`, Ongoing track: legal and launch.
+
 ## Key Files
 
 - `src/App3D.jsx` — Main 3D game component entry point

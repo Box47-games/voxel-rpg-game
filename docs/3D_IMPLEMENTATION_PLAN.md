@@ -68,6 +68,24 @@ These run alongside every phase instead of waiting for Phase 5, because the game
 
 Phase 5 keeps only the big polish and content pass.
 
+### Ongoing track: legal and launch
+The studio playbook's per-game checklist (`.claude/skills/studio-playbook/`, section 9), as it stands for Riftholm. The studio-wide steps (Box47 games LLC, its tax number and bank, store accounts, licences, taxes) are done once on Nestfall's roadmap; these are Riftholm's own. None of it is legal advice: the owner confirms each step.
+- ❌ **Name:** search trademarks (USPTO) and the app stores for "Riftholm", then file it in the LLC's name (classes 9 and 41) if it is clear.
+- ❌ **The game's own address:** the game is served at `box47-games.github.io/voxel-rpg-game/`. Browsers keep saves per address, so moving later strands every save (Nestfall had to have every player export first). Choose a domain in the LLC's name and move early, with save export and import in place first.
+- ❌ **The old name in identifiers:** the repository, the `/voxel-rpg-game/` base path and the `voxel3d-saves` database still carry the working title. Renaming them gets harder with every player; decide whether to rename them with the address move.
+- ❓ **The code's licence:** `LICENSE` is MIT, copyright TiberiousDoom 2025, and the repository is public, so anyone may copy, change and sell the game's code. Decide whether that is wanted for a game the studio sells; if not, change the licence and make the repository private before release.
+- ❌ **Ownership:** assign the game's copyright from the owner to Box47 games LLC (a one-page assignment, as for Nestfall), and keep the feedback Worker on the studio's Cloudflare account.
+- ❌ **A privacy page,** linked from the start screen, saying what the game does:
+  - saves stay in the browser (IndexedDB);
+  - Send Feedback sends a rating, category, message, an optional screenshot of the 3D view and game details (level, position, day, screen size, browser) to the studio's feedback Worker on Cloudflare, where only the developer can read it; IP addresses are kept only as a salted hash, for rate limiting;
+  - the fonts come from Google Fonts, so Google sees each player's IP address.
+- ❌ **Fewer third parties:** bundle Silkscreen and Pixelify Sans with the game instead of loading them from Google Fonts, so the privacy page can say the game calls no other company.
+- ❌ **Credits:** list every third-party asset and its licence in a credits file (Silkscreen and Pixelify Sans are OFL; check the npm dependencies' licences too).
+- ❌ **AI use:** declare it on store pages and the game's page wherever art, models or code were made with AI.
+- ❌ **Children and age rating:** answer the stores' target-audience and rating questions (IARC for Google Play). The game collects no personal data, which keeps this simple; screenshots in feedback show only the 3D view.
+- ❌ **Selling:** if the game is sold or takes tips, payments inside an app go through the store's billing; add terms of use and a refund policy that follow the store's.
+- ❌ **Multiplayer (Phase 6):** strangers never play on a home machine; before rooms open to strangers, a name filter, kicking a player, and protection for each player's buildings.
+
 ### Mobile is first-class
 Phones are a target platform. Every phase's exit criteria include a phone playtest and a mobile frame-time target; supported devices and browsers are listed in Phase 7's plan (#596).
 
