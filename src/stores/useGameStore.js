@@ -361,8 +361,6 @@ const useGameStore = create((rawSet, get, api) => {
   // Chunk manager reference (for auto-jump, etc.)
   _chunkManager: null,
   setChunkManager: (cm) => set({ _chunkManager: cm }),
-  _settlementModule: null,
-  setSettlementModule: (mod) => set({ _settlementModule: mod }),
   _networkLayer: null,
   setNetworkLayer: (layer) => set({ _networkLayer: layer }),
   _riftManager: null,

@@ -36,13 +36,11 @@ ESLint: `no-unused-vars: warn`, `no-console: warn` (except warn/error), `react/n
 
 ## Architecture Overview
 
-### Two Game Architectures (Coexisting)
+### Architecture
 
-1. **Module System** — `GameManager` → `ModuleOrchestrator` → 25+ modules in `src/modules/`. Used for the strategic/management layer (buildings, economy, NPCs, combat, expeditions). Communicates via orchestrator events.
+**One live architecture**: `App3D.jsx` → `Experience.jsx` → R3F components + Zustand store. The voxel world, player movement, real-time combat, and settlement simulation all run inside a React Three Fiber `<Canvas>`.
 
-2. **3D Real-Time System** — `App3D.jsx` → `Experience.jsx` → R3F components + Zustand store. Used for the voxel world, player movement, real-time combat, settlement simulation. Runs inside a React Three Fiber `<Canvas>`.
-
-These two systems connect via bridge patterns (e.g., `SettlementBridge.js`) that sync module state into Zustand stores.
+> **Historical note (removed during audit):** this repo previously carried a second, parallel "Module System" (`GameManager` → `ModuleOrchestrator` → 25+ modules in `src/modules/`) with a `SettlementBridge` intended to sync it into the Zustand store. `GameManager` was never loaded from `App3D`, so the bridge's `_settlementModule` was always `null` and the whole chain was runtime-dead. The entire `src/modules/` tree, `GameManager.js`, `SettlementBridge.js`, and their tests were deleted. If you ever need per-module strategic simulation, build it on top of the Zustand store and tick components — don't resurrect the orchestrator pattern.
 
 ### 3D Rendering Pipeline
 
@@ -70,13 +68,7 @@ Pattern: Game logic writes to stores via actions. 3D components subscribe to sli
 
 ### Settlement System
 
-```
-SettlementTick.jsx (useFrame loop)
-  → SettlementBridge.js (reads store → feeds modules → writes results back)
-    → SettlementModule.js (orchestrates tick order)
-      → ImmigrationManager, ZoneManager, StockpileManager,
-        TaskAssignmentEngine, HousingManager, NPCStateMachine
-```
+All settlement logic (campfire scanning, attractiveness, immigration, NPC needs, NPC work loop) lives in `SettlementTick.jsx` and works directly against the Zustand store.
 
 NPC states: `IDLE → THINKING → WORKING_MINE/WORKING_HAUL/WORKING_BUILD → EATING/SLEEPING → LEAVING`
 
@@ -123,10 +115,7 @@ Save/load in `src/persistence/`:
 
 - `src/App3D.jsx` — Main 3D game component entry point
 - `src/components/3d/Experience.jsx` — Scene setup, entity rendering, tick orchestration
+- `src/components/3d/SettlementTick.jsx` — Settlement/NPC simulation loop
 - `src/stores/useGameStore.js` — Central Zustand store (~1650 lines)
-- `src/GameManager.js` — Module-based game state initialization
-- `src/core/ModuleOrchestrator.js` — Module coordination
 - `src/data/tuning.js` — All gameplay balance constants
 - `src/systems/chunks/ChunkManager.js` — Terrain chunk loading/unloading
-- `src/modules/settlement/SettlementModule.js` — Settlement tick orchestration
-- `src/modules/settlement/SettlementBridge.js` — Module ↔ Store bridge

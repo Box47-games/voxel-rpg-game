@@ -3,14 +3,15 @@
  * campfire detection, attractiveness recalculation, immigration spawning,
  * NPC needs/state updates, and NPC work loop.
  *
- * Also provides a SettlementBridge hook for the SettlementModule's
- * tickSettlementCore to sync results back to the Zustand store.
+ * All settlement logic now lives directly in this component against the
+ * Zustand store; the historical SettlementBridge / SettlementModule chain
+ * was never wired up at runtime (GameManager wasn't loaded from App3D)
+ * and was removed during the audit cleanup.
  */
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import useGameStore from '../../stores/useGameStore';
-import SettlementBridge from '../../modules/settlement/SettlementBridge';
 import { BlockTypes } from '../../systems/chunks/blockTypes';
 import { CHUNK_SIZE, CHUNK_SIZE_Y, VOXEL_SIZE } from '../../systems/chunks/coordinates';
 import { calculateAttractiveness } from '../../systems/settlement/AttractivenessCalculator';
@@ -219,23 +220,6 @@ function tryResumeTask(npc, updates) {
 }
 
 export default function SettlementTick({ chunkManager }) {
-  const bridgeRef = useRef(null);
-
-  // Create bridge once, connected to the settlement module
-  useEffect(() => {
-    const module = useGameStore.getState()._settlementModule;
-    if (module) {
-      bridgeRef.current = new SettlementBridge(module);
-    }
-  }, []);
-
-  // Update chunk adapter when chunkManager changes
-  useEffect(() => {
-    if (bridgeRef.current && chunkManager) {
-      bridgeRef.current.setChunkAdapter(chunkManager);
-    }
-  }, [chunkManager]);
-
   const campfireCheckAccum = useRef(0);
   const campfireScanIdx = useRef(0);
   const attractAccum = useRef(0);
@@ -248,14 +232,6 @@ export default function SettlementTick({ chunkManager }) {
 
     const store = useGameStore.getState();
     if (store.gameState !== 'playing') return;
-
-    // If the settlement module + bridge are available, run the module tick
-    const module = store._settlementModule;
-    if (module && bridgeRef.current) {
-      const snapshot = bridgeRef.current.getGameState();
-      const results = module.tickSettlementCore(delta, snapshot);
-      bridgeRef.current.syncToStore(results);
-    }
 
     const settlement = store.settlement;
     if (!settlement) return;
