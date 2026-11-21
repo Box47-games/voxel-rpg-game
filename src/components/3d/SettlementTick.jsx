@@ -349,6 +349,21 @@ export default function SettlementTick({ chunkManager }) {
       const removeIds = [];
       let anyTaskCompleted = false;
 
+      // Pre-build the candidate list used by every NPC's socialize scan below.
+      // Each entry is {id, x, z}; NPCs in transient states (APPROACHING,
+      // LEAVING) are excluded here so the inner loop skips them without the
+      // per-pair state filter it used to do.
+      const socializeCandidates = [];
+      for (const other of settlement.npcs) {
+        if (other.state === 'APPROACHING' || other.state === 'LEAVING') continue;
+        socializeCandidates.push({
+          id: other.id,
+          other,
+          x: other.position[0] || 0,
+          z: other.position[2] || 0,
+        });
+      }
+
       for (const npc of settlement.npcs) {
         // APPROACHING — tick timer; if stuck for 60s, force to LEAVING
         if (npc.state === 'APPROACHING') {
@@ -568,17 +583,22 @@ export default function SettlementTick({ chunkManager }) {
               updates.stateTimer = 0;
               updates.thoughtBubble = { type: 'sleeping', timer: NPC_THOUGHT_DURATION };
             } else if (newSocial < NPC_SOCIAL_CRITICAL && settlement.npcs.length > 1) {
-              // Find nearest other NPC within 20 world units to socialize with
-              let nearestDist = 20;
+              // Find nearest socializable NPC within 20 world units.
+              // Compares squared distances to skip the per-pair sqrt; the
+              // candidate list was filtered of APPROACHING/LEAVING NPCs above.
+              const SOCIAL_RADIUS = 20;
+              let nearestDistSq = SOCIAL_RADIUS * SOCIAL_RADIUS;
               let nearestNPC = null;
-              for (const other of settlement.npcs) {
-                if (other.id === npc.id || other.state === 'APPROACHING' || other.state === 'LEAVING') continue;
-                const dx = (other.position[0] || 0) - (npc.position[0] || 0);
-                const dz = (other.position[2] || 0) - (npc.position[2] || 0);
-                const d = Math.sqrt(dx * dx + dz * dz);
-                if (d < nearestDist) {
-                  nearestDist = d;
-                  nearestNPC = other;
+              const npcX = npc.position[0] || 0;
+              const npcZ = npc.position[2] || 0;
+              for (const cand of socializeCandidates) {
+                if (cand.id === npc.id) continue;
+                const dx = cand.x - npcX;
+                const dz = cand.z - npcZ;
+                const dSq = dx * dx + dz * dz;
+                if (dSq < nearestDistSq) {
+                  nearestDistSq = dSq;
+                  nearestNPC = cand.other;
                 }
               }
               if (nearestNPC) {
