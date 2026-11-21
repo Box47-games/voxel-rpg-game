@@ -181,8 +181,8 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
 - **Determinism:** gameplay code still uses `Math.random()`; only tests seed it (`src/setupTests.js`). The playbook's seeded-RNG and cross-browser rules apply once Phase 6 multiplayer starts (see the Phase 3+ "plain data with entity IDs" rule in `docs/3D_IMPLEMENTATION_PLAN.md`).
 - **Commands and saves:** there is no command log; store actions change the world. Saves are versioned (schema v8, `migrateSave`), as the playbook asks.
 - **Its *(TS/Vite)* rules:** this repository is JavaScript and React on Vite, tested with Vitest and a Chromium smoke test (`npm run test:smoke`), not a Playwright suite.
-- **Docs:** there is no `CHANGELOG.md`, `DECISIONS.md` or `GAME_DESIGN.md`. The roadmap and its decisions live in `docs/3D_IMPLEMENTATION_PLAN.md` (Roadmap Decisions) and the phase plans in `docs/phases/`; open questions in `docs/OPEN_QUESTIONS.md`.
-- **Releases:** no `ship` or `steward` skill; follow CI and `main`'s protection as described above.
+- **Docs:** `CHANGELOG.md` (one entry per release, for players), `docs/DECISIONS.md` (one row per real choice; earlier decisions stay in the plans, D-001), the roadmap in `docs/3D_IMPLEMENTATION_PLAN.md` and the phase plans in `docs/phases/`, and open questions in `docs/OPEN_QUESTIONS.md`. There is no `GAME_DESIGN.md`; this file and the plans describe the game.
+- **Releases:** every merge to `main` is a version (D-003); the `ship` skill (`.claude/skills/ship/`) has the steps. There is no `steward` skill.
 - **Legal (its section 9):** the per-game items are tracked in `docs/3D_IMPLEMENTATION_PLAN.md`, Ongoing track: legal and launch.
 
 ## Key Files
