@@ -17,56 +17,58 @@ This plan provides high-level phase structure. **Each phase requires a detailed 
 3. Identify technical unknowns and research needs
 4. Set exit criteria (what "done" looks like)
 5. Review what we learned from previous phase
+6. Every task's acceptance check is *in the game*: visible in a normal play session without dev tools, on desktop **and a phone**. Unit tests alone don't count (the most common past failure was features built but never connected).
+7. Carry any unmet exit criteria forward as issues, so they don't sit unnoticed.
 
 ---
 
-## Current State Assessment
+## Current State
 
-### What Already Exists (3D-Ready)
+The February 2026 assessment that was here listed 2D-era files that no longer exist; it is in `git log` if needed. What's live now is tracked in [`ROADMAP_AUDIT.md`](ROADMAP_AUDIT.md) and [`CLAUDE.md`](../CLAUDE.md).
 
-#### 3D Rendering Components ✅
-- `VoxelTerrain.jsx` - Instanced mesh terrain rendering
-- `Player.jsx` - 3D player with physics
-- `Enemy.jsx` - 3D enemy rendering
-- `Experience.jsx` - Main 3D scene composition
-- `Projectile.jsx`, `DamageNumber.jsx`, `LootDrop.jsx`, `XPOrb.jsx` - Combat visuals
-- `ParticleEffect.jsx` - Visual effects
-- `CameraRotateControls.jsx`, `TouchControls.jsx` - Input handling
-- `WaveManager.jsx` - Enemy wave spawning
+| Phase | Status (November 21, 2026) |
+|---|---|
+| 0 Foundation | Done, except the multiplayer prep, which is now light (see below; #585, #588), save on a worker (#586) and pooling (#587) |
+| 1 Survival | Done |
+| 2 Settlement | Done (building effects left: #583) |
+| 3 Combat & Portals | In progress (#576): 3.0.1, 3.0.3, 3.0.4 done; 3.0.2 next |
+| 4 Companion & Magic | Not started; after Phase 3 (#579, plan: #593) |
+| 5 Polish & Content | Partly pulled into the ongoing basics track below |
+| 6 Multiplayer | Not started |
+| 7 Release | Not started (#596) |
 
-#### Game Systems (Reusable from 2D) ✅
-- **AI Systems:** BehaviorTree, EnemyAI, NPCBehavior, CompanionAI, Pathfinding, Wildlife
-- **Building:** BuilderBehavior, BuildingConfig, TierProgression
-- **Combat:** DefenseCombatEngine, RaidEventManager, DungeonCombatEngine
-- **Environment:** WorldGenerator, BiomeManager, ChunkManager, WeatherSystem, SeasonalSystem
-- **Economy:** Crafting, Loot tables, Material systems
-- **Persistence:** SaveSystem (needs 3D adaptation)
-- **Events:** EventSystem with various world events
-- **Character:** Full attribute/skill system with progression
+---
 
-#### State Management ✅
-- Zustand store with player stats, inventory, equipment
-- Monster/wildlife management
-- Combat mechanics (damage, crits, projectiles)
-- Character progression (XP, levels, skill points)
+## Roadmap Decisions (November 21, 2026)
 
-### What Needs Integration/Development
+### The world and the long-term goal
+- **Goal:** find the rift source and reclaim the island. Sealing the **heart rift** is the story's ending.
+- **A finite island**, irregular in shape (not round), about 2–3 km across, split into **4–5 territories**. New games only; old saves keep their infinite world.
+- **Three rift tiers:** a large rift in the middle of each territory, ringed at a distance by medium rifts, each ringed by small rifts. The heart rift sits at the centre of the large rifts. A rift can only be sealed once its children are; sealing a territory's large rift reclaims it.
+- **Resurgence:** anything can return until the heart is sealed, but a sealed rift only reopens once all its children have. Settlements nearby must patrol to keep small rifts sealed.
+- **Outposts:** one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols.
+- **After the heart:** keep playing the freed island (no rifts, no raids), or start New Game+ on a harder island.
+- **Peaceful builder mode** (no raids, no resurgence) as a new-game setting, built in Phase 3.
+- The island, rift tiers, territories, outposts and patrols are built inside Phase 3 (3.3/3.4/3.6); see `docs/phases/PHASE_3_DETAILED_PLAN.md`, Decisions 13–21.
 
-| System | Status | Work Needed |
-|--------|--------|-------------|
-| Chunk-based rendering | Not started | Critical for performance |
-| LOD system | Not started | Critical for large worlds |
-| Network architecture | Not started | Design from start for multiplayer |
-| Procedural World Gen | Module exists | Integrate with VoxelTerrain |
-| Save/Load | Module exists | Adapt for 3D + multiplayer state |
-| NPC Settlers | AI exists | 3D rendering, task visuals |
-| Portal System | Not started | Core feature |
-| The Companion | AI exists | 3D model, teaching system |
-| Magic System | Partial | Spell effects, learning system |
-| Building Placement | Module exists | 3D placement UI |
-| Audio | Not started | Music, SFX |
-| Full UI | Partial (HUD) | Menus, inventory screens |
-| 3D Assets | Not started | Models, animations (learning required) |
+### Order
+Finish Phase 3 (the settlement-defence loop on the island) before the companion (Phase 4). The companion then has a real threat to help with.
+
+### Ongoing track: the basics
+These run alongside every phase instead of waiting for Phase 5, because the game is already deployed and players see these gaps:
+- Saves: autosave and save on leaving the page (#589), then save on a worker (#586)
+- Settings and accessibility (#591)
+- Audio, a bit at a time (#590)
+- Player-feedback bugs as they come in (the `player-feedback` label)
+- Performance measured on a laptop and a phone (#597)
+
+Phase 5 keeps only the big polish and content pass.
+
+### Mobile is first-class
+Phones are a target platform. Every phase's exit criteria include a phone playtest and a mobile frame-time target; supported devices and browsers are listed in Phase 7's plan (#596).
+
+### Multiplayer: kept, lightly
+Co-op stays Phase 6. A short design doc (host-authoritative) comes first (#588). New systems from Phase 3 on are plain data with entity IDs and pure logic outside React, so they can run on a host later. The existing store is not retrofitted, and the unused action-history middleware is removed (#585).
 
 ---
 
@@ -209,6 +211,8 @@ World
 ---
 
 ## Multiplayer Architecture (Designed From Start)
+
+> **Stance since November 21, 2026:** kept, lightly — see [Roadmap Decisions](#multiplayer-kept-lightly). The architecture below is the Phase 6 target, not a rule every system follows today.
 
 ### Why Design For Multiplayer Early
 
@@ -415,8 +419,10 @@ Begin with placeholder cube characters. Gameplay first, pretty models later. A f
 #### Goals
 - Enhanced combat (melee, ranged, dodge, block)
 - Monster variety with unique behaviors
-- Portal system (spawning, closing, reopening)
-- Territory and corruption mechanics
+- The island world: 4–5 territories, three rift tiers and the heart rift
+- Portal system (spawning, closing, reopening, resurgence that cascades from small to large rifts)
+- Territory and corruption mechanics; outposts and patrols
+- Peaceful builder mode
 - Defensive structures
 - NPC guards and military
 - Raid events
@@ -471,6 +477,7 @@ Begin with placeholder cube characters. Gameplay first, pretty models later. A f
 **Focus:** Making everything feel good
 
 #### Goals
+*Saves, settings, accessibility and audio basics now run as an ongoing track (see [Roadmap Decisions](#ongoing-track-the-basics)); this phase is the larger pass.*
 - Audio (music, SFX, ambient)
 - Visual polish (weather, particles, lighting)
 - Quest system
@@ -570,6 +577,8 @@ WeatherSystem     → Visual effects, network synced
 ---
 
 ## Automated Testing Strategy
+
+> The project uses **Vitest**, not Jest: read `jest` below as `vitest` and see `CLAUDE.md` for the real commands.
 
 ### Testing Philosophy
 
@@ -924,6 +933,11 @@ This lets us test component logic without WebGL context.
 | Burnout | High | Medium | It's for fun—take breaks, no deadlines |
 | Browser compatibility issues | Medium | Low | Test across browsers early |
 | Three.js breaking changes | Low | Low | Pin versions, test upgrades |
+| Features built but never connected to the game | High | High (it happened) | In-game acceptance check for every task; carry unmet exit criteria forward as issues |
+| Docs drift from the code | Medium | High (it happened) | Status table above; `ROADMAP_AUDIT.md` refreshed at the end of each phase |
+| Phone performance | High | Medium | Mobile is first-class: phone frame-time target in every phase's exit criteria |
+| A finite island changes world generation | Medium | Medium | New worlds only; world-gen version in the save |
+| Players lose progress (no autosave) | High | High (today) | #589, in the ongoing basics track |
 
 ---
 

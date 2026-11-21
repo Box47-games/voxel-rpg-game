@@ -55,7 +55,7 @@ Ordered by how much they hurt a player today.
 7. **Monster count is short of the plan** (#595). 4 rift monster types (slime, goblin, skeleton, shadow creeper) against the plan's "5+". §3.2 in #576 covers behaviour variety but not new types.
 8. **Release basics** (#596). The PWA manifest exists but there's no service worker (no offline play or install-update flow). There's no itch.io/desktop build plan (Phase 7), and `README.md` still shows "production ready" and "v1.0" badges and 2D-era content.
 9. **Performance targets still unmeasured** (#597). #578 covers per-enemy cost only. Nobody has measured the Phase 0 targets (60 FPS, <1 GB memory, <100 ms per chunk) on real hardware, and there's no coverage tooling to back the ">70% coverage" criterion.
-10. **Undecided Phase 3 questions** (#598). A "Peaceful builder" mode (no raids, no rift resurgence) and whether guards wear weapon durability are still open. Tool durability now exists, so the second needs a decision before §3.6. Decision #4 (steering, A* only if needed) was overtaken by the A* pathfinding that shipped.
+10. ~~**Undecided Phase 3 questions** (#598).~~ Decided November 21 (Phase 3 plan, Decisions 13–21); the long-term goal and endgame are now in `3D_IMPLEMENTATION_PLAN.md` → Roadmap Decisions.
 
 ### Docs that are out of date
 

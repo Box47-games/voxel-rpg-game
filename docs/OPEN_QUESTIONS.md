@@ -2,43 +2,21 @@
 
 Decisions waiting on the project owner, collected so work can resume later. Each has a proposed default; anything not overridden can start with the default.
 
-_Last updated: 2026-11-15_
+_Last updated: 2026-11-21_
 
-## Repository state
+## Decided
 
-- Branch `claude/sweet-hopper-28hqmt` (dead-code removal, roadmap audit, unified dev overlay, Phase 3 plan) was merged into `main` as PR #558.
-- Done: `package.json` `homepage`, `author` and `repository.url` now point to Box47-games (site: https://box47-games.github.io/voxel-rpg-game/). GitHub Pages deploys from `.github/workflows/deploy.yml` on pushes to `main`.
+All earlier questions are resolved. The decisions live where the work does:
 
-## Phase 3 — decisions needed
+- **Phase 3:** [`PHASE_3_DETAILED_PLAN.md` → Decisions](phases/PHASE_3_DETAILED_PLAN.md#decisions), 1–21. Decisions 13–21 (November 21) add the world and endgame: a finite island of 4–5 territories, three rift tiers around a heart rift, resurgence that cascades from small to large rifts, outposts and patrols, peaceful builder mode in Phase 3, slow guard weapon wear with Blacksmith repair, and the freed island or New Game+ after the heart is sealed.
+- **Roadmap:** [`3D_IMPLEMENTATION_PLAN.md` → Roadmap Decisions](3D_IMPLEMENTATION_PLAN.md#roadmap-decisions-november-21-2026): Phase 3 before the companion, an ongoing basics track (saves, settings, audio, accessibility), mobile first-class, multiplayer kept lightly with the unused action middleware removed.
 
-From [`docs/phases/PHASE_3_DETAILED_PLAN.md`](phases/PHASE_3_DETAILED_PLAN.md#decisions-needed).
+## Still open
 
-| # | Question | Proposed default |
-|---|----------|------------------|
-| 1 | Finish all Phase 2 leftovers first, or only housing, the NPC schedule and the NPC panel? | **Decided: finish all Phase 2 leftovers first** (changed from the default on 2026-11-15). Order: housing → day/night schedule → farming zone → settlement dashboard → building panel → building upgrades (needs a short design pass first). **All done** (NPC panel, housing, day/night schedule, farming zone, settlement dashboard, building panel, building upgrades). Upgrade design chosen: grow in place, plan's path and costs, building effects (Storage Shed capacity, Well/Watchtower auras) left for later |
-| 2 | Wire in the settlement engine (`SettlementBridge`) before guard/shelter logic? | **Decided: yes — done.** `SettlementTick` now drives `SettlementModule` through `SettlementBridge` |
-| 3 | Permanent NPC death? | No — NPCs are knocked down and recover (or leave if hit again while down) |
-| 4 | Enemy navigation: full pathfinding or simple steering? | Steering + breaking through walls; A* only if playtests show stuck raids |
-| 5 | Can monsters break blocks? | Only player-placed wood/stone defenses, never terrain |
-| 6 | Map scope | Rift list in the pause menu now; real map in Phase 5 |
-| 7 | Companion's role | Out of Phase 3; consider the companion rescue story as its own short phase (biggest gap vs. the vision) |
-
-## Phase 3 — open questions
-
-| # | Question | Proposed default |
-|---|----------|------------------|
-| 1 | Can player spells hurt NPCs? | No; area spells skip NPCs |
-| 2 | Do goblins that steal from stockpiles drop the loot when killed? | Yes |
-| 3 | "Peaceful builder" mode (no raids, no rift resurgence) — Phase 3 or Phase 5? | Undecided |
-| 4 | Do guards use up weapon durability? (Tool durability isn't implemented yet.) | Undecided |
-| 5 | NPC recruitment | Defer to Phase 5 trade caravans |
-
-## Known bugs found while planning
-
-- **Fixed: buildings finished by a settler never appeared** — the settler builder only advanced the block count; it now places each block (`buildingInfo.placeNextBlock`, shared with `ConstructionTick`). This predated the settlement refactor.
-- **Fixed: closed rifts reopened after a reload** — rift state is now saved (schema v7, Phase 3 task 3.0.1).
-- **Fixed: the rift anchor was almost never attacked** — the anchor check now uses live positions from `store._enemyPositions`, and reinforcements walk to their anchor while the rift is closing unless the player is closer. The rest of task 3.0.2 (target registry, single damage path, removing the legacy Monster path) is still to do.
-
-## Other follow-ups from the roadmap audit
-
-See [`docs/ROADMAP_AUDIT.md`](ROADMAP_AUDIT.md) for the full list. The largest: the companion story, weather, quests and skill points exist in code but are never activated or have no UI.
+| # | Question | Proposed default | Needed by |
+|---|----------|------------------|-----------|
+| 1 | Island shape: one landmass with bays and peninsulas, or a main island with small offshore islets? | One landmass, noise-warped outline | 3.3.0 |
+| 2 | What carries over into New Game+ (spells, skills, gear, blueprints)? | Spells and skill points; not gear or materials | Phase 5 |
+| 3 | Where is the companion found, and when in a run? | Near the first medium rift, after the first small rift is sealed | Phase 4 plan (#593) |
+| 4 | Do outposts get immigration and housing of their own, or are settlers sent from the main settlement? | Sent from the main settlement | 3.4 / 3.6 |
+| 5 | How does the player travel across a 2–3 km island (fast travel between settlements, mounts, roads)? | Fast travel between your own campfires | 3.4 or Phase 5 |
