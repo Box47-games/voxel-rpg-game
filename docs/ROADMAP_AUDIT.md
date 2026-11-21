@@ -1,6 +1,6 @@
 # Roadmap & Vision Audit
 
-**Date:** November 11, 2026 (Phase 2 and Phase 3 sections updated November 15, 2026)
+**Date:** November 11, 2026 (Phase 2 and Phase 3 sections updated November 15, 2026; open-issue coverage added November 21, 2026)
 **Compared:** the live game code (everything reachable from `src/index.jsx`) against
 - `docs/3D_IMPLEMENTATION_PLAN.md` (phases 0–7)
 - `docs/phases/PHASE_0/1/2_DETAILED_PLAN.md` (exit criteria)
@@ -21,6 +21,47 @@ Three patterns explain most gaps:
 1. **Built but never connected.** Several features were written, tested and merged but never mounted or imported by the game, so players never see them. The biggest were the companion story (Phase 4), quests UI, skill-tree UI, town upgrades, game modes and the "endgame" systems from PR #556. These were all dead code and were removed in the dead-code cleanup; they can be restored from the commits listed in [Built but never connected](#built-but-never-connected) if you want to wire them up.
 2. **Constants without behavior.** `tuning.js` defines numbers for features that don't exist yet (tool durability, shelter health/stamina regen, shelter monster exclusion). They read as done but do nothing.
 3. **The docs describe a different game.** `README.md` describes the old 2D settlement game, and `PHASE_2_DETAILED_PLAN.md` §2.0 wires the settlement through `GameManager`/`ModuleOrchestrator`, which the 3D app never used (and which no longer exist). The newer `.claude/plans/phase2-settlement-unification.md` already supersedes it.
+
+---
+
+## Open issues vs. the roadmap (November 21, 2026)
+
+The 22 open issues checked against the phases above and against the code on `main`.
+
+### What the issues cover
+
+| Phase | Issues | Coverage |
+|---|---|---|
+| 0 Foundation | #585 action system, #586 save on a worker, #587 object pooling, #588 multiplayer-ready state | All four ❌ exit criteria have an issue. #586's premise is wrong (see gaps). |
+| 2 Settlement | #583 building effects (Storage Shed, Watchtower, Blacksmith) | Storage/production effects covered. BUILDING zone and dashboard production rates have no issue. |
+| 3 Combat & Portals | #576 tracker, #577 targets + one damage path, #578 per-enemy cost; player feedback #570, #571, #573, #574 | Good. 3.1–3.9 live as checkboxes in #576 only. |
+| 4 Companion | #579 | Covered, but there is no `PHASE_4_DETAILED_PLAN.md`, which the 3D plan asks for before starting. |
+| 5 Polish | #580 skill tree, #581 quest log, #582 weather | Covered for those three. Audio, accessibility, settings and the map have none. |
+| 6 Multiplayer | #588 (prep only) | Expected; the phase hasn't started. |
+| 7 Release | none | See gaps. |
+| Player bugs | #567 main menu, #568 pickup labels, #569 diagonal speed, #572 wildlife count, #575 feedback day | Small, independent fixes. #567 and #575 are confirmed still present in code. |
+| Tooling | #584 ESLint 10 | Fine. |
+
+### Gaps found (issues opened November 21)
+
+Ordered by how much they hurt a player today.
+
+1. **No autosave** (#589). `Game3DSaveManager.startAutoSave` has no callers, and nothing saves on `pagehide`/`visibilitychange`. The only saves are the pause menu's Save and the dev overlay. Closing the tab, a crash or a phone killing the page loses everything since the last manual save. #586 assumes autosaves exist; it should follow this fix. If autosave writes to the `autosave` slot, the start screen's Continue (which loads `default`) also has to pick the newest slot.
+2. **Audio is placeholder** (#590). `utils/AudioManager.js` holds 18 inline data-URI beeps, many named for the 2D game (`dungeonEnter`, `bossPhaseChange`). Only 4 calls exist in live code (melee swing, loot pickup, enemy death, and `play('error')` for a sound that doesn't exist, so it is silent). No music, no ambience, no footsteps, mining, building or spell sounds, and no volume control. The 3D plan lists audio as a Phase 5 goal; Phase 3 §3.8 also lists combat audio.
+3. **No settings / accessibility screen** (#591). There's nowhere to set volume, text or UI size, a colour-blind palette, key remapping, mouse sensitivity or graphics quality (render distance, shadows). Phase 5 lists accessibility options, and Phase 1's "colour-blind safe, 375 px readable" was never verified.
+4. **Quests never exist at runtime** (#592). `useQuestStore.initializeAllQuests` has no callers, so `QuestManager` has nothing to track. #581 asks for the UI and for saving progress, but not for this; the log would be empty.
+5. **No Phase 4 / Phase 5 detailed plans** (#593). `docs/phases/` stops at Phase 3. #579 points to a restorable `CompanionStoryManager` (commit `c34db28`) but has no design for the rescue, bond milestones or which spells get taught.
+6. **Settlers lack the "Grow" pillar's social side** (#594). No relationships between settlers, no specialists/merchants, no recruitment (OPEN_QUESTIONS defers recruitment to Phase 5 trade caravans). 
+7. **Monster count is short of the plan** (#595). 4 rift monster types (slime, goblin, skeleton, shadow creeper) against the plan's "5+". §3.2 in #576 covers behaviour variety but not new types.
+8. **Release basics** (#596). The PWA manifest exists but there's no service worker (no offline play or install-update flow). There's no itch.io/desktop build plan (Phase 7), and `README.md` still shows "production ready" and "v1.0" badges and 2D-era content.
+9. **Performance targets still unmeasured** (#597). #578 covers per-enemy cost only. Nobody has measured the Phase 0 targets (60 FPS, <1 GB memory, <100 ms per chunk) on real hardware, and there's no coverage tooling to back the ">70% coverage" criterion.
+10. ~~**Undecided Phase 3 questions** (#598).~~ Decided November 21 (Phase 3 plan, Decisions 13–38); the long-term goal and endgame are now in `3D_IMPLEMENTATION_PLAN.md` → Roadmap Decisions.
+
+### Docs that are out of date
+
+- This file: the summary and "Recommended next steps" predate tool durability, shelter perks, pathfinding, block pieces and the art pass (items 3 and 7 are done or partly done).
+- `docs/OPEN_QUESTIONS.md`: last updated 2026-11-15; decision 4 superseded.
+- `docs/3D_IMPLEMENTATION_PLAN.md` "Current State" and `README.md`, as listed under Documentation drift.
 
 ---
 
@@ -68,13 +109,13 @@ Three patterns explain most gaps:
 | Break / place blocks with mouse | ✅ | `BlockInteraction.jsx` (desktop + long-press mobile). |
 | WASD, jump, mouse look | ✅ | `useKeyboard.js`, `FirstPersonControls.jsx`, `CameraRotateControls.jsx`. |
 | Inventory (I key) | ✅ | `InventoryUI.jsx`. |
-| Save/Load with all state | ✅ | `Game3DSaveManager.js` (v6; includes unloaded modified chunks). Quests: only completed IDs saved. |
+| Save/Load with all state | ✅ | `Game3DSaveManager.js` (v8; includes unloaded modified chunks). **No autosave runs** (see below). Quests: only completed IDs saved. |
 | **All mutations go through action system** | ❌ | `systems/state/ActionSystem.js` middleware is installed but **nothing dispatches actions** — every mutation is a plain `set()`. |
 | Save in a worker, non-blocking | ❌ | Save runs on the main thread (IndexedDB is async, serialization is not). |
 | **Multiplayer-ready state** | ❌ | No authority/input layer. The `NetworkLayer` that existed was never used and was removed as dead code. |
 | **Object pooling** | ❌ | No pools in live code (`systems/pools/PoolManager.js` existed but was never imported). Projectiles/particles/damage numbers allocate per spawn. |
 | 60 FPS, <16 ms frame, <1 GB memory, <100 ms/chunk | *unmeasured* | The per-frame re-render fixes in PR #557 removed the largest known main-thread cost. Use the dev overlay's perf tab to measure. |
-| Test coverage >70% for new systems | 🟡 | 46 test files / 1017 tests pass; coverage tooling isn't installed so % is unknown. |
+| Test coverage >70% for new systems | 🟡 | 111 test files (Nov 21); coverage tooling isn't installed so % is unknown. |
 
 ### Phase 1 — Survival & Gathering
 

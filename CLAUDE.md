@@ -6,9 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install          # Install dependencies
-npm start            # Start Vite dev server at http://localhost:3000
+npm start            # Start Vite dev server at http://localhost:3000 (npm run dev is the same)
+npm run preview      # Serve the production build
 npm run build        # Production build (output: build/)
 npm run deploy       # Build and deploy to GitHub Pages
+npm run art          # Regenerate UI icon/catalog art (scripts/art/); art:portraits renders character-model portraits (headless Chromium)
 ```
 
 ## Testing
@@ -62,7 +64,7 @@ Tick components use `useFrame` inside R3F Canvas to drive game logic each frame.
 
 ### State Management
 
-- **`useGameStore`** (`src/stores/useGameStore.js`, ~1730 lines) — Primary store. Player, enemies, projectiles, settlement NPCs, zones, world time, UI state, inventory. Almost all 3D components read/write here. Store actions are wrapped by `ActionHistory` middleware (`src/systems/state/ActionSystem.js`) for replay/rollback/debugging.
+- **`useGameStore`** (`src/stores/useGameStore.js`, ~2100 lines) — Primary store. Player, enemies, projectiles, settlement NPCs, zones, world time, UI state, inventory. Almost all 3D components read/write here. Store actions are wrapped by `ActionHistory` middleware (`src/systems/state/ActionSystem.js`) for replay/rollback/debugging.
 - **`useQuestStore`** — Quest progress and objectives (driven by `systems/QuestManager.js` + JSON definitions in `src/config/quests/`; no quest UI yet).
 
 Pattern: Game logic writes to stores via actions. 3D components subscribe to slices. No circular deps — modules don't read components.
@@ -106,7 +108,12 @@ WorkerPool (`src/systems/workers/WorkerPool.js`) caps at `Math.min(navigator.har
 | `story/` | DialogueEngine.js | NPC dialogue system |
 | `workers/` | WorkerPool.js | Thread pool for chunk workers |
 | `state/` | ActionSystem.js | Action history middleware (replay, rollback, debugging) |
-| `LootGenerator`, `LootTable`, `LootIntegration` | (root-level) | Loot drop/pickup pipeline |
+| `navigation/`, `movement/` | gridPath.js, stepUp.js | Walker A* pathing; player half-step climbing |
+| `construction/` | scaffoldRoute.js | Walkable scaffold ramp spiralling round a construction site |
+| `interaction/` | interactTarget.js | What E opens near the player (shared by BlockInteraction and InteractPrompt) |
+| `tools/` | toolDurability.js | Tool wear, breaking, repair |
+| `hints/`, `feedback/` | hintScheduler.js, feedback.js | Contextual hint picking; feedback-form payload |
+| `LootGenerator`, `LootTable`, `LootIntegration`, `LootDropManager`, `EquipmentManager` | (root-level) | Loot drop/pickup pipeline |
 | `QuestManager` | (root-level) | Quest state machine driven by `src/config/quests/*.json` |
 
 ### Key Data Files
@@ -170,7 +177,7 @@ Save/load in `src/persistence/Game3DSaveManager.js` (IndexedDB `voxel3d-saves`, 
 
 - `src/App3D.jsx` — Main 3D game component entry point
 - `src/components/3d/Experience.jsx` — Scene setup, entity rendering, tick orchestration
-- `src/stores/useGameStore.js` — Central Zustand store (~1730 lines)
+- `src/stores/useGameStore.js` — Central Zustand store (~2100 lines)
 - `src/persistence/Game3DSaveManager.js` — Save/load
 - `src/data/tuning.js` — All gameplay balance constants
 - `src/systems/chunks/ChunkManager.js` — Terrain chunk loading/unloading

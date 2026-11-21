@@ -2,7 +2,7 @@
 
 **Created:** November 11, 2026
 **Estimated Duration:** 10-14 weeks
-**Status:** Ready to start — decisions resolved November 15, 2026 (see [Decisions](#decisions)); pre-start checks in [Before Starting](#before-starting)
+**Status:** In progress — 3.0.1, 3.0.3, 3.0.4 done; 3.0.2 next. World and endgame decisions added November 21, 2026 (see [Decisions](#decisions) 13–21): the world becomes a finite island of territories, which reshapes 3.3 and 3.4.
 **Prerequisite:** Phase 2 — ✅ done: the core loop (campfire → immigration → zones → mine → haul → build) plus housing, the day/night schedule, farming, the NPC panel, the settlement dashboard and building upgrades, all running on the unified settlement engine (`SettlementBridge`).
 
 ---
@@ -47,7 +47,7 @@ From the Vision document:
 - **Readable over hard.** Every enemy attack is telegraphed (wind-up pose + color flash). Damage comes from the player's mistakes, not from invisible hits.
 - **Defense is a choice, not a tax.** Raids scale with what the player has built; a small, well-defended village and a sprawling one both work.
 - **NPC autonomy holds.** The player assigns guard *roles* and builds defenses; NPCs decide where to stand, when to fight and when to flee.
-- **No softlocks.** Losing a raid costs resources and repairs, never the settlement.
+- **No softlocks.** Losing a raid costs resources and repairs, never the settlement. Rifts are different: a rift reopening inside a settlement can destroy it (Decision 35), but the player can always light a new campfire and rebuild.
 
 ---
 
@@ -205,29 +205,57 @@ Each type gets a **behavior profile** (data in `MONSTER_TYPES`, logic in `system
 
 ### 3.3 Portal Lifecycle (Week 4-6)
 
-#### 3.3.1 Rift tiers
-- [ ] `minor` (current behavior) and `major` rifts (rarer, larger corruption radius, guardian, longer closing with 2 anchor phases)
-- [ ] Major rifts drop a guaranteed rare reward (void crystal) used by 3.5 ward stones and Phase 4 magic
+#### 3.3.0 The island (new worlds only)
+- [ ] Finite island world generator: **one landmass** (Decision 22) with an irregular coastline (not a circle: a noise-warped outline with bays, peninsulas, maybe an inland lake), ocean beyond, about 2–3 km across. Every territory is reachable on foot
+- [ ] 4–5 **territories**: regions of the island, each with its own large rift near its middle. The **heart rift** sits at the island's centre, between the large rifts
+- [ ] Store a `worldGen` version in the save: old saves keep the infinite generator; only new games get the island (Decision 15)
+- [ ] Rift layout comes from the world seed: each large rift is ringed at a distance by medium rifts, and each medium rift by small rifts
 
-#### 3.3.2 Resurgence — "victory is never permanent"
-- [ ] Closed rifts track `stability` (0–100). Stability decays when no **ward stone** (3.5.2) is powered within `WARD_RADIUS` and no settlement territory covers it
-- [ ] At 0 stability the rift enters `RESURGENT`: flickering visual, minor spawns, corruption regrows over `RIFT_RESURGE_DURATION`; the player can re-seal it with a short ritual (cheaper than first close) before it returns to ACTIVE
-- [ ] Notifications: "The sealed rift at … is weakening" at 50% and 20% stability
+#### 3.3.1 Rift tiers
+- [ ] Three tiers: **small** (today's rift), **medium** (larger corruption, a guardian, longer closing), **large** (a territory's centre; boss-level guardian, two anchor phases). Plus the single **heart rift**
+- [ ] Each rift knows its parent (small → medium → large → heart), so the hierarchy is data, not distance checks
+- [ ] Gating: a medium rift can only be sealed once all its small rifts are sealed; a large one once all its medium rifts are; the heart once every large rift is
+- [ ] Larger tiers drop better rewards (void crystals) used by 3.5 ward stones and Phase 4 magic
+- [ ] Sealing a territory's large rift reclaims the territory (3.4)
+- [ ] **Rift waystones** (Decision 26): sealing a medium or large rift leaves a waystone; the player can travel between any of their waystones (not during a raid). A waystone goes dark while its rift is resurgent
+- [ ] Leave room for the companion: the first medium rift near the start area is where Phase 4's rescue happens (Decision 24)
+
+#### 3.3.2 Resurgence — "victory is never permanent" (until the heart is sealed)
+- [ ] Sealed **small** rifts lose `stability` over time and reopen at 0. Settler patrols (3.6.2) and ward stones (3.5.2) in range slow the decay
+- [ ] A rift reopens at a **new random spot** in its tier's zone (Decision 30): a small rift anywhere in its medium rift's ring, a medium one in its large rift's ring, a large one near its territory's middle. Never inside another rift's existing corruption, but it **can land inside a settlement or outpost** (Decision 32). Players can't simply build a wall round the old spot
+- [ ] A sealed **medium** rift can only reopen once all of its small rifts have reopened; a sealed **large** rift only once all of its medium rifts have. Resurgence cascades upward, so the player always has warning
+- [ ] Reopening a large rift un-reclaims its territory
+- [ ] Re-sealing a resurgent rift is cheaper than the first close
+- [ ] Sealing the heart rift ends resurgence everywhere (see 3.3.4)
+- [ ] Notifications: "The sealed rift at … is weakening" at 50% and 20% stability, and when a child rift reopens under a sealed parent
 
 #### 3.3.3 Chain reactions (exists — extend)
 - [ ] Closing a rift already boosts nearby rifts' spawn rate; also raise their raid weight (3.7) for a day
 
+#### 3.3.4 The heart rift and after
+- [ ] Sealing the heart is the story ending: an ending scene (with the companion once Phase 4 lands)
+- [ ] Afterwards the player chooses: keep playing the freed island (no rifts reopen, raids stop), or start **New Game+** (Decisions 21, 23, 27)
+- [ ] New Game+ happens on the **same island**: every rift, the heart included, reopens (at new spots, per 3.3.2). The settlement and outposts stay but are damaged by the returning corruption. The player keeps spells, level and skill/attribute points, and equipped gear
+- [ ] Starting New Game+ hits the settlements at once: player-built blocks in the space a reopened rift itself takes up (its core and crystal spires) break outright; blocks elsewhere in the new corruption wear down as usual (Decision 33). The same applies whenever a rift reopens on top of buildings
+- [ ] Each New Game+ cycle adds **one** more difficulty mechanic, cumulatively (Decision 34). In this order (Decision 37): stronger monsters → more rifts per territory → earlier and bigger raids → faster resurgence → **corruption spreads** (creeps between rifts and joins nearby rings), **rift storms** (occasional storms that drain every sealed rift's stability and boost spawns island-wide). After the last one, the pool repeats with bigger numbers. Store the cycle number in the save; settings in `tuning.js`
+
 **Tuning constants:**
 ```
-RIFT_MAJOR_CHANCE = 0.15
-RIFT_MAJOR_CORRUPTION_MULT = 1.75
-RIFT_STABILITY_DECAY_PER_DAY = 25     (unwarded, outside territory)
+ISLAND_DIAMETER = ~1200             (blocks; 2–3 km)
+TERRITORY_COUNT = 4–5
+RIFT_MEDIUM_PER_LARGE / RIFT_SMALL_PER_MEDIUM = (tune in playtest)
+RIFT_MEDIUM_CORRUPTION_MULT = 1.75, RIFT_LARGE_CORRUPTION_MULT = 2.5
+RIFT_STABILITY_DECAY_PER_DAY = 25     (small rifts, no patrol or ward in range)
+RIFT_PATROL_DECAY_MULT = (0–1, tune)
 RIFT_RESURGE_DURATION = 120           (s of RESURGENT before ACTIVE)
 RIFT_RESEAL_COST = { void_shard: 3 }
 ```
 
 **Acceptance criteria:**
-- [ ] An unattended closed rift reopens within ~4 in-game days; a warded one never does
+- [ ] A new game starts on an island; an old save still loads its infinite world unchanged
+- [ ] An unattended sealed small rift reopens within ~4 in-game days; a patrolled or warded one much later or never
+- [ ] A sealed medium or large rift never reopens while any of its children is still sealed
+- [ ] After the heart is sealed, no rift reopens
 - [ ] Re-sealing a resurgent rift is noticeably easier than the first close
 - [ ] Rift state (including stability) survives save/load (3.0.1)
 
@@ -238,7 +266,11 @@ RIFT_RESEAL_COST = { void_shard: 3 }
 ### 3.4 Territory & Corruption (Week 5-6)
 
 #### 3.4.1 Territory
-- [ ] `systems/territory/TerritoryManager.js`: territory = union of circles around the settlement center, completed buildings (`TERRITORY_RADIUS_PER_BUILDING`) and closed+warded rifts (reclaimed land)
+- [ ] Two layers: the island's fixed **territories** (3.3.0), each reclaimed when its large rift is sealed, and the **settled area** around each settlement and outpost
+- [ ] `systems/territory/TerritoryManager.js`: settled area = union of circles around each settlement/outpost centre and completed buildings (`TERRITORY_RADIUS_PER_BUILDING`); a reclaimed territory has no ambient monster spawns
+- [ ] **Displaced settlers** (Decision 38): if a rift destroys a settlement's or outpost's campfire, its settlers walk to the nearest other settlement or outpost; with none, they wait by the ruins for `DISPLACED_WAIT_DAYS` in-game days for a new campfire nearby, then leave
+- [ ] **Outposts** (Decision 18): one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols
+- [ ] Outposts grow on their own (Decision 25): each campfire runs its own immigration and housing, so a neglected outpost still fills slowly. The player can also send settlers from an established settlement (NPC panel); experienced settlers (high skills) make the outpost grow faster, for example by raising its attractiveness and work speed
 - [ ] Store `territory` (list of circles) and a cheap `isInTerritory(x, z)`
 - [ ] Rendering: faint ground border at territory edges (reuse ZoneOverlay approach), toggle in the build/zone modes
 - [ ] Effects: monsters don't spawn inside territory except during raids; NPC work zones must be inside territory
@@ -246,6 +278,7 @@ RIFT_RESEAL_COST = { void_shard: 3 }
 #### 3.4.2 Corruption creep
 - [ ] Active rifts slowly extend corruption outward (`CORRUPTION_CREEP_PER_DAY` blocks, capped at `CORRUPTION_MAX_RADIUS`) unless blocked by territory
 - [ ] Corrupted ground inside territory lowers attractiveness and NPC happiness — gives the player a reason to push rifts back
+- [ ] **Corruption damages building** (Decision 31): player-built blocks and pieces touched by corruption, or built on corrupted ground, lose HP over time until they are destroyed. Uses the block HP from 3.5.3; settlers can repair them, but only purifying the ground stops the damage
 - [ ] Purification: existing fade on closing; plus a craftable **purifying torch** for small patches (uses void shards)
 
 **Tuning constants:**
@@ -255,6 +288,7 @@ TERRITORY_RADIUS_PER_BUILDING = 6     (capped)
 TERRITORY_MAX_RADIUS = 96
 CORRUPTION_CREEP_PER_DAY = 2          (blocks)
 CORRUPTION_MAX_RADIUS = 48
+CORRUPTION_BREAK_DAYS = { wood: 2, stone: 5 }   (in-game days to break a full block; pieces by volume)
 ```
 
 **Acceptance criteria:**
@@ -316,7 +350,8 @@ WATCHTOWER_WARNING_BONUS = 20         (s)
 #### 3.6.2 Guard role
 - [ ] New job `GUARD` (player sets guard count/assigns from the NPC panel — depends on Phase 2 NPC detail panel; fallback: guard slots on watchtowers)
 - [ ] Guard behavior: patrol territory edge or man a watchtower by day/night shift, engage enemies inside territory, fall back to the campfire when < 30% HP
-- [ ] Guards use equipment from the stockpile (weapon/armor items) — gives crafting a settlement purpose
+- [ ] Guards use equipment from the stockpile (weapon/armor items) — gives crafting a settlement purpose. Their weapons wear at `GUARD_WEAPON_WEAR_MULT` of the player's rate; a completed Blacksmith (#583) repairs them from stockpile materials (Decision 20)
+- [ ] **Patrols:** guards from a nearby settlement or outpost walk routes past sealed rifts in range, slowing their resurgence (3.3.2)
 - [ ] Rift closing: guards near a closing rift count as defenders (`RIFT_NPC_DEFENDER_SPEED_BONUS` already exists — wire it to real guards)
 
 #### 3.6.3 Civilian threat response
@@ -332,6 +367,8 @@ NPC_THREAT_RADIUS = 20
 NPC_ALL_CLEAR_TIME = 15
 GUARD_ENGAGE_RADIUS = 24
 GUARD_RETREAT_HP_FRACTION = 0.3
+GUARD_WEAPON_WEAR_MULT = 0.25     (tune)
+PATROL_RANGE = (tune)
 ```
 
 **Acceptance criteria:**
@@ -344,6 +381,9 @@ GUARD_RETREAT_HP_FRACTION = 0.3
 ---
 
 ### 3.7 Raids (Week 8-10)
+
+#### 3.7.0 Peaceful builder mode (Decision 19)
+- [ ] A world setting chosen at new game: no raids, no resurgence, rifts stay where they are until sealed. The raid director and resurgence read it from the start
 
 #### 3.7.1 Raid director
 - [ ] `systems/raids/RaidDirector.js`: daily roll at dusk; raid chance and strength from settlement size (NPCs + buildings), days since last raid, nearby active rifts (and chain-reaction weight), difficulty; no raids before `RAID_GRACE_DAYS`
@@ -420,10 +460,15 @@ Phase 3 is **complete** when ALL of the following are true:
 - [ ] **Weapon variety:** at least two melee weapon archetypes with different reach/speed
 - [ ] **Monster behaviors:** slime, goblin, skeleton archer, shadow creeper and rift guardian each behave distinctly
 - [ ] **Enemy projectiles:** skeleton archers shoot; projectiles hurt the player, NPCs and blocks
-- [ ] **Rift tiers:** minor and major rifts; major rifts have a guardian
+- [ ] **Island world:** new games start on a finite island with 4–5 territories; old saves keep their infinite world
+- [ ] **Rift tiers:** small, medium and large rifts plus the heart rift, laid out by territory; larger rifts need their children sealed first and have guardians
 - [ ] **Rift persistence:** closed/closing rift state survives save/load
-- [ ] **Resurgence:** unwarded closed rifts weaken and reopen; re-sealing is possible
-- [ ] **Territory:** visible, grows with buildings and reclaimed rifts, blocks spawns and corruption creep
+- [ ] **Resurgence:** unpatrolled sealed small rifts weaken and reopen at a new spot in their zone; a sealed parent only reopens after all its children have; re-sealing is possible; nothing reopens after the heart is sealed
+- [ ] **Outposts and patrols:** the player can found outposts in reclaimed territories; guards patrol nearby sealed rifts
+- [ ] **Peaceful builder mode:** a new-game setting that turns off raids and resurgence
+- [ ] **Ending:** sealing the heart rift plays an ending, then offers the freed island or New Game+ on the same island with stacking difficulty
+- [ ] **Corruption damage:** player-built blocks in or touching corruption wear down and break
+- [ ] **Territory:** territories are reclaimed by sealing their large rift; each settlement's area is visible, grows with buildings, blocks spawns and corruption creep
 - [ ] **Corruption creep:** active rifts spread corruption over days
 - [ ] **Defenses:** palisade/stone walls, gate, ward stone, brazier, watchtower — all NPC-buildable
 - [ ] **Breakable defenses:** monsters damage and break defensive blocks; NPCs repair them
@@ -433,7 +478,7 @@ Phase 3 is **complete** when ALL of the following are true:
 - [ ] **One damage path:** legacy Monster-class combat code removed
 
 ### Quality Requirements
-- [ ] **60 FPS** (dev overlay p95 < 18 ms) during a raid with 25 enemies, 8 NPCs, walls and 2 projectiles/s on target hardware
+- [ ] **60 FPS** (dev overlay p95 < 18 ms) during a raid with 25 enemies, 8 NPCs, walls and 2 projectiles/s on target hardware, and a phone playtest of a raid holds a playable frame rate (mobile is first-class)
 - [ ] **No stuck enemies:** no raid enemy idles > 10 s without moving or attacking
 - [ ] **No NPC softlocks:** downed/sheltering NPCs always return to normal states
 - [ ] **All new systems have tests** (>70% coverage for logic modules in `src/systems/combat`, `raids`, `territory`)
@@ -564,7 +609,7 @@ Resolved November 15, 2026 (the proposed defaults were accepted):
 1. **Order vs. Phase 2 leftovers** — moot: Phase 2's housing, schedule, farming, dashboard and NPC panel all landed before Phase 3 started.
 2. **Settlement unification first** — done: the live game runs on the settlement engine through `SettlementBridge`, so guard and threat-response logic goes into `modules/settlement` / `systems/settlement` once.
 3. **NPC permadeath** — no. NPCs are downed and recover; one hit again while downed leaves the settlement.
-4. **Pathfinding** — steering + wall-breaking (3.0.3). A* only if playtests show stuck raids.
+4. **Pathfinding** — ~~steering + wall-breaking; A* only if raids get stuck~~. Superseded: A* pathfinding for monsters, animals and settlers shipped (`systems/navigation/gridPath.js`). Wall-breaking still applies.
 5. **What monsters can break** — only player-placed wood and stone (defensive and building blocks), never natural terrain.
 6. **Map scope (3.8.3)** — a rift list in the pause menu now; a real map in Phase 5.
 7. **Companion in combat** — out of Phase 3. Consider pulling the companion rescue arc forward as its own mini-phase afterwards.
@@ -573,9 +618,38 @@ Resolved November 16, 2026 (the former open questions; proposed answers accepted
 
 8. **Friendly fire** — no in Phase 3: player spells and attacks never hurt settlers, and area spells skip them. Build this into the 3.0.2 damage path.
 9. **Loot from raids** — goblins that steal from stockpiles drop what they stole when killed.
-10. **Peaceful builder mode** (no raids, no resurgence) — Phase 5.
-11. **Guard equipment** — guards' weapons wear like tools (`systems/tools/toolDurability.js`: wear per hit, broken = unarmed, repairable).
+10. ~~**Peaceful builder mode** — Phase 5.~~ Changed November 21: Phase 3 (Decision 19).
+11. **Guard equipment** — guards' weapons wear like tools (`systems/tools/toolDurability.js`: wear per hit, broken = unarmed, repairable). Refined by Decision 20.
 12. **Recruitment** — Phase 5, with trade caravans.
+
+Resolved November 21, 2026 (world and endgame; from the roadmap review):
+
+13. **Long-term goal** — find the rift source and reclaim the island. Sealing the heart rift is the story's ending.
+14. **The world is a finite island** with an interesting, irregular shape (not round), split into 4–5 territories, about 2–3 km across.
+15. **Old saves** keep the infinite world; the island is for new games only (world-gen version stored in the save).
+16. **Three rift tiers**: one large rift in the middle of each territory, ringed at a distance by medium rifts, each ringed by small rifts. The **heart rift** sits at the centre of the large rifts. Larger rifts can only be sealed after their children.
+17. **Resurgence**: anything can return until the heart is sealed, but a sealed rift can only reopen once all its child rifts have reopened. Nearby settlements must patrol to keep small rifts sealed.
+18. **Outposts**: one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols.
+19. **Peaceful builder mode** is in Phase 3, as a new-game setting (replaces Decision 10).
+20. **Guard weapons wear slowly** (a fraction of the player's rate), and the Blacksmith repairs them from the stockpile.
+21. **After the heart**: keep playing the freed island (no rifts, no raids), or start New Game+ on the same island (changed by Decision 27).
+22. **Island shape**: one landmass with bays, peninsulas and maybe an inland lake; no separate islands.
+23. **New Game+ carries over** spells learned, level and skill/attribute points, and equipped gear. Settlements and outposts also stay (Decision 27).
+24. **The companion** is found near the first medium rift, after the player seals their first small rift: the "You sense someone nearby…" hint leads there. The rescue itself is Phase 4; Phase 3's rift layout keeps a medium rift near the start area for it.
+25. **Outposts grow on their own** through their own immigration, even if left alone. Sending experienced settlers from an established settlement makes them grow faster.
+26. **Travel**: rift waystones (left by sealing medium and large rifts) for travel between them, in Phase 3; and roads that make walking faster for the player and settlers, planned for Phase 5.
+27. **New Game+ is on the same island.** Every rift, the heart included, reopens. The settlement and outposts stay but are damaged. (Replaces "a harder island" in 21 and 23.) Difficulty: see Decision 34.
+28. **Waystone travel is free**, but not during a raid and not to a dark waystone (its rift is reopening).
+29. **Each settlement keeps its own stockpiles.** The player carries goods between them; settler haulers between settlements come with roads (Phase 5).
+30. **Reopened rifts move.** Every reopening (resurgence or New Game+) picks a new random spot in the rift's tier zone, never inside another rift's existing corruption.
+31. **Corruption damages building.** Player-built blocks and pieces touched by corruption, or built over it, lose HP over time until they're destroyed.
+32. **Reopened rifts can land anywhere in their zone**, including inside a settlement or outpost.
+33. **New Game+ hits settlements at once:** player-built blocks in the space a reopened rift itself takes up break outright; the rest of the new corruption wears blocks down as usual.
+34. **New Game+ adds one difficulty mechanic per cycle**, cumulatively, not all at once. Pool: stronger monsters, faster resurgence, earlier and bigger raids, more rifts, corruption spreading between rifts, and rift storms. No cycle limit.
+35. **Nothing is protected from a rift.** A rift that reopens inside a settlement can destroy anything, the campfire included; the settlement can be rebuilt. (Raids still never destroy the settlement, 3.7.3.)
+36. **Corruption wear depends on material:** wood breaks in about 2 in-game days, stone in about 5; pieces by their volume.
+37. **New Game+ order:** stronger monsters → more rifts → earlier raids → faster resurgence → corruption spreads → rift storms; then the pool repeats with bigger numbers.
+38. **Displaced settlers:** when a rift destroys a campfire, its settlers move to the nearest settlement or outpost; with none, they wait by the ruins a few in-game days for a new campfire, then leave.
 
 ---
 
@@ -599,5 +673,7 @@ Also landed since: shelter perks, tool durability and repair (no wooden tools), 
 None: all resolved (Decisions 8–12).
 
 ---
+
+**Order** (decided November 21): finish Phase 3 before the companion (Phase 4): 3.0.2 → 3.1 → 3.3/3.4 (island, tiers, territories) → 3.5/3.6/3.7.
 
 **Next:** begin with 3.0.2 (combat targets & one damage path, no friendly fire) — every later task routes damage through it. Profile the per-enemy cost early.
