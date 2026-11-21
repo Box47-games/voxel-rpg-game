@@ -184,22 +184,6 @@ const ContextualHints = () => {
       showOnce: true,
     },
     {
-      id: 'housing-needed',
-      text: 'NPCs need housing! Build a HOUSE to provide shelter.',
-      condition: () => {
-        if (gameState !== 'playing') return false;
-        const s = useGameStore.getState();
-        const mod = s._settlementModule;
-        if (!mod || !mod.housingManager) return false;
-        return s.settlement.npcs.length > 1 &&
-          mod.housingManager.getTotalCapacity() < s.settlement.npcs.length;
-      },
-      priority: 13,
-      duration: 5000,
-      showOnce: false,
-      cooldown: 120000,
-    },
-    {
       id: 'npc-hungry',
       text: 'A settler is hungry! Ensure your food supply.',
       condition: () => {
