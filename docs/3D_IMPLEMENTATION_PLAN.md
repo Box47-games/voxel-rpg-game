@@ -43,13 +43,15 @@ The February 2026 assessment that was here listed 2D-era files that no longer ex
 
 ### The world and the long-term goal
 - **Goal:** find the rift source and reclaim the island. Sealing the **heart rift** is the story's ending.
-- **A finite island**, irregular in shape (not round), about 2–3 km across, split into **4–5 territories**. New games only; old saves keep their infinite world.
+- **A finite island**: one irregular landmass (not round; bays, peninsulas), about 2–3 km across, split into **4–5 territories**. New games only; old saves keep their infinite world.
 - **Three rift tiers:** a large rift in the middle of each territory, ringed at a distance by medium rifts, each ringed by small rifts. The heart rift sits at the centre of the large rifts. A rift can only be sealed once its children are; sealing a territory's large rift reclaims it.
 - **Resurgence:** anything can return until the heart is sealed, but a sealed rift only reopens once all its children have. Settlements nearby must patrol to keep small rifts sealed.
-- **Outposts:** one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols.
-- **After the heart:** keep playing the freed island (no rifts, no raids), or start New Game+ on a harder island.
+- **Outposts:** one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols. They grow on their own; sending experienced settlers grows them faster.
+- **Travel:** rift waystones (left by sealed medium and large rifts) in Phase 3; roads that speed up walking in Phase 5.
+- **The companion** is found near the first medium rift, after the first small rift is sealed (Phase 4).
+- **After the heart:** keep playing the freed island (no rifts, no raids), or start New Game+ on a harder island, keeping spells, level and skill points, and equipped gear.
 - **Peaceful builder mode** (no raids, no resurgence) as a new-game setting, built in Phase 3.
-- The island, rift tiers, territories, outposts and patrols are built inside Phase 3 (3.3/3.4/3.6); see `docs/phases/PHASE_3_DETAILED_PLAN.md`, Decisions 13–21.
+- The island, rift tiers, territories, outposts and patrols are built inside Phase 3 (3.3/3.4/3.6); see `docs/phases/PHASE_3_DETAILED_PLAN.md`, Decisions 13–26.
 
 ### Order
 Finish Phase 3 (the settlement-defence loop on the island) before the companion (Phase 4). The companion then has a real threat to help with.
@@ -482,6 +484,7 @@ Begin with placeholder cube characters. Gameplay first, pretty models later. A f
 - Visual polish (weather, particles, lighting)
 - Quest system
 - More content (biomes, monsters, items)
+- Roads: built by settlers or worn in by use, faster walking for the player and settlers
 - Tutorial and onboarding
 - Accessibility options
 - Performance optimization pass

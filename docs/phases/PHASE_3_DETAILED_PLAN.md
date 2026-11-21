@@ -206,7 +206,7 @@ Each type gets a **behavior profile** (data in `MONSTER_TYPES`, logic in `system
 ### 3.3 Portal Lifecycle (Week 4-6)
 
 #### 3.3.0 The island (new worlds only)
-- [ ] Finite island world generator: an irregular coastline (not a circle; for example a noise-warped outline with bays, a peninsula or two), ocean beyond, about 2–3 km across
+- [ ] Finite island world generator: **one landmass** (Decision 22) with an irregular coastline (not a circle: a noise-warped outline with bays, peninsulas, maybe an inland lake), ocean beyond, about 2–3 km across. Every territory is reachable on foot
 - [ ] 4–5 **territories**: regions of the island, each with its own large rift near its middle. The **heart rift** sits at the island's centre, between the large rifts
 - [ ] Store a `worldGen` version in the save: old saves keep the infinite generator; only new games get the island (Decision 15)
 - [ ] Rift layout comes from the world seed: each large rift is ringed at a distance by medium rifts, and each medium rift by small rifts
@@ -217,6 +217,8 @@ Each type gets a **behavior profile** (data in `MONSTER_TYPES`, logic in `system
 - [ ] Gating: a medium rift can only be sealed once all its small rifts are sealed; a large one once all its medium rifts are; the heart once every large rift is
 - [ ] Larger tiers drop better rewards (void crystals) used by 3.5 ward stones and Phase 4 magic
 - [ ] Sealing a territory's large rift reclaims the territory (3.4)
+- [ ] **Rift waystones** (Decision 26): sealing a medium or large rift leaves a waystone; the player can travel between any of their waystones (not during a raid). A waystone goes dark while its rift is resurgent
+- [ ] Leave room for the companion: the first medium rift near the start area is where Phase 4's rescue happens (Decision 24)
 
 #### 3.3.2 Resurgence — "victory is never permanent" (until the heart is sealed)
 - [ ] Sealed **small** rifts lose `stability` over time and reopen at 0. Settler patrols (3.6.2) and ward stones (3.5.2) in range slow the decay
@@ -231,7 +233,7 @@ Each type gets a **behavior profile** (data in `MONSTER_TYPES`, logic in `system
 
 #### 3.3.4 The heart rift and after
 - [ ] Sealing the heart is the story ending: an ending scene (with the companion once Phase 4 lands)
-- [ ] Afterwards the player chooses: keep playing the freed island (no rifts reopen, raids stop), or start **New Game+** on a harder island from the main menu, keeping some progress (Phase 5 decides what carries over)
+- [ ] Afterwards the player chooses: keep playing the freed island (no rifts reopen, raids stop), or start **New Game+** on a harder island from the main menu. Carried over: spells learned, level and skill/attribute points, and equipped gear; not materials, settlements or building unlocks (Decision 23)
 
 **Tuning constants:**
 ```
@@ -263,6 +265,7 @@ RIFT_RESEAL_COST = { void_shard: 3 }
 - [ ] Two layers: the island's fixed **territories** (3.3.0), each reclaimed when its large rift is sealed, and the **settled area** around each settlement and outpost
 - [ ] `systems/territory/TerritoryManager.js`: settled area = union of circles around each settlement/outpost centre and completed buildings (`TERRITORY_RADIUS_PER_BUILDING`); a reclaimed territory has no ambient monster spawns
 - [ ] **Outposts** (Decision 18): one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols
+- [ ] Outposts grow on their own (Decision 25): each campfire runs its own immigration and housing, so a neglected outpost still fills slowly. The player can also send settlers from an established settlement (NPC panel); experienced settlers (high skills) make the outpost grow faster, for example by raising its attractiveness and work speed
 - [ ] Store `territory` (list of circles) and a cheap `isInTerritory(x, z)`
 - [ ] Rendering: faint ground border at territory edges (reuse ZoneOverlay approach), toggle in the build/zone modes
 - [ ] Effects: monsters don't spawn inside territory except during raids; NPC work zones must be inside territory
@@ -622,6 +625,11 @@ Resolved November 21, 2026 (world and endgame; from the roadmap review):
 19. **Peaceful builder mode** is in Phase 3, as a new-game setting (replaces Decision 10).
 20. **Guard weapons wear slowly** (a fraction of the player's rate), and the Blacksmith repairs them from the stockpile.
 21. **After the heart**: keep playing the freed island (no rifts, no raids), or start New Game+ on a harder island.
+22. **Island shape**: one landmass with bays, peninsulas and maybe an inland lake; no separate islands.
+23. **New Game+ carries over** spells learned, level and skill/attribute points, and equipped gear. Not materials, settlements or building unlocks.
+24. **The companion** is found near the first medium rift, after the player seals their first small rift: the "You sense someone nearby…" hint leads there. The rescue itself is Phase 4; Phase 3's rift layout keeps a medium rift near the start area for it.
+25. **Outposts grow on their own** through their own immigration, even if left alone. Sending experienced settlers from an established settlement makes them grow faster.
+26. **Travel**: rift waystones (left by sealing medium and large rifts) for travel between them, in Phase 3; and roads that make walking faster for the player and settlers, planned for Phase 5.
 
 ---
 
