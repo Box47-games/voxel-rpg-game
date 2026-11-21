@@ -45,15 +45,15 @@ The February 2026 assessment that was here listed 2D-era files that no longer ex
 - **Goal:** find the rift source and reclaim the island. Sealing the **heart rift** is the story's ending.
 - **A finite island**: one irregular landmass (not round; bays, peninsulas), about 2–3 km across, split into **4–5 territories**. New games only; old saves keep their infinite world.
 - **Three rift tiers:** a large rift in the middle of each territory, ringed at a distance by medium rifts, each ringed by small rifts. The heart rift sits at the centre of the large rifts. A rift can only be sealed once its children are; sealing a territory's large rift reclaims it.
-- **Resurgence:** anything can return until the heart is sealed, but a sealed rift only reopens once all its children have. A reopened rift comes back at a new random spot in its tier's zone (never inside other corruption), so players can't build around it. Settlements nearby must patrol to keep small rifts sealed.
-- **Corruption damages building:** player-built blocks touched by or built over corruption wear down until destroyed.
+- **Resurgence:** anything can return until the heart is sealed, but a sealed rift only reopens once all its children have. A reopened rift comes back at a new random spot in its tier's zone (never inside other corruption, but possibly inside a settlement), so players can't build around it. Nothing is protected: a rift can destroy a settlement, which can be rebuilt. Settlements nearby must patrol to keep small rifts sealed.
+- **Corruption damages building:** player-built blocks touched by or built over corruption wear down until destroyed (wood in about 2 in-game days, stone in about 5).
 - **Outposts:** one main settlement plus small outposts in reclaimed territories, each with its own campfire, settlers and patrols. They grow on their own; sending experienced settlers grows them faster.
 - **Travel:** free rift waystone travel (not during raids, not to dark waystones) in Phase 3; roads that speed up walking in Phase 5.
 - **Resources:** each settlement keeps its own stockpiles; hauling between settlements comes with roads.
 - **The companion** is found near the first medium rift, after the first small rift is sealed (Phase 4).
-- **After the heart:** keep playing the freed island (no rifts, no raids), or start New Game+ on the same island: every rift reopens, settlements stay but are damaged, and the player keeps spells, level and skill points, and gear. Each cycle stacks stronger monsters, faster resurgence, earlier raids and more rifts.
+- **After the heart:** keep playing the freed island (no rifts, no raids), or start New Game+ on the same island: every rift reopens, settlements stay but are damaged, and the player keeps spells, level and skill points, and gear. Starting it breaks some blocks inside the new corruption at once. Each cycle adds one more difficulty mechanic, cumulatively and without limit: stronger monsters, faster resurgence, earlier raids, more rifts, corruption spreading between rifts, rift storms.
 - **Peaceful builder mode** (no raids, no resurgence) as a new-game setting, built in Phase 3.
-- The island, rift tiers, territories, outposts and patrols are built inside Phase 3 (3.3/3.4/3.6); see `docs/phases/PHASE_3_DETAILED_PLAN.md`, Decisions 13–31.
+- The island, rift tiers, territories, outposts and patrols are built inside Phase 3 (3.3/3.4/3.6); see `docs/phases/PHASE_3_DETAILED_PLAN.md`, Decisions 13–36.
 
 ### Order
 Finish Phase 3 (the settlement-defence loop on the island) before the companion (Phase 4). The companion then has a real threat to help with.

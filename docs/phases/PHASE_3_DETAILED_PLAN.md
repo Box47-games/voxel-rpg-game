@@ -47,7 +47,7 @@ From the Vision document:
 - **Readable over hard.** Every enemy attack is telegraphed (wind-up pose + color flash). Damage comes from the player's mistakes, not from invisible hits.
 - **Defense is a choice, not a tax.** Raids scale with what the player has built; a small, well-defended village and a sprawling one both work.
 - **NPC autonomy holds.** The player assigns guard *roles* and builds defenses; NPCs decide where to stand, when to fight and when to flee.
-- **No softlocks.** Losing a raid costs resources and repairs, never the settlement.
+- **No softlocks.** Losing a raid costs resources and repairs, never the settlement. Rifts are different: a rift reopening inside a settlement can destroy it (Decision 35), but the player can always light a new campfire and rebuild.
 
 ---
 
@@ -222,7 +222,7 @@ Each type gets a **behavior profile** (data in `MONSTER_TYPES`, logic in `system
 
 #### 3.3.2 Resurgence — "victory is never permanent" (until the heart is sealed)
 - [ ] Sealed **small** rifts lose `stability` over time and reopen at 0. Settler patrols (3.6.2) and ward stones (3.5.2) in range slow the decay
-- [ ] A rift reopens at a **new random spot** in its tier's zone (Decision 30): a small rift anywhere in its medium rift's ring, a medium one in its large rift's ring, a large one near its territory's middle. Never inside another rift's existing corruption. Players can't simply build a wall round the old spot
+- [ ] A rift reopens at a **new random spot** in its tier's zone (Decision 30): a small rift anywhere in its medium rift's ring, a medium one in its large rift's ring, a large one near its territory's middle. Never inside another rift's existing corruption, but it **can land inside a settlement or outpost** (Decision 32). Players can't simply build a wall round the old spot
 - [ ] A sealed **medium** rift can only reopen once all of its small rifts have reopened; a sealed **large** rift only once all of its medium rifts have. Resurgence cascades upward, so the player always has warning
 - [ ] Reopening a large rift un-reclaims its territory
 - [ ] Re-sealing a resurgent rift is cheaper than the first close
@@ -236,7 +236,8 @@ Each type gets a **behavior profile** (data in `MONSTER_TYPES`, logic in `system
 - [ ] Sealing the heart is the story ending: an ending scene (with the companion once Phase 4 lands)
 - [ ] Afterwards the player chooses: keep playing the freed island (no rifts reopen, raids stop), or start **New Game+** (Decisions 21, 23, 27)
 - [ ] New Game+ happens on the **same island**: every rift, the heart included, reopens (at new spots, per 3.3.2). The settlement and outposts stay but are damaged by the returning corruption. The player keeps spells, level and skill/attribute points, and equipped gear
-- [ ] Each New Game+ cycle stacks more difficulty: stronger monsters, faster resurgence, earlier and bigger raids, and more rifts per territory. Store the cycle number in the save; the multipliers go in `tuning.js`
+- [ ] Starting New Game+ hits the settlements at once: a share of player-built blocks inside the new corruption break outright (`NGPLUS_UPFRONT_BREAK_FRACTION`), then the normal wear continues (Decision 33)
+- [ ] Each New Game+ cycle adds **one** more difficulty mechanic, cumulatively (Decision 34). The pool, in an order to settle in playtests: stronger monsters, faster resurgence, earlier and bigger raids, more rifts per territory, **corruption spreads** (creeps between rifts and joins nearby rings), **rift storms** (occasional storms that drain every sealed rift's stability and boost spawns island-wide). Store the cycle number in the save; settings in `tuning.js`
 
 **Tuning constants:**
 ```
@@ -286,7 +287,7 @@ TERRITORY_RADIUS_PER_BUILDING = 6     (capped)
 TERRITORY_MAX_RADIUS = 96
 CORRUPTION_CREEP_PER_DAY = 2          (blocks)
 CORRUPTION_MAX_RADIUS = 48
-CORRUPTION_BLOCK_DAMAGE_PER_DAY = (tune)
+CORRUPTION_BREAK_DAYS = { wood: 2, stone: 5 }   (in-game days to break a full block; pieces by volume)
 ```
 
 **Acceptance criteria:**
@@ -636,11 +637,16 @@ Resolved November 21, 2026 (world and endgame; from the roadmap review):
 24. **The companion** is found near the first medium rift, after the player seals their first small rift: the "You sense someone nearby…" hint leads there. The rescue itself is Phase 4; Phase 3's rift layout keeps a medium rift near the start area for it.
 25. **Outposts grow on their own** through their own immigration, even if left alone. Sending experienced settlers from an established settlement makes them grow faster.
 26. **Travel**: rift waystones (left by sealing medium and large rifts) for travel between them, in Phase 3; and roads that make walking faster for the player and settlers, planned for Phase 5.
-27. **New Game+ is on the same island.** Every rift, the heart included, reopens. The settlement and outposts stay but are damaged. Each cycle stacks all four: stronger monsters, faster resurgence, earlier and bigger raids, more rifts. (Replaces "a harder island" in 21 and 23.)
+27. **New Game+ is on the same island.** Every rift, the heart included, reopens. The settlement and outposts stay but are damaged. (Replaces "a harder island" in 21 and 23.) Difficulty: see Decision 34.
 28. **Waystone travel is free**, but not during a raid and not to a dark waystone (its rift is reopening).
 29. **Each settlement keeps its own stockpiles.** The player carries goods between them; settler haulers between settlements come with roads (Phase 5).
 30. **Reopened rifts move.** Every reopening (resurgence or New Game+) picks a new random spot in the rift's tier zone, never inside another rift's existing corruption.
 31. **Corruption damages building.** Player-built blocks and pieces touched by corruption, or built over it, lose HP over time until they're destroyed.
+32. **Reopened rifts can land anywhere in their zone**, including inside a settlement or outpost.
+33. **New Game+ hits settlements at once:** some of the player-built blocks inside the new corruption break outright; the rest wear down as usual.
+34. **New Game+ adds one difficulty mechanic per cycle**, cumulatively, not all at once. Pool: stronger monsters, faster resurgence, earlier and bigger raids, more rifts, corruption spreading between rifts, and rift storms. No cycle limit.
+35. **Nothing is protected from a rift.** A rift that reopens inside a settlement can destroy anything, the campfire included; the settlement can be rebuilt. (Raids still never destroy the settlement, 3.7.3.)
+36. **Corruption wear depends on material:** wood breaks in about 2 in-game days, stone in about 5; pieces by their volume.
 
 ---
 
