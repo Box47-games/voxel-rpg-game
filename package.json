@@ -1,10 +1,10 @@
 {
   "name": "voxel-rpg-game",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Riftholm - a voxel settlement survival RPG built with React Three Fiber",
   "private": true,
   "homepage": "https://box47-games.github.io/voxel-rpg-game",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "author": "Box47-games",
   "repository": {
     "type": "git",

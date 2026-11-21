@@ -4,7 +4,7 @@ A browser-based voxel settlement survival RPG built with React Three Fiber. Carv
 
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)]()
 [![Version](https://img.shields.io/badge/version-1.0-blue)]()
-[![License](https://img.shields.io/badge/license-MIT-blue)]()
+[![License](https://img.shields.io/badge/license-all%20rights%20reserved-red)](LICENSE)
 
 ---
 

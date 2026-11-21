@@ -3,6 +3,13 @@
 The newest version is at the top. Every merge to `main` is a new version, written for players, with what's
 **New** and what's **Fixed**. `package.json`'s version matches the top entry (a test checks).
 
+## 2.1.1 · 2026-11-21 · All rights reserved
+### New
+- **Riftholm is no longer open source.** Its code, art and everything else now belong to Box47 games LLC, with all rights reserved. Versions published before today stay under the MIT License.
+
+### Fixed
+- Nothing this time.
+
 ## 2.1.0 · 2026-11-21 · The first changelog
 The first entry. It sums up the latest work; earlier changes are in `git log`.
 
