@@ -16,7 +16,7 @@ export const Billboard = ({ children, ...props }) => (
 );
 
 // Mock Text component
-export const Text = ({ children, ...props }) => (
+export const Text = ({ children: _children, ...props }) => (
   <mesh data-testid="drei-text" {...props}>
     <planeGeometry args={[1, 1]} />
     <meshBasicMaterial />

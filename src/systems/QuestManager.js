@@ -259,7 +259,7 @@ export class QuestManager {
    * Useful for time-based quest objectives or updates
    * @param {number} deltaTime - Time since last update (ms)
    */
-  update(deltaTime) {
+  update(_deltaTime) {
     // Currently no time-based quest mechanics
     // But this is a hook for future features like:
     // - Time limit quests

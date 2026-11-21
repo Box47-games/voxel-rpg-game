@@ -195,7 +195,7 @@ export class StateSnapshot {
  * Wraps set() to track actions and validate mutations
  */
 export function createActionMiddleware(actionHistory) {
-  return (set, get, api) => (fn) => {
+  return (set, get, _api) => (fn) => {
     // If fn is an action object, process it
     if (fn && typeof fn === 'object' && fn.type) {
       const action = fn;

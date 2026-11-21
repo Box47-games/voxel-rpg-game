@@ -664,7 +664,7 @@ const useGameStore = create((rawSet, get, api) => {
           if (questManager) {
             questManager.trackKill(monster.type);
           }
-        }).catch(err => {
+        }).catch(() => {
           // Quest system not loaded yet, ignore
         });
       } catch (err) {

@@ -155,7 +155,7 @@ describe('WorkerPool', () => {
 
     it('resets error counter on successful message', async () => {
       pool.consecutiveErrors = 2;
-      const result = await pool.execute({ type: 'buildMesh' });
+      await pool.execute({ type: 'buildMesh' });
       expect(pool.consecutiveErrors).toBe(0);
     });
 

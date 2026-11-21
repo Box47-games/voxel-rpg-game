@@ -19,7 +19,7 @@ describe('LootDropManager', () => {
     manager = new LootDropManager();
 
     // Mock the lootTable.generateLoot method
-    manager.lootTable.generateLoot = vi.fn((monster) => ({
+    manager.lootTable.generateLoot = vi.fn((_monster) => ({
       gold: 50,
       items: [
         new Item({ name: 'Test Sword', type: 'WEAPON', stats: { damage: 30 } })

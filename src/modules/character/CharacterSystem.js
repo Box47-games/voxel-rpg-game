@@ -160,7 +160,7 @@ export const resetAttributes = (character) => {
  * @param {number} newLevel - The new player level
  * @returns {object} Updated character data
  */
-export const grantLevelUpPoints = (character, newLevel) => {
+export const grantLevelUpPoints = (character, _newLevel) => {
   return {
     ...character,
     attributePoints: character.attributePoints + 5, // 5 attribute points per level

@@ -135,7 +135,7 @@ export class LootGenerator {
   rollRandomProperty(itemType) {
     // Get applicable properties for this item type
     const applicableProps = Object.entries(ITEM_PROPERTIES)
-      .filter(([key, prop]) => prop.applicableTo.includes(itemType))
+      .filter(([, prop]) => prop.applicableTo.includes(itemType))
       .map(([key, prop]) => ({ key, ...prop }));
 
     if (applicableProps.length === 0) return null;

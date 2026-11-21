@@ -60,11 +60,9 @@ Tick components use `useFrame` inside R3F Canvas to drive game logic each frame.
 ### State Management
 
 - **`useGameStore`** (`src/stores/useGameStore.js`, ~1650 lines) — Primary store. Player, enemies, projectiles, settlement NPCs, zones, world time, UI state, inventory. Almost all 3D components read/write here.
-- **`useDungeonStore`** — Dungeon layout, monsters, loot (2100+ lines).
 - **`useQuestStore`** — Quest progress and objectives.
-- **`useSettlementStore`** — Settlement UI state (zone selection, NPC panel).
 
-Pattern: Game logic writes to stores via actions. 3D components subscribe to slices. No circular deps — modules don't read components.
+Pattern: Game logic writes to stores via actions. 3D components subscribe to slices.
 
 ### Settlement System
 
@@ -88,14 +86,10 @@ WorkerPool caps at `Math.min(navigator.hardwareConcurrency, 4)` threads.
 - **`src/data/zoneTypes.js`** — Zone type definitions (MINING, STOCKPILE, FARMING, BUILDING, RESTRICTED).
 - **`src/data/blockDrops.js`** — Block → loot tables, calculated via `calculateDrops(blockType, toolTier)`.
 - **`src/data/spells.js`** — Spell definitions with cooldowns and mana costs.
-- **`src/shared/config.js`** — Building types, tiers, dimensions, costs, resource types, grid config.
 
 ### Persistence
 
-Save/load in `src/persistence/`:
-- `BrowserSaveManager.js` — localStorage + IndexedDB fallback
-- `GameStateSerializer.js` — Handles Maps, Sets serialization
-- `SaveVersionManager.js` — Schema migrations (current: v3)
+Save/load uses `src/persistence/Game3DSaveManager.js` — a singleton driven by the pause-menu Save/Load buttons. It stores game state (slot record) plus dirty chunks (binary ArrayBuffers) in IndexedDB (`voxel3d-saves` DB). Autosave fires every 30 s. There is no versioned migration layer; a save written by an older build is loaded as-is.
 
 ### Chunk System Constants
 

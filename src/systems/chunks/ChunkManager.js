@@ -202,7 +202,7 @@ export class ChunkManager {
    * Process queues - call this every frame
    * @param {number} deltaTime - Time since last frame
    */
-  update(deltaTime) {
+  update(_deltaTime) {
     const startTime = performance.now();
 
     // Process unloads first (free memory)

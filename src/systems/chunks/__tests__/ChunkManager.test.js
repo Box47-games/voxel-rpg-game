@@ -1,6 +1,6 @@
 import { ChunkManager } from '../ChunkManager';
 import { Chunk, ChunkState } from '../Chunk';
-import { chunkKey, CHUNK_SIZE, VOXEL_SIZE } from '../coordinates';
+import { CHUNK_SIZE, VOXEL_SIZE } from '../coordinates';
 import { BlockTypes } from '../blockTypes';
 
 describe('ChunkManager', () => {

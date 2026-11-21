@@ -173,7 +173,7 @@ export function canCastSpell(spell, character, player) {
  * @param {object} target - Target of the spell
  * @returns {object} Spell result
  */
-export function applySpellEffects(spell, character, target = null) {
+export function applySpellEffects(spell, character, _target = null) {
   const damage = calculateSpellDamage(spell, character);
   const manaCost = calculateManaCost(spell, character);
 

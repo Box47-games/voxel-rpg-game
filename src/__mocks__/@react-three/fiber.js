@@ -13,7 +13,7 @@ export const Canvas = ({ children, shadows, ...props }) => (
 );
 
 // Mock useFrame hook
-export const useFrame = vi.fn((callback) => {
+export const useFrame = vi.fn((_callback) => {
   // Optionally call with mock state and delta
   // callback({ clock: { elapsedTime: 0 } }, 0.016);
 });

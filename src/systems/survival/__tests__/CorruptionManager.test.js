@@ -36,7 +36,7 @@ function makeChunkManager() {
 
 function makeRiftManager() {
   return {
-    tickCorruptionFade: vi.fn((rift, delta, playerPos, npcCount) => {
+    tickCorruptionFade: vi.fn((rift, _delta, _playerPos, _npcCount) => {
       // Simulate fade
       rift.corruptionProgress = Math.max(0, rift.corruptionProgress - 0.1);
       return rift.corruptionProgress;
@@ -80,7 +80,7 @@ describe('CorruptionManager', () => {
       lastReinforcementTime: 0,
     };
 
-    const result = cm.update(3, [closingRift], chunkMgr, rm, [riftX, 0, riftZ]);
+    cm.update(3, [closingRift], chunkMgr, rm, [riftX, 0, riftZ]);
 
     // tickCorruptionFade should have been called
     expect(rm.tickCorruptionFade).toHaveBeenCalledTimes(1);

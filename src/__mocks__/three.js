@@ -122,7 +122,7 @@ export class Quaternion {
     this.z = z;
     this.w = w;
   }
-  setFromEuler(euler) {
+  setFromEuler(_euler) {
     return this;
   }
 }
